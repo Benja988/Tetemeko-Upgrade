@@ -1,6 +1,8 @@
 'use client';
 
 import Image from "next/image";
+import Link from "next/link";
+import { FaBroadcastTower, FaMusic, FaGlobeAfrica, FaMicrophoneAlt, FaPlayCircle } from 'react-icons/fa';
 
 export default function AboutUs() {
   return (
@@ -13,7 +15,7 @@ export default function AboutUs() {
           fill
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-black/80" />
+        <div className="absolute inset-0 bg-primary opacity-80" />
       </div>
 
       <div className="max-w-6xl mx-auto flex flex-col-reverse lg:flex-row items-center gap-14">
@@ -43,6 +45,42 @@ export default function AboutUs() {
               <h3 className="text-3xl font-bold text-green-400">24/7</h3>
               <p className="text-sm text-gray-300">Live Broadcasting</p>
             </div>
+          </div>
+
+          {/* List of Stations */}
+          <div className="mt-12">
+            <h3 className="text-2xl font-semibold mb-4 text-white">Our Stations</h3>
+            <ul className="space-y-3">
+              <li className="flex items-center gap-3 text-gray-300">
+                <FaBroadcastTower className="text-white" />
+                Radio PinyLuo – Community voices, local power.
+              </li>
+              <li className="flex items-center gap-3 text-gray-300">
+                <FaMusic className="text-pink-400" />
+                Vibe Radio – Non-stop music and urban culture.
+              </li>
+              <li className="flex items-center gap-3 text-gray-300">
+                <FaGlobeAfrica className="text-green-400" />
+                Swahili Nation – Bridging East African stories.
+              </li>
+              <li className="flex items-center gap-3 text-gray-300">
+                <FaMicrophoneAlt className="text-yellow-300" />
+                Youth Talk – Bold voices. Big ideas.
+              </li>
+
+              {/* Listen Live Button */}
+              <div className="mt-8">
+                <Link
+                  href="/stations"
+                  className="inline-flex items-center gap-2 bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-semibold py-3 px-6 rounded-xl shadow-md transition-all duration-300"
+                >
+                  <FaPlayCircle className="text-lg" />
+                  Listen Live
+                </Link>
+              </div>
+
+
+            </ul>
           </div>
         </div>
 

@@ -1,58 +1,43 @@
 'use client';
 
-import { FC, useState } from 'react';
-import HeroSection from '@/components/news/HeroSection';
-import SearchBar from '@/components/news/SearchBar';
-import TagsFilter from '@/components/news/TagsFilter';
-import NewsletterSignup from '@/components/news/NewsletterSignup';
-import CategoriesSidebar from '@/components/news/CategoriesSidebar';
-import Breadcrumbs from '@/components/news/Breadcrumbs';
+import { FC, useState, useEffect } from 'react';
+
+// Core layout
+import Navbar from '@/components/Navbar';
 import StickyShareButtons from '@/components/news/StickyShareButtons';
-import NewsSection from '@/components/news/NewsSection'; // Merged news grid
+import FirstSection from '@/components/news/FirstSection';
+import SecondSection from '@/components/news/SecondSection';
+import ThirdSection from '@/components/news/ThirdSection';
+import FourthSection from '@/components/news/FourthSection';
+import FifthSection from '@/components/news/FifthSection';
+import Breadcrumbs from '@/components/news/Breadcrumbs';
+import NewsFooter from '@/components/news/NewsFooter';
+
 
 const NewsAndBlogsPage: FC = () => {
-  const [searchQuery, setSearchQuery] = useState<string>('');
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // You can later filter NewsSection using this query
-    console.log('Searching for:', query);
-  };
+  
 
   return (
-    <main className="relative py-16 bg-gray-100 px-4 sm:px-8 lg:px-16">
-      <StickyShareButtons />
-
-      <div className="max-w-7xl mx-auto space-y-12">
-        {/* Breadcrumbs */}
+    <>
+      <Navbar />
+      <main className="relative py-16 sm:px-8 lg:px-16 bg-primary text-primaryText">
         <Breadcrumbs />
-
-        {/* Hero Section */}
-        <HeroSection />
-
-        {/* Search + Tags + Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-3 space-y-12">
-            <SearchBar onSearch={handleSearch} />
-            <TagsFilter />
-
-            {/* Unified News Section */}
-            <NewsSection />
-          </div>
-
-          {/* Sidebar for large screens */}
-          <aside className="space-y-6 hidden lg:block">
-            <CategoriesSidebar />
-            <NewsletterSignup />
-          </aside>
-        </div>
-
-        {/* Newsletter for mobile */}
-        <div className="lg:hidden">
-          <NewsletterSignup />
-        </div>
-      </div>
-    </main>
+        <StickyShareButtons />
+        <FirstSection />
+        <SecondSection />
+        <ThirdSection />
+        <FourthSection />
+        <FifthSection />
+        {/* <SixthSection /> */}
+        {/* <SeventhSection /> */}
+        {/* <EighthSection /> */}
+        {/* <NinthSection /> */}
+        {/* <TenthSection /> */}
+        <NewsFooter />
+        
+        
+      </main>
+    </>
   );
 };
 

@@ -1,62 +1,44 @@
 'use client';
 
 import { FC } from 'react';
+import { Post } from '@/types'; // Assume you have a type for post
 import Link from 'next/link';
-import Image from 'next/image';
 
-const HeroSection: FC = () => {
-    return (
-        <section className="bg-gradient-to-br from-[#07131F] to-[#0A1F2B] text-white rounded-2xl shadow-xl px-6 py-16 lg:py-24 lg:px-16 transition-all">
-            {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="mb-6 text-sm text-white/80">
-                <ol className="flex items-center space-x-2">
-                    <li>
-                        <Link href="/" className="hover:underline">
-                            Home
-                        </Link>
-                    </li>
-                    <li className="mx-1">›</li>
-                    <li className="font-semibold text-white">News & Blogs</li>
-                </ol>
-            </nav>
+interface HeroSectionProps {
+  filteredPosts: Post[];
+}
 
-            {/* Hero Content */}
-            <div className="flex flex-col-reverse lg:flex-row items-center gap-12">
-                {/* Text */}
-                <div className="text-center lg:text-left flex-1">
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight tracking-tight">
-                        Stay Informed with the Latest{' '}
-                        <br className="hidden sm:block" />
-                        <span className="text-[#8A9A9F]">News & Blogs</span> {/* Replaced yellow with a cool gray */}
-                    </h1>
-                    <p className="text-lg sm:text-xl text-white/90 max-w-xl mx-auto lg:mx-0">
-                        Dive into expert insights, timely stories, and trending updates — all thoughtfully curated for you.
-                    </p>
+const HeroSection: FC<HeroSectionProps> = ({ filteredPosts }) => {
+  return (
+    <section className="flex flex-col lg:flex-row space-y-6 lg:space-y-0 lg:space-x-6">
+      {/* Breaking News */}
+      <div className="lg:w-2/3 bg-primaryLight rounded-lg p-6">
+        <h2 className="text-4xl font-bold text-primaryText">
+          Breaking News: Major Event Today
+        </h2>
+        <p className="text-xl text-primaryText/80 mt-4">
+          Stay tuned for updates as we cover the biggest event of the day.
+        </p>
+      </div>
 
-                    <div className="mt-8">
-                        <Link
-                            href="#latest"
-                            className="inline-block bg-[#3C4A55] text-white font-semibold px-6 py-3 rounded-lg shadow hover:bg-[#2C3A45] transition"
-                        >
-                            Explore Now
-                        </Link>
-                    </div>
-                </div>
-
-                {/* Image */}
-                <div className="w-full h-64 sm:h-80 lg:h-[28rem] relative rounded-xl shadow-lg overflow-hidden flex-1">
-                    <Image
-                        src="/hero-images/image2.jpg" // Replace with your actual image path
-                        alt="News and Blogs Hero"
-                        fill
-                        priority
-                        className="object-cover rounded-xl"
-                        sizes="(min-width: 1024px) 50vw, 100vw"
-                    />
-                </div>
-            </div>
-        </section>
-    );
+      {/* Trending Stories */}
+      <div className="lg:w-1/3 bg-primaryLight/90 rounded-lg p-6">
+        <h3 className="text-2xl font-semibold text-primaryText mb-4">Trending Stories</h3>
+        <div className="space-y-4">
+          {filteredPosts.slice(0, 3).map((post) => (
+            <Link key={post.id} href={`/news/${post.slug}`}>
+              <div className="bg-primaryLight/50 p-4 rounded-lg shadow-sm hover:shadow-lg cursor-pointer transition-all duration-300">
+                <h4 className="text-lg font-semibold text-primaryText hover:text-accent">
+                  {post.title}
+                </h4>
+                <p className="text-sm text-primaryText/70">{post.author.name}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 };
 
 export default HeroSection;

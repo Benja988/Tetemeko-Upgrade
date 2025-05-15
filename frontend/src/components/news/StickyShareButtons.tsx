@@ -1,15 +1,57 @@
 'use client';
-import { FC } from 'react';
-import { FaFacebook, FaTwitter, FaLinkedin } from 'react-icons/fa';
 
-const StickyShareButtons: FC = () => {
-    return (
-        <div className="fixed top-1/2 left-4 z-50 hidden md:flex flex-col gap-4">
-            <a href="#" title="Share on Facebook"><FaFacebook className="text-blue-600 hover:scale-110 transition" size={24} /></a>
-            <a href="#" title="Share on Twitter"><FaTwitter className="text-sky-500 hover:scale-110 transition" size={24} /></a>
-            <a href="#" title="Share on LinkedIn"><FaLinkedin className="text-blue-700 hover:scale-110 transition" size={24} /></a>
-        </div>
-    );
+import React from 'react';
+import { FaFacebookF, FaTwitter, FaLinkedinIn, FaWhatsapp, FaTelegramPlane } from 'react-icons/fa';
+
+const StickyShareButtons: React.FC = () => {
+  // **List of Share Buttons**
+  const shareButtons = [
+    {
+      icon: <FaFacebookF />,
+      url: 'https://www.facebook.com/sharer/sharer.php?u=',
+      color: '#4267B2',
+    },
+    {
+      icon: <FaTwitter />,
+      url: 'https://twitter.com/intent/tweet?url=',
+      color: '#1DA1F2',
+    },
+    {
+      icon: <FaLinkedinIn />,
+      url: 'https://www.linkedin.com/shareArticle?mini=true&url=',
+      color: '#0077B5',
+    },
+    {
+      icon: <FaWhatsapp />,
+      url: 'https://api.whatsapp.com/send?text=',
+      color: '#25D366',
+    },
+    {
+      icon: <FaTelegramPlane />,
+      url: 'https://t.me/share/url?url=',
+      color: '#0088cc',
+    },
+  ];
+
+  // **Get the current URL**
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+  return (
+    <div className="fixed left-4 top-1/3 z-50 flex flex-col space-y-3">
+      {shareButtons.map((button, index) => (
+        <a
+          key={index}
+          href={`${button.url}${encodeURIComponent(currentUrl)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 rounded-full text-white hover:opacity-80 transition-all duration-200"
+          style={{ backgroundColor: button.color }}
+        >
+          {button.icon}
+        </a>
+      ))}
+    </div>
+  );
 };
 
 export default StickyShareButtons;

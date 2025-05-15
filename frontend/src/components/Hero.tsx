@@ -7,6 +7,7 @@ import { Menu, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { HEROIMAGES } from '@/constants/heroImages'
 import { navLinks } from '@/constants/navLinks'
 import Image from 'next/image'
+import { FaBroadcastTower, FaCalendarCheck, FaShoppingCart } from 'react-icons/fa'
 
 const GRID_SIZE = 5
 
@@ -184,7 +185,7 @@ export default function Hero() {
                     transition={{ duration: 0.6 }}
                     className="uppercase tracking-[0.25em] text-sm sm:text-base text-primary bg-white px-4 py-1 rounded-full mb-5 font-semibold shadow-md"
                 >
-                    Africa's Premier Multimedia Experience
+                    Kenya's Premier Multimedia Experience
                 </motion.p>
 
                 {/* Main Heading */}
@@ -220,22 +221,28 @@ export default function Hero() {
                 >
                     <Link
                         href="/stations"
-                        className="bg-primary hover:bg-primary-dark text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300"
+                        className="bg-primary hover:bg-primary-dark text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300 flex items-center gap-2"
                     >
-                        🎧 Listen Live
+                        <FaBroadcastTower />
+                        Listen Live
                     </Link>
+
                     <Link
                         href="/marketplace"
-                        className="bg-white hover:bg-gray-100 text-primary px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300"
+                        className="bg-white hover:bg-gray-100 text-primary px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300 flex items-center gap-2"
                     >
-                        🛒 Shop Now
+                        <FaShoppingCart />
+                        Shop Now
                     </Link>
+
                     <Link
-                        href="/services"
-                        className="bg-gray-800 hover:bg-gray-700 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300"
+                        href="/requestServices"
+                        className="bg-gray-800 hover:bg-gray-700 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-2xl font-semibold shadow-lg text-base sm:text-lg transition-all duration-300 flex items-center gap-2"
                     >
-                        📅 Reserve Media Services
+                        <FaCalendarCheck />
+                        Reserve Media Services
                     </Link>
+
                 </motion.div>
 
                 {/* Stats */}

@@ -7,9 +7,8 @@ const Breadcrumbs: FC = () => {
             <ol className="list-reset flex space-x-2">
                 <li><a href="/" className="hover:underline text-blue-600">Home</a></li>
                 <li>/</li>
-                <li><a href="/news" className="hover:underline text-blue-600">News</a></li>
-                <li>/</li>
-                <li className="text-gray-800">Latest</li>
+                <li><a href="/news" className="hover:underline text-blue-400">News</a></li>
+                
             </ol>
         </nav>
     );

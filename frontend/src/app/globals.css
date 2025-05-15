@@ -46,6 +46,14 @@ body {
   @apply px-4 sm:px-6 md:px-10 lg:px-16 xl:px-24 py-12;
 }
 
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+
 
 
 a {
@@ -56,5 +64,6 @@ a {
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;
+    overflow-wrap: break-word;
   }
 }

@@ -29,12 +29,12 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-          <Link href="/marketplace/cart">
+          {/* <Link href="/marketplace/cart">
             <FaShoppingCart className="text-lg hover:text-gray-300 transition" />
           </Link>
           <Link href="/account">
             <FaUserCircle className="text-lg hover:text-gray-300 transition" />
-          </Link>
+          </Link> */}
         </nav>
 
         {/* Mobile Menu Toggle */}
@@ -56,12 +56,12 @@ const Navbar = () => {
               {link.name}
             </Link>
           ))}
-          <Link href="/marketplace/cart" className="block hover:text-white">
+          {/* <Link href="/marketplace/cart" className="block hover:text-white">
             Cart
           </Link>
           <Link href="/account" className="block hover:text-white">
             Account
-          </Link>
+          </Link> */}
         </nav>
       )}
     </header>

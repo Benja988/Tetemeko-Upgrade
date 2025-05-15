@@ -39,7 +39,7 @@ export default function FeaturedWork() {
       {/* Section Title */}
       <div className="relative z-10 text-center mb-16">
         <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight leading-tight font-sans">
-          🌟 Featured Work
+          Featured Work
         </h2>
         <p className="text-gray-300 mt-4 text-lg font-light max-w-xl mx-auto font-serif italic">
           Some of our best and most recent projects.

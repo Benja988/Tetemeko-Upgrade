@@ -4,11 +4,12 @@ import { FC } from 'react';
 import Link from 'next/link';
 import {
     FaFacebookF,
-    FaTwitter,
     FaInstagram,
     FaWhatsapp,
+    FaYoutube,
 } from 'react-icons/fa';
 import { IoMdMail } from 'react-icons/io';
+import { FaXTwitter } from 'react-icons/fa6';
 
 const TopNav: FC = () => {
     return (
@@ -19,12 +20,12 @@ const TopNav: FC = () => {
                 <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
                     <div className="flex items-center gap-1">
                         <IoMdMail size={16} />
-                        <span>info@tetemekomedia.co.tz</span>
+                        <span>info@tetemekomedia.co.ke</span>
                     </div>
                     <span className="hidden sm:inline">|</span>
                     <div className="flex items-center gap-1">
                         <FaWhatsapp size={16} />
-                        <span>+255 712 345 678</span>
+                        <span>+254 719 161 925</span>
                     </div>
                 </div>
 
@@ -46,7 +47,7 @@ const TopNav: FC = () => {
                         aria-label="Twitter"
                         className="hover:text-white transition"
                     >
-                        <FaTwitter size={16} />
+                        <FaXTwitter size={16} />
                     </a>
                     <a
                         href="https://instagram.com/tetemekomedia"
@@ -57,10 +58,19 @@ const TopNav: FC = () => {
                     >
                         <FaInstagram size={16} />
                     </a>
-                    <Link href="/support" className="hover:text-white transition">
+                    <a
+                        href="https://www.youtube.com/channel/UCNwWgwfletrfQbUHzlbq4nA"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Youtube"
+                        className="hover:text-white transition"
+                    >
+                        <FaYoutube size={16} />
+                    </a>
+                    <Link href="/contact" className="hover:text-white transition">
                         Support
                     </Link>
-                    <Link href="/faqs" className="hover:text-white transition">
+                    <Link href="/contact" className="hover:text-white transition">
                         FAQs
                     </Link>
                 </div>
