@@ -1,8 +1,8 @@
 'use client';
 
-import { podcasts } from '@/constants/podcasts';
+import { podcasts } from '@/data/podcasts';
 import { posts } from '@/constants/post';
-import PodcastCard from './podcasts/PodcastCard';
+// import PodcastCard from './podcasts/PodcastCard';
 // import NewsCard from './news/NewsCard';
 
 export default function PodcastsAndNews() {
@@ -24,11 +24,11 @@ export default function PodcastsAndNews() {
           <h3 className="text-2xl font-semibold text-[#07131F] mb-6 border-b border-gray-200 pb-2">
             Latest Podcasts
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {latestPodcasts.map((podcast) => (
               <PodcastCard key={podcast.id} podcast={podcast} />
             ))}
-          </div>
+          </div> */}
         </div>
 
         {/* News Section */}

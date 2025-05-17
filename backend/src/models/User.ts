@@ -28,7 +28,7 @@ const UserSchema: Schema = new Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // ✅ No need to use schema.index({ email: 1 })
+      unique: true, 
       lowercase: true,
       trim: true,
       match: [/^\S+@\S+\.\S+$/, "Invalid email format"],

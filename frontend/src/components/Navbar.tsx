@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { FaBars, FaTimes, FaShoppingCart, FaUserCircle } from 'react-icons/fa';
+import { FaBars, FaTimes } from 'react-icons/fa';
 import { navLinks } from '@/constants/navLinks';
 
 const Navbar = () => {
@@ -11,60 +11,61 @@ const Navbar = () => {
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
   return (
-    <header className="w-full bg-[#07131F] text-white border-b border-primary">
-      <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <Link href="/" className="text-xl font-bold tracking-wide">
-          Tetemeko Media Group
-        </Link>
-
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex space-x-6 items-center">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              href={link.path}
-              className="hover:text-gray-300 transition"
-            >
-              {link.name}
-            </Link>
-          ))}
-          {/* <Link href="/marketplace/cart">
-            <FaShoppingCart className="text-lg hover:text-gray-300 transition" />
+    <>
+      {/* Normal Navbar */}
+      <header className="w-full bg-[#07131F]/80 text-white border-b border-primary backdrop-blur-md z-20">
+        <div className="max-w-7xl mx-auto px-8 py-4 flex justify-between items-center">
+          {/* Logo */}
+          <Link href="/" className="text-xl font-bold tracking-wide">
+            Tetemeko Media Group
           </Link>
-          <Link href="/account">
-            <FaUserCircle className="text-lg hover:text-gray-300 transition" />
-          </Link> */}
-        </nav>
 
-        {/* Mobile Menu Toggle */}
-        <button onClick={toggleMenu} className="md:hidden">
-          {menuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
-        </button>
-      </div>
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex space-x-6 items-center">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.path}
+                className="hover:text-gray-300 transition"
+              >
+                {link.name}
+              </Link>
+            ))}
+          </nav>
 
-      {/* Mobile Menu */}
+          {/* Mobile Menu Toggle */}
+          <button onClick={toggleMenu} className="md:hidden">
+            {menuOpen ? <FaTimes className="text-xl" /> : <FaBars className="text-xl" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Fullscreen Mobile Overlay Menu */}
       {menuOpen && (
-        <nav className="md:hidden px-4 pb-4 space-y-3 bg-gray-900 text-sm">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex flex-col items-center justify-center space-y-6 text-white text-xl transition-all duration-300 md:hidden">
+          {/* Close Button */}
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="absolute top-6 right-6 text-2xl hover:text-gray-300"
+            aria-label="Close menu"
+          >
+            <FaTimes />
+          </button>
+
+          {/* Menu Links */}
           {navLinks.map((link) => (
             <Link
               key={link.name}
               href={link.path}
-              className="block text-gray-300 hover:text-white"
               onClick={() => setMenuOpen(false)}
+              className="hover:text-gray-300"
             >
               {link.name}
             </Link>
           ))}
-          {/* <Link href="/marketplace/cart" className="block hover:text-white">
-            Cart
-          </Link>
-          <Link href="/account" className="block hover:text-white">
-            Account
-          </Link> */}
-        </nav>
+        </div>
       )}
-    </header>
+    </>
   );
 };
 

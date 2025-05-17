@@ -68,7 +68,7 @@ export default function MarketPlaceSection2() {
             transition={{ delay: 0.2 }}
           >
             <Link
-              href="/marketplace/latest"
+              href="/marketplace/products"
               className="inline-flex items-center justify-center text-indigo-400 hover:text-indigo-300 font-semibold transition underline-offset-4 hover:underline"
             >
               Browse All <FiArrowRight className="ml-2" />

@@ -15,9 +15,9 @@ export default function Home() {
       <OurServices />
       <FeaturedWork />
 
-      <PodcastProvider>
+      {/* <PodcastProvider>
         <PodcastsAndNews />
-      </PodcastProvider>
+      </PodcastProvider> */}
       
       <Events />
       <Feedback />

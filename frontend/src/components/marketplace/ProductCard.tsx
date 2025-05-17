@@ -33,7 +33,7 @@ export default function ProductCard({ product, index = 0, variant = 'grid' }: Pr
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
     >
-      <Link href={`/marketplace/product/${product.slug}`}>
+      <Link href={`/marketplace/products/${product.slug}`}>
         <figure className={`relative ${isHorizontal ? 'w-full h-48 overflow-hidden rounded-t-lg' : 'w-full h-44'}`}>
           <img
             src={product.image}
