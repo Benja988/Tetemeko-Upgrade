@@ -1,36 +1,43 @@
 import express from "express";
-import cors from 'cors';
-import helmet from 'helmet';
+import cors from "cors";
+import helmet from "helmet";
 import rateLimit from "express-rate-limit";
-import dotenv from 'dotenv';
-import authRoutes from './routes/auth.routes'
-import cookieParser from 'cookie-parser'
+import dotenv from "dotenv";
+import authRoutes from "./routes/auth.routes";
+import cookieParser from "cookie-parser";
 
 // Load env
 dotenv.config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// ✅ Middleware
+app.use(
+  cors({
+    origin: "http://localhost:3000", // ✅ Frontend URL
+    credentials: true,               // ✅ Allow cookies and credentials
+    methods: ["GET", "POST", "PUT", "DELETE"], // ✅ Explicit methods
+    allowedHeaders: ["Content-Type", "Authorization"], // ✅ Headers allowed
+  })
+);
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Rate Limiting
+// ✅ Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+  windowMs: 15 * 60 * 1000,
+  max: 100,
 });
 app.use(limiter);
 
-// Routes
-app.use("/api/auth", authRoutes)
+// ✅ Routes
+app.use("/api/auth", authRoutes);
 
-// Default Route
-app.get('/', (req, res) => {
-    res.send("Tetemeko media group is running... ✅")
+// ✅ Default Route
+app.get("/", (req, res) => {
+  res.send("Tetemeko media group is running... ✅");
 });
 
 export default app;

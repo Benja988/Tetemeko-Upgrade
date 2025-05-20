@@ -35,7 +35,7 @@ router.post("/refresh-token", refreshToken);
 
 // 🔹 Password Management
 router.post("/forgot-password", forgotPassword);
-router.post("/reset-password", resetPassword);
+router.post("/reset-password/:token", resetPassword);
 
 // 🔹 Manager Invitations & Role Upgrades
 router.post("/invite-manager", authenticateJWT, authorize([UserRole.ADMIN]), inviteManager);

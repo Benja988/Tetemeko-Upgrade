@@ -1,27 +1,40 @@
-import { Request, Response, NextFunction, RequestHandler } from "express";
-import User, { IUser, UserRole } from "../models/User";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
-import crypto from "crypto";
-import { sendEmail } from "../utils/sendEmail";
-import { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { Request, Response, NextFunction, RequestHandler } from 'express'
+import User, { IUser, UserRole } from '../models/User'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
+import { sendEmail } from '../utils/sendEmail'
+import { AuthenticatedRequest } from '../middlewares/auth.middleware'
+import { generateVerificationEmail } from '../utils/emailTemplate'
+import { sendVerificationSuccessEmail } from '../utils/emailTemplate'
+import { generateResetPasswordEmail } from '../utils/emailTemplate'
+import { generatePasswordResetSuccessEmail } from '../utils/emailTemplate'
+import { generateAdminRegistrationSuccessEmail } from '../utils/emailTemplate'
 
 // Helper to generate JWT token
 const generateToken = (user: IUser) => {
-  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET as string, { expiresIn: "7d" });
-};
+  return jwt.sign(
+    { id: user._id, role: user.role },
+    process.env.JWT_SECRET as string,
+    { expiresIn: '7d' }
+  )
+}
 
-// ✅ Register Web User
-export const registerUser = async (req: Request, res: Response): Promise<void> => {
+// ✅ Register User
+export const registerUser = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password } = req.body
+
     if (await User.findOne({ email })) {
-      res.status(400).json({ message: "Email already registered" });
-      return;
+      res.status(400).json({ message: 'Email already registered' })
+      return
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const hashedPassword = await bcrypt.hash(password, 10)
+    const verificationToken = crypto.randomBytes(32).toString('hex')
 
     const newUser = new User({
       name,
@@ -30,107 +43,146 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       role: UserRole.WEB_USER,
       isVerified: false,
       verificationToken,
-    });
+    })
 
-    await newUser.save();
+    await newUser.save()
 
-    // Construct verification link
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&email=${email}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`
 
-    await sendEmail(email, "Verify Your Email", `Click the link to verify your email: ${verificationLink}`);
+    const emailContent = generateVerificationEmail(name, verificationLink)
 
-    res.status(201).json({ message: "User registered. Please verify your email." });
+    await sendEmail(
+      email,
+      'Welcome to Tetemeko Media! Please Verify Your Email',
+      emailContent
+    )
+
+    res
+      .status(201)
+      .json({ message: 'User registered. Please verify your email.' })
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.error('Registration error:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Verify Email
-export const verifyEmail = async (req: Request, res: Response): Promise<void> => {
+export const verifyEmail = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { token } = req.query; // Read only the token from URL params
+    const { token } = req.query
 
-    if (!token) {
-      res.status(400).json({ message: "Invalid verification link" });
-      return;
+    if (!token || typeof token !== 'string') {
+      res.status(400).json({ message: 'Invalid verification link' })
+      return
     }
 
-    // Find user by token
-    const user = await User.findOne({ verificationToken: token });
+    const user = await User.findOne({ verificationToken: token })
 
     if (!user) {
-      res.status(400).json({ message: "Invalid or expired verification token" });
-      return;
+      res.status(400).json({ message: 'Invalid or expired verification token' })
+      return
     }
 
-    // Mark user as verified
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    await user.save();
+    user.isVerified = true
+    user.verificationToken = undefined
+    await user.save()
 
-    res.status(200).json({ message: "Email verified successfully. You can now log in." });
+    // Send verification success email
+    const emailContent = sendVerificationSuccessEmail(user.name, user.email)
+    await sendEmail(user.email, "You're Verified! 🎉", emailContent)
+
+    res
+      .status(200)
+      .json({ message: 'Email verified successfully. You can now log in.' })
   } catch (error) {
-    console.error("Error verifying email:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Error verifying email:', error)
+    res.status(500).json({ message: 'Internal server error' })
   }
-};
+}
 
-// ✅ Login User
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body
 
     if (!email || !password) {
-      res.status(400).json({ message: "Email and password are required" });
-      return;
+      res.status(400).json({ message: 'Email and password are required' })
+      return
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email })
 
     if (!user) {
-      res.status(401).json({ message: "Invalid credentials" });
-      return;
+      res.status(401).json({ message: 'Invalid credentials' })
+      return
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = await bcrypt.compare(password, user.password)
     if (!isPasswordValid) {
-      res.status(401).json({ message: "Invalid credentials" });
-      return;
+      res.status(401).json({ message: 'Invalid credentials' })
+      return
     }
 
     if (!user.isVerified) {
-      res.status(403).json({ message: "Please verify your email first" });
-      return;
+      res.status(403).json({ message: 'Please verify your email first' })
+      return
     }
 
-    // Generate authentication token
-    const token = generateToken(user);
+    // ✅ Generate access token
+    const token = generateToken(user)
 
+    // ✅ Generate refresh token
+    const refreshToken = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.REFRESH_SECRET as string,
+      { expiresIn: '7d' }
+    )
+
+    // ✅ Save refresh token to DB
+    user.refreshToken = refreshToken
+    await user.save()
+
+    // ✅ Set refresh token in HTTP-only cookie
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    })
+
+    // ✅ Send response
     res.status(200).json({
-      message: "Login successful",
+      message: 'Login successful',
       token,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
       },
-    });
+    })
+
+    console.log(`🔑 Login successful for user: ${user.email}`)
+    
   } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Login error:', error)
+    res.status(500).json({ message: 'Internal server error' })
   }
-};
+}
+
 
 // ✅ Invite Manager
 export const inviteManager = async (req: Request, res: Response) => {
   try {
-    const { email } = req.body;
-    const invitationCode = crypto.randomBytes(8).toString("hex"); // Shorter code
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const { email } = req.body
+    const invitationCode = crypto.randomBytes(8).toString('hex') // Shorter code
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
 
-    console.log(`📩 Sending invitation to: ${email}`);
-    console.log(`📌 Invitation Code: ${invitationCode}`);
+    console.log(`📩 Sending invitation to: ${email}`)
+    console.log(`📌 Invitation Code: ${invitationCode}`)
 
     await sendEmail(
       email,
@@ -158,16 +210,14 @@ export const inviteManager = async (req: Request, res: Response) => {
         <p style="font-size: 12px; color: #555;">Best Regards, <br> Your Company Team</p>
       </div>
       `
-    );
-    
+    )
 
-    res.json({ message: "Invitation sent successfully." });
+    res.json({ message: 'Invitation sent successfully.' })
   } catch (err) {
-    console.error("❌ Server error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('❌ Server error:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
-
+}
 
 // ✅ Admin Registration (Most Secure Method)
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
@@ -175,17 +225,19 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
     const { name, email, password, adminSecret } = req.body;
 
     if (!name || !email || !password || !adminSecret) {
-      res.status(400).json({ message: "All fields are required." });
+      res.status(400).json({ message: 'All fields are required.' });
       return;
     }
 
     if (await User.findOne({ email })) {
-      res.status(400).json({ message: "Email already registered." });
+      res.status(400).json({ message: 'Email already registered.' });
+      console.log('⚠️ Email already registered:', email);
+      
       return;
     }
 
     if (adminSecret !== process.env.ADMIN_SECRET) {
-      res.status(403).json({ message: "Invalid admin secret." });
+      res.status(403).json({ message: 'Invalid admin secret.' });
       return;
     }
 
@@ -200,33 +252,39 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
 
     await newAdmin.save();
 
-    res.status(201).json({ message: "Admin registered successfully" });
+    // Send admin registration success email
+    const emailContent = generateAdminRegistrationSuccessEmail(name);
+    await sendEmail(email, "Welcome to Tetemeko Admin Panel", emailContent);
+
+    res.status(201).json({ message: 'Admin registered successfully' });
   } catch (err) {
-    console.error("❌ Admin Registration Error:", err);
-    res.status(500).json({ message: "Internal server error. Please try again later." });
+    console.error('❌ Admin Registration Error:', err);
+    res.status(500).json({ message: 'Internal server error. Please try again later.' });
   }
 };
 
-
 // ✅ Register Manager with Invitation Code
-export const registerManager = async (req: Request, res: Response): Promise<void> => {
+export const registerManager = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { name, email, password, invitationCode } = req.body;
+    const { name, email, password, invitationCode } = req.body
 
     if (!invitationCode) {
-      res.status(400).json({ message: "Invalid invitation code" });
-      return;
+      res.status(400).json({ message: 'Invalid invitation code' })
+      return
     }
 
     if (await User.findOne({ email })) {
-      res.status(400).json({ message: "Email already registered" });
-      return;
+      res.status(400).json({ message: 'Email already registered' })
+      return
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
+    const hashedPassword = await bcrypt.hash(password, 10)
+
     // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationToken = crypto.randomBytes(32).toString('hex')
 
     const newManager = new User({
       name,
@@ -234,255 +292,335 @@ export const registerManager = async (req: Request, res: Response): Promise<void
       password: hashedPassword,
       role: UserRole.MANAGER,
       isVerified: false,
-      verificationToken,  // Store token in DB
-    });
+      verificationToken, // Store token in DB
+    })
 
-    await newManager.save();
+    await newManager.save()
 
     // Use environment variable for domain
-    const domain = process.env.CLIENT_URL || "https://yourdomain.com";
-    const verificationLink = `${domain}/auth/verify-email?token=${verificationToken}`;
-    
+    const domain = process.env.CLIENT_URL || 'https://yourdomain.com'
+    const verificationLink = `${domain}/auth/verify-email?token=${verificationToken}`
+
     await sendEmail(
-      email, 
-      "Verify Your Email", 
+      email,
+      'Verify Your Email',
       `<p>Hello ${name},</p>
       <p>Click the link below to verify your email:</p>
       <a href="${verificationLink}">${verificationLink}</a>`
-    );
+    )
 
-    res.status(201).json({ message: "Manager registered. Check email to verify your account." });
-
+    res
+      .status(201)
+      .json({
+        message: 'Manager registered. Check email to verify your account.',
+      })
   } catch (err) {
-    console.error("❌ Registration error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('❌ Registration error:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Promote Manager to Admin
-export const promoteToAdmin = async (req: Request, res: Response): Promise<void> => {
+export const promoteToAdmin = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
+    const { userId } = req.params
+    const user = await User.findById(userId)
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     if (user.role !== UserRole.MANAGER) {
-      res.status(400).json({ message: "User is not a manager" });
-      return;
+      res.status(400).json({ message: 'User is not a manager' })
+      return
     }
 
-    user.role = UserRole.ADMIN;
-    await user.save();
+    user.role = UserRole.ADMIN
+    await user.save()
 
-    res.status(200).json({ message: "User promoted to Admin" });
+    res.status(200).json({ message: 'User promoted to Admin' })
   } catch (err) {
-    console.error("Error in promoteToAdmin:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in promoteToAdmin:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Forgot Password
-export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+export const forgotPassword = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { email } = req.body;
-    const user = await User.findOne({ email });
-    
+    const { email } = req.body
+    const user = await User.findOne({ email })
+
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
-    user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1-hour expiry
-    await user.save();
+    const resetToken = crypto.randomBytes(32).toString('hex')
+    user.resetPasswordToken = resetToken
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+    await user.save()
 
-    await sendEmail(email, "Reset Password", `Your reset code: ${resetToken}`);
-    res.status(200).json({ message: "Reset code sent to email" });
+    const emailContent = generateResetPasswordEmail(user.name, resetToken)
+    await sendEmail(user.email, 'Reset Your Password', emailContent)
+
+    res.status(200).json({ message: 'Password reset email sent successfully' })
   } catch (err) {
-    console.error("Error in forgotPassword:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error in forgotPassword:', err)
+    res.status(500).json({ message: 'Internal server error' })
   }
-};
+}
 
 // ✅ Reset Password
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, token, newPassword } = req.body;
-    const user = await User.findOne({ email, resetPasswordToken: token });
+    const { token } = req.query;
+    const { newPassword } = req.body;
 
-    if (!user || !user.resetPasswordExpires || user.resetPasswordExpires < new Date()) {
-      res.status(400).json({ message: "Invalid or expired reset token" });
+    console.log("🔍 Reset Password Request:");
+    console.log("🔑 Token:", token);
+    console.log("🛡️ New Password:", newPassword ? "Provided" : "Not Provided");
+
+    if (!token) {
+      res.status(400).json({ message: "No reset token provided." });
       return;
     }
 
+    // ✅ 1. Find the user with a valid reset token that hasn't expired
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      console.warn("⚠️ Invalid or expired reset token.");
+      res.status(400).json({ message: "Invalid or expired reset token." });
+      return;
+    }
+
+    console.log("✅ User found:", user.email);
+
+    // ✅ 2. Hash the new password
+    console.log("🔒 Hashing new password...");
     user.password = await bcrypt.hash(newPassword, 10);
+
+    // ✅ 3. Clear the reset token and expiration date
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+
+    // ✅ 4. Save the updated user document
+    console.log("💾 Saving updated user document...");
     await user.save();
+    console.log("✅ User document saved successfully");
+
+    // ✅ 5. Send confirmation email
+    const emailContent = generatePasswordResetSuccessEmail(user.name || "User");
+    try {
+      await sendEmail(user.email, "Password Reset Successful", emailContent);
+      console.log(`✅ Confirmation email sent to ${user.email}`);
+    } catch (error) {
+      console.error("❌ Failed to send email:", error);
+    }
 
     res.status(200).json({ message: "Password reset successful" });
+    console.log("🎉 Password reset completed successfully!");
   } catch (err) {
-    console.error("Error in resetPassword:", err);
+    console.error("🔥 Error in resetPassword handler:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 // ✅ Logout (Invalidate refresh tokens)
 export const logout = async (req: Request, res: Response) => {
   try {
-    res.cookie("refreshToken", "", { httpOnly: true, expires: new Date(0) });
-    res.json({ message: "Logged out successfully" });
+    res.cookie('refreshToken', '', { httpOnly: true, expires: new Date(0) })
+    res.json({ message: 'Logged out successfully' })
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Resend Email Verification
-export const resendVerification = async (req: Request, res: Response): Promise<void> => {
+export const resendVerification = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { email } = req.body;
+    const { email } = req.body
 
     if (!email) {
-      res.status(400).json({ message: "Email is required" });
-      return;
+      res.status(400).json({ message: 'Email is required' })
+      return
     }
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email })
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
     if (user.isVerified) {
-      res.status(400).json({ message: "User is already verified" });
-      return;
+      res.status(400).json({ message: 'User is already verified' })
+      return
     }
 
     // Generate new verification token
-    const verificationToken = crypto.randomBytes(32).toString("hex");
-    user.verificationToken = verificationToken;
-    await user.save();
+    const verificationToken = crypto.randomBytes(32).toString('hex')
+    user.verificationToken = verificationToken
+    await user.save()
 
     // Construct verification link
-    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&email=${email}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}&email=${email}`
 
-    await sendEmail(email, "Verify Your Email", `Click the link to verify your email: ${verificationLink}`);
+    await sendEmail(
+      email,
+      'Verify Your Email',
+      `Click the link to verify your email: ${verificationLink}`
+    )
 
-    res.status(200).json({ message: "Verification email resent successfully" });
+    res.status(200).json({ message: 'Verification email resent successfully' })
   } catch (error) {
-    console.error("Error resending verification email:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error('Error resending verification email:', error)
+    res.status(500).json({ message: 'Internal server error' })
   }
-};
+}
 
 // ✅ Get User Profile
-export const getProfile = async (req: Request, res: Response): Promise<void> => {
-  const authReq = req as AuthenticatedRequest;
+export const getProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const authReq = req as AuthenticatedRequest
 
   try {
     if (!authReq.user) {
-      res.status(401).json({ message: "Unauthorized: No user found in request" });
-      return;
+      res
+        .status(401)
+        .json({ message: 'Unauthorized: No user found in request' })
+      return
     }
 
-    const user = await User.findById(authReq.user.id).select("-password");
+    const user = await User.findById(authReq.user.id).select('-password')
 
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
-    res.status(200).json(user);
+    res.status(200).json(user)
   } catch (err) {
-    console.error("Error fetching profile:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error fetching profile:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Update Profile
-export const updateProfile = async (req: Request, res: Response): Promise<void> => {
-  const authReq = req as AuthenticatedRequest; // Ensure req is treated as AuthenticatedRequest
+export const updateProfile = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const authReq = req as AuthenticatedRequest // Ensure req is treated as AuthenticatedRequest
 
   try {
     if (!authReq.user) {
-      res.status(401).json({ message: "Unauthorized: No user found in request" });
-      return;
+      res
+        .status(401)
+        .json({ message: 'Unauthorized: No user found in request' })
+      return
     }
 
-    const user = await User.findById(authReq.user.id);
+    const user = await User.findById(authReq.user.id)
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
-    const { name, password } = req.body;
-    if (name) user.name = name;
-    if (password) user.password = await bcrypt.hash(password, 10);
+    const { name, password } = req.body
+    if (name) user.name = name
+    if (password) user.password = await bcrypt.hash(password, 10)
 
-    await user.save();
-    res.status(200).json({ message: "Profile updated successfully" });
+    await user.save()
+    res.status(200).json({ message: 'Profile updated successfully' })
   } catch (err) {
-    console.error("Error updating profile:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error updating profile:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Deactivate Account (Soft Delete)
-export const deactivateAccount = async (req: Request, res: Response): Promise<void> => {
-  const authReq = req as AuthenticatedRequest; // Ensure req is treated as AuthenticatedRequest
+export const deactivateAccount = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  const authReq = req as AuthenticatedRequest // Ensure req is treated as AuthenticatedRequest
 
   try {
     if (!authReq.user) {
-      res.status(401).json({ message: "Unauthorized: No user found in request" });
-      return;
+      res
+        .status(401)
+        .json({ message: 'Unauthorized: No user found in request' })
+      return
     }
 
-    const user = await User.findById(authReq.user.id);
+    const user = await User.findById(authReq.user.id)
     if (!user) {
-      res.status(404).json({ message: "User not found" });
-      return;
+      res.status(404).json({ message: 'User not found' })
+      return
     }
 
-    user.isActive = false; // Assuming `isActive` exists in your User model
-    await user.save();
-    res.status(200).json({ message: "Account deactivated" });
+    user.isActive = false // Assuming `isActive` exists in your User model
+    await user.save()
+    res.status(200).json({ message: 'Account deactivated' })
   } catch (err) {
-    console.error("Error deactivating account:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error deactivating account:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
 
 // ✅ Refresh Token (Generate new JWT)
-export const refreshToken = async (req: Request, res: Response): Promise<void> => {
+export const refreshToken = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    const { refreshToken } = req.body // ✅ POSTed in body
+
     if (!refreshToken) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
+      res.status(401).json({ message: 'Unauthorized' })
+      return
     }
 
-    jwt.verify(refreshToken, process.env.REFRESH_SECRET as string, (err: Error | null, decoded: any) => {
-      if (err) {
-        res.status(403).json({ message: "Invalid refresh token" });
-        return;
+    jwt.verify(
+      refreshToken,
+      process.env.REFRESH_SECRET as string,
+      (err: Error | null, decoded: any) => {
+        if (err || !decoded) {
+          res.status(403).json({ message: 'Invalid refresh token' })
+          return
+        }
+
+        // ✅ Create a new access token
+        const newToken = jwt.sign(
+          { id: decoded.id, role: decoded.role },
+          process.env.JWT_SECRET as string,
+          { expiresIn: '1h' } // short-lived access token
+        )
+
+        res.status(200).json({ token: newToken })
       }
-
-      const newToken = jwt.sign(
-        { id: decoded.id, role: decoded.role },
-        process.env.JWT_SECRET as string,
-        { expiresIn: "7d" }
-      );
-
-      res.status(200).json({ token: newToken });
-    });
+    )
   } catch (err) {
-    console.error("Error refreshing token:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error('Error refreshing token:', err)
+    res.status(500).json({ message: 'Server error' })
   }
-};
+}
+

@@ -13,6 +13,7 @@ export interface IUser extends Document {
   role: UserRole;
   isVerified: boolean;
   isActive: boolean;
+  refreshToken?: string;
   invitationCode?: string;
   invitationCodeExpires?: Date;
   verificationToken?: string;
@@ -42,9 +43,10 @@ const UserSchema: Schema = new Schema(
     },
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
+    refreshToken: { type: String, unique: true, sparse: true }, // For JWT refresh token
 
     // ✅ Invitation system
-    invitationCode: { type: String, unique: true, sparse: true }, // No need to add index manually
+    invitationCode: { type: String, unique: true, sparse: true }, 
     invitationCodeExpires: { type: Date },
 
     // ✅ Email verification

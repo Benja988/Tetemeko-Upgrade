@@ -1,20 +1,17 @@
-import Sidebar from '@/components/admin/dashboard/Sidebar'
-import DashboardHeader from '@/components/admin/dashboard/DashboardHeader'
+'use client';
 
-export const metadata = {
-  title: 'Dashboard | Tetemeko',
+import { AuthProvider } from '@/context/AuthContext';
+import { Toaster } from 'sonner';
+
+interface LayoutProps {
+  children: React.ReactNode;
 }
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: LayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-light)]">
-      <Sidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <DashboardHeader />
-        <main className="p-4 sm:p-6 overflow-y-auto flex-1">
+    <AuthProvider>
+      <Toaster richColors position="top-center" /> {/* ✅ Add this for toast support */}
           {children}
-        </main>
-      </div>
-    </div>
-  )
+    </AuthProvider>
+  );
 }
