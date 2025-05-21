@@ -1,44 +1,23 @@
-import mongoose, { Document, Schema } from "mongoose";
-import { IAuthor } from "./Author";
-import { IReviewer } from "./Reviewer";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
-/** ================================
- *       COMMENT SCHEMA
-================================= */
-export interface IComment {
-  name: string;
-  email: string;
-  comment: string;
-  replies: IComment[];
-  createdAt?: Date;
-  updatedAt?: Date;
-}
-
-const CommentSchema = new Schema<IComment>(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true },
-    comment: { type: String, required: true },
-    replies: [this],
-  },
-  { timestamps: true }
-);
-
-/** ================================
- *          NEWS SCHEMA
-================================= */
 export interface INews extends Document {
   title: string;
-  text: string;
-  category: string;
-  thumbnail: string;
-  author: mongoose.Schema.Types.ObjectId | IAuthor;
-  reviewer: mongoose.Schema.Types.ObjectId | IReviewer;
-  status: "pending" | "approved" | "rejected";
-  isDeleted: boolean;
-  readTime?: number;
-  views: number;
-  comments: IComment[];
+  content: string;
+  summary?: string;
+  author: Types.ObjectId;         // Reference to Author model
+  category?: Types.ObjectId;      // Reference to Category model
+  tags?: string[];
+  publishedAt?: Date;
+  isPublished: boolean;
+  thumbnail?: string;             // URL of thumbnail image
+  featuredImage?: string;         // URL of featured image/banner
+  seoTitle?: string;              // SEO optimized title
+  seoDescription?: string;        // SEO meta description
+  readingTime?: number;           // Estimated reading time in minutes
+  viewsCount: number;             // Number of views
+  isFeatured: boolean;            // Mark news as featured
+  isBreaking: boolean;            // Mark news as breaking news
+  comments: Types.ObjectId[];     // References to Comment documents
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -46,43 +25,24 @@ export interface INews extends Document {
 const NewsSchema = new Schema<INews>(
   {
     title: { type: String, required: true },
-    text: { type: String, required: true },
-    category: { type: String, required: true },
-    thumbnail: { type: String, required: true },
-    author: { type: mongoose.Schema.Types.ObjectId, ref: "Author", required: true },
-    reviewer: { type: mongoose.Schema.Types.ObjectId, ref: "Reviewer" },
-    status: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
-    isDeleted: { type: Boolean, default: false },
-    readTime: { type: Number },
-    views: { type: Number, default: 0 },
-    comments: [CommentSchema],
+    content: { type: String, required: true },
+    summary: { type: String },
+    author: { type: Schema.Types.ObjectId, ref: "Author", required: true },
+    category: { type: Schema.Types.ObjectId, ref: "Category" }, 
+    tags: [{ type: String }],
+    publishedAt: { type: Date },
+    isPublished: { type: Boolean, default: false },
+    thumbnail: { type: String },
+    featuredImage: { type: String },
+    seoTitle: { type: String },
+    seoDescription: { type: String },
+    readingTime: { type: Number },
+    viewsCount: { type: Number, default: 0 },
+    isFeatured: { type: Boolean, default: false },
+    isBreaking: { type: Boolean, default: false },
+    comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }],
   },
   { timestamps: true }
 );
 
-/** ================================
- *          MIDDLEWARE
-================================= */
-
-// Set read time before saving
-NewsSchema.pre("save", function (next) {
-  const wordsPerMinute = 200;
-  const words = this.text?.split(/\s+/).length || 0;
-  this.readTime = Math.ceil(words / wordsPerMinute);
-  next();
-});
-
-// Filter out deleted documents from queries
-NewsSchema.pre(/^find/, function (this: mongoose.Query<any, any>, next) {
-  this.find({ isDeleted: false });
-  next();
-});
-
-/** ================================
- *          EXPORT MODEL
-================================= */
 export const News = mongoose.model<INews>("News", NewsSchema);

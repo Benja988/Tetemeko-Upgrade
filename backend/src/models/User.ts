@@ -22,6 +22,9 @@ export interface IUser extends Document {
   lockUntil?: Date;
   resetPasswordToken?: string;
   resetPasswordExpires?: Date;
+
+  incrementFailedLogins: () => Promise<void>;
+  resetFailedLogins: () => Promise<void>;
 }
 
 const UserSchema: Schema = new Schema(

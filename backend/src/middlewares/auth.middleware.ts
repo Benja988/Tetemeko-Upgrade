@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import User, { IUser, UserRole } from "../models/User";
 
+
 export interface UserPayload extends JwtPayload {
   id: string;
   role: UserRole;

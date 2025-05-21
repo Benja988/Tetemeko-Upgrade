@@ -5,12 +5,11 @@ import mongoose, { Document, Schema } from "mongoose";
 ================================= */
 export interface IAuthor extends Document {
   name: string;
-  email: string;
-  password: string;
+  email?: string;           // Optional, if you want to contact author
   bio?: string;
-  avatar?: string;
+  avatar?: string;          // URL to profile image
   role: "author";
-  isVerified: boolean;
+  isVerified: boolean;      // For content approval or trust
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -18,8 +17,7 @@ export interface IAuthor extends Document {
 const AuthorSchema = new Schema<IAuthor>(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
+    email: { type: String, unique: true, sparse: true },  // optional but unique if present
     bio: { type: String },
     avatar: { type: String },
     role: { type: String, enum: ["author"], default: "author" },

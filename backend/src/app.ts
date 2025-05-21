@@ -4,6 +4,10 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
+import userRoutes from "./routes/user.routes";
+import categoryRoutes from "./routes/category.routes";
+import authorRoutes from "./routes/author.routes"; // ✅ Author routes
+import newsRoutes from "./routes/news.routes";
 import cookieParser from "cookie-parser";
 
 // Load env
@@ -34,6 +38,10 @@ app.use(limiter);
 
 // ✅ Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/categories", categoryRoutes); // ✅ Category routes
+app.use("/api/authors", authorRoutes); // ✅ Author routes
+app.use("/api/news", newsRoutes); // ✅ News routes
+app.use("/api/users", userRoutes); // ✅ User routes (for admin)
 
 // ✅ Default Route
 app.get("/", (req, res) => {

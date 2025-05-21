@@ -1,102 +1,333 @@
-import { Request, Response, NextFunction } from "express";
-import News from "../models/news.model";
+import { Request, Response } from "express";
+import { News } from "../models/News";  // Adjust the path as needed
+import mongoose from "mongoose";
 
-// 📌 Get all news articles
-export const getAllNews = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Create a news post
+ */
+export const createNews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const news = await News.find().sort({ publishedAt: -1 }).populate("author", "name email");
-    res.status(200).json(news);
-  } catch (error) {
-    next(error);
-  }
-};
+    const {
+      title,
+      content,
+      summary,
+      author,
+      category,
+      tags,
+      publishedAt,
+      isPublished,
+      thumbnail,
+      featuredImage,
+      seoTitle,
+      seoDescription,
+      readingTime,
+      isFeatured,
+      isBreaking,
+    } = req.body;
 
-// 📌 Get single news article
-export const getNewsById = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const news = await News.findById(req.params.id).populate("author", "name email");
-    if (!news) {
-      return res.status(404).json({ message: "Article not found" });
-    }
-    res.status(200).json(news);
-  } catch (error) {
-    next(error);
-  }
-};
+    const news = new News({
+      title,
+      content,
+      summary,
+      author,
+      category,
+      tags,
+      publishedAt,
+      isPublished,
+      thumbnail,
+      featuredImage,
+      seoTitle,
+      seoDescription,
+      readingTime,
+      isFeatured,
+      isBreaking,
+    });
 
-// 📌 Publish a new article (Admin/Content Manager)
-export const createNews = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { title, content } = req.body;
-    const author = req.user?.id;
-
-    const news = new News({ title, content, author });
     await news.save();
 
-    res.status(201).json({ message: "Article published successfully", news });
+    res.status(201).json({ message: "News created successfully", news });
   } catch (error) {
-    next(error);
+    console.error("Error creating news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// 📌 Edit an article (Admin/Content Manager)
-export const updateNews = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Get all news with optional filters & pagination
+ */
+export const getAllNews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const updatedNews = await News.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { page = 1, limit = 10, category, tag, author, isPublished } = req.query;
+
+    const filters: any = {};
+    if (category) filters.category = category;
+    if (author) filters.author = author;
+    if (isPublished !== undefined) filters.isPublished = isPublished === "true";
+    if (tag) filters.tags = { $in: [tag] };
+
+    const newsList = await News.find(filters)
+      .populate("author", "name email") // populate author name & email
+      .sort({ publishedAt: -1 })
+      .skip((+page - 1) * +limit)
+      .limit(+limit);
+
+    const total = await News.countDocuments(filters);
+
+    res.status(200).json({
+      total,
+      page: +page,
+      limit: +limit,
+      news: newsList,
+    });
+  } catch (error) {
+    console.error("Error fetching news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+/**
+ * Get single news by ID
+ */
+export const getNewsById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid news ID" });
+      return;
+    }
+
+    const news = await News.findById(id).populate("author", "name email");
+
+    if (!news) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+
+    res.status(200).json(news);
+  } catch (error) {
+    console.error("Error fetching news by ID:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+/**
+ * Update news by ID
+ */
+export const updateNewsById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid news ID" });
+      return;
+    }
+
+    const updatedNews = await News.findByIdAndUpdate(id, updates, {
+      new: true,
+      runValidators: true,
+    });
+
     if (!updatedNews) {
-      return res.status(404).json({ message: "Article not found" });
+      res.status(404).json({ error: "News not found" });
+      return;
     }
-    res.status(200).json({ message: "Article updated", updatedNews });
+
+    res.status(200).json({ message: "News updated successfully", news: updatedNews });
   } catch (error) {
-    next(error);
+    console.error("Error updating news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// 📌 Delete an article (Admin only)
-export const deleteNews = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Delete news by ID
+ */
+export const deleteNewsById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const deletedNews = await News.findByIdAndDelete(req.params.id);
-    if (!deletedNews) {
-      return res.status(404).json({ message: "Article not found" });
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid news ID" });
+      return;
     }
-    res.status(200).json({ message: "Article deleted" });
+
+    const deleted = await News.findByIdAndDelete(id);
+
+    if (!deleted) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+
+    res.status(200).json({ message: "News deleted successfully" });
   } catch (error) {
-    next(error);
+    console.error("Error deleting news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// 📌 Add a comment to an article
-export const addComment = async (req: Request, res: Response, next: NextFunction) => {
+/**
+ * Increment views count for a news article
+ */
+export const incrementViews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { text } = req.body;
-    const news = await News.findById(req.params.id);
+    const { id } = req.params;
 
-    if (!news) {
-      return res.status(404).json({ message: "Article not found" });
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid news ID" });
+      return;
     }
 
-    news.comments.push({ user: req.user?.id, text, createdAt: new Date() });
-    await news.save();
+    const updatedNews = await News.findByIdAndUpdate(
+      id,
+      { $inc: { viewsCount: 1 } },
+      { new: true }
+    );
 
-    res.status(201).json({ message: "Comment added successfully", comments: news.comments });
+    if (!updatedNews) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+
+    res.status(200).json({ message: "View count incremented", viewsCount: updatedNews.viewsCount });
   } catch (error) {
-    next(error);
+    console.error("Error incrementing views:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
-// 📌 Delete a comment (Admin only)
-export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
+export const getFeaturedNews = async (req: Request, res: Response): Promise<void> => {
   try {
-    const news = await News.findById(req.params.id);
-    if (!news) {
-      return res.status(404).json({ message: "Article not found" });
+    const featuredNews = await News.find({ isFeatured: true, isPublished: true })
+      .sort({ publishedAt: -1 })
+      .limit(5)
+      .populate("author", "name");
+
+    res.status(200).json(featuredNews);
+  } catch (error) {
+    console.error("Error fetching featured news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export const getBreakingNews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const breakingNews = await News.find({ isBreaking: true, isPublished: true })
+      .sort({ publishedAt: -1 })
+      .limit(5)
+      .populate("author", "name");
+
+    res.status(200).json(breakingNews);
+  } catch (error) {
+    console.error("Error fetching breaking news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+export const searchNews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { query, page = 1, limit = 10 } = req.query;
+
+    if (!query || typeof query !== "string") {
+      res.status(400).json({ error: "Search query is required" });
+      return;
     }
 
-    news.comments = news.comments.filter(comment => comment._id?.toString() !== req.params.commentId);
-    await news.save();
+    const searchRegex = new RegExp(query, "i");
 
-    res.status(200).json({ message: "Comment deleted successfully" });
+    const filters = {
+      isPublished: true,
+      $or: [
+        { title: searchRegex },
+        { content: searchRegex },
+        { tags: searchRegex },
+      ],
+    };
+
+    const newsList = await News.find(filters)
+      .populate("author", "name")
+      .skip((+page - 1) * +limit)
+      .limit(+limit)
+      .sort({ publishedAt: -1 });
+
+    const total = await News.countDocuments(filters);
+
+    res.status(200).json({
+      total,
+      page: +page,
+      limit: +limit,
+      news: newsList,
+    });
   } catch (error) {
-    next(error);
+    console.error("Error searching news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+export const getNewsByCategory = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { category } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    const filters = {
+      category,
+      isPublished: true,
+    };
+
+    const newsList = await News.find(filters)
+      .populate("author", "name")
+      .skip((+page - 1) * +limit)
+      .limit(+limit)
+      .sort({ publishedAt: -1 });
+
+    const total = await News.countDocuments(filters);
+
+    res.status(200).json({
+      total,
+      page: +page,
+      limit: +limit,
+      news: newsList,
+    });
+  } catch (error) {
+    console.error("Error fetching news by category:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+export const getRecentNews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const recentNews = await News.find({ isPublished: true })
+      .populate("author", "name")
+      .sort({ publishedAt: -1 })
+      .limit(+limit);
+
+    res.status(200).json(recentNews);
+  } catch (error) {
+    console.error("Error fetching recent news:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+export const getNewsStats = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const totalNews = await News.countDocuments();
+    const publishedNews = await News.countDocuments({ isPublished: true });
+    const unpublishedNews = totalNews - publishedNews;
+
+    res.status(200).json({
+      totalNews,
+      publishedNews,
+      unpublishedNews,
+    });
+  } catch (error) {
+    console.error("Error fetching news statistics:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };

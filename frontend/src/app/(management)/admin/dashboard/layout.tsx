@@ -2,8 +2,18 @@
 
 import DashboardHeader from '@/components/admin/dashboard/DashboardHeader';
 import Sidebar from '@/components/admin/dashboard/Sidebar';
+import { useAuth } from '@/context/AuthContext';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
+import Loader from '@/components/Loader';
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  
+  useAuthGuard(); // Ensure protected routes
+
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Loader message="Loading dashboard..." />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-light)]">

@@ -1,3 +1,6 @@
+// admin/dashboard/page.tsx
+// src/app/(management)/admin/dashboard/page.tsx
+
 'use client';
 
 import { AuthProvider } from '@/context/AuthContext';
