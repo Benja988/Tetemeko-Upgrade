@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { FaFacebook, FaTwitter, FaInstagram, FaYoutube } from "react-icons/fa";
 import { categoriesRow1, categoriesRow2 } from "@/data/categories"; // Make sure the path is correct
+import { SocialLinks } from "../SocialLinks";
+import { QuickLinks } from "../QuickLinks";
 
 const NewsFooter: React.FC = () => {
   const [email, setEmail] = useState<string>("");
@@ -88,6 +90,9 @@ const NewsFooter: React.FC = () => {
         ))}
       </div>
 
+      {/* Quick Links */}
+      <QuickLinks />
+
       {/* Footer Branding and Social Media Icons */}
       <div className="mt-8 flex flex-wrap justify-between items-center gap-4">
         <div className="text-sm">
@@ -95,20 +100,7 @@ const NewsFooter: React.FC = () => {
           <p className="mt-1">Tetemeko Media Group ™ &copy; {new Date().getFullYear()}</p>
         </div>
 
-        <div className="flex gap-4 text-2xl">
-          <Link href="https://www.facebook.com" target="_blank">
-            <FaFacebook className="hover:text-blue-600 transition" />
-          </Link>
-          <Link href="https://www.twitter.com" target="_blank">
-            <FaTwitter className="hover:text-blue-400 transition" />
-          </Link>
-          <Link href="https://www.instagram.com" target="_blank">
-            <FaInstagram className="hover:text-pink-500 transition" />
-          </Link>
-          <Link href="https://www.youtube.com" target="_blank">
-            <FaYoutube className="hover:text-red-600 transition" />
-          </Link>
-        </div>
+        <SocialLinks />
       </div>
 
       {/* Back to Top Button */}

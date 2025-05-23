@@ -1,105 +1,171 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
+import mongoose from "mongoose";
 import Station from "../models/Station";
+import { IUser } from "../models/User";
 
-// @desc Get all stations
-export const getAllStations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 🟢 Create Station
+export const createStation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const stations = await Station.find();
-    res.status(200).json(stations);
+    const { name, description, streamUrl, logoUrl, location, genres } = req.body;
+    const user = req.user as IUser;
+
+    const station = await Station.create({
+      name,
+      description,
+      streamUrl,
+      logoUrl,
+      location,
+      genres,
+      owner: user._id,
+    });
+
+    res.status(201).json({ success: true, station });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Error creating station", error });
   }
 };
 
-// @desc Get a single station by ID
-export const getStationById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 🟢 Get All Stations
+export const getAllStations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
-    if (!station) {
-      res.status(404).json({ message: "Station not found" });
+    const { genre, isActive } = req.query;
+
+    const filter: any = {};
+    if (genre) filter.genres = genre;
+    if (isActive !== undefined) filter.isActive = isActive === "true";
+
+    const stations = await Station.find(filter).populate("owner", "name email");
+
+    res.status(200).json({ success: true, stations });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch stations", error });
+  }
+};
+
+// 🟢 Get Single Station by ID
+export const getStationById = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ success: false, message: "Invalid station ID" });
       return;
     }
-    res.status(200).json(station);
+
+    const station = await Station.findById(id).populate("owner", "name email");
+
+    if (!station) {
+      res.status(404).json({ success: false, message: "Station not found" });
+      return;
+    }
+
+    res.status(200).json({ success: true, station });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Error fetching station", error });
   }
 };
 
-// @desc Create a new station (Admin only)
-export const createStation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 🟢 Update Station
+export const updateStation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const { name, streamUrl, description, logo, schedule } = req.body;
+    const { id } = req.params;
+    const updates = req.body;
+    const user = req.user as IUser;
 
-    const station = new Station({ name, streamUrl, description, logo, schedule });
+    const station = await Station.findById(id);
+
+    if (!station) {
+      res.status(404).json({ success: false, message: "Station not found" });
+      return;
+    }
+
+    const isOwner = station.owner.toString() === user.id.toString();
+    const isAdmin = user.role === "admin";
+
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ success: false, message: "Not authorized to update this station" });
+      return;
+    }
+
+    Object.assign(station, updates);
     await station.save();
 
-    res.status(201).json({ message: "Station created successfully", station });
+    res.status(200).json({ success: true, station });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Error updating station", error });
   }
 };
 
-// @desc Update a station (Admin only)
-export const updateStation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 🟢 Delete Station
+export const deleteStation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const updatedStation = await Station.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!updatedStation) {
-      res.status(404).json({ message: "Station not found" });
-      return;
-    }
+    const { id } = req.params;
+    const user = req.user as IUser;
 
-    res.status(200).json({ message: "Station updated", updatedStation });
-  } catch (error) {
-    next(error);
-  }
-};
+    const station = await Station.findById(id);
 
-// @desc Delete a station (Admin only)
-export const deleteStation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const deletedStation = await Station.findByIdAndDelete(req.params.id);
-    if (!deletedStation) {
-      res.status(404).json({ message: "Station not found" });
-      return;
-    }
-
-    res.status(200).json({ message: "Station deleted" });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc Get live stream URL & now-playing info
-export const getLiveStreamInfo = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const station = await Station.findById(req.params.id);
     if (!station) {
-      res.status(404).json({ message: "Station not found" });
+      res.status(404).json({ success: false, message: "Station not found" });
       return;
     }
 
-    const nowPlaying = {
-      track: "Live Broadcast",
-      host: "Tetemeko Radio Host",
-    };
+    const isOwner = station.owner.toString() === user.id.toString();
+    const isAdmin = user.role === "admin";
 
-    res.status(200).json({ streamUrl: station.streamUrl, nowPlaying });
+    if (!isOwner && !isAdmin) {
+      res.status(403).json({ success: false, message: "Not authorized to delete this station" });
+      return;
+    }
+
+    await station.deleteOne();
+
+    res.status(200).json({ success: true, message: "Station deleted successfully" });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Error deleting station", error });
   }
 };
 
-// @desc Get upcoming shows for a station
-export const getStationSchedule = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// 🟢 Toggle Active Status (Admin only)
+export const toggleStationStatus = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
-    if (!station) {
-      res.status(404).json({ message: "Station not found" });
+    const { id } = req.params;
+    const user = req.user as IUser;
+
+    if (user.role !== "admin") {
+      res.status(403).json({ success: false, message: "Only admins can toggle station status" });
       return;
     }
 
-    res.status(200).json(station.schedule);
+    const station = await Station.findById(id);
+
+    if (!station) {
+      res.status(404).json({ success: false, message: "Station not found" });
+      return;
+    }
+
+    station.isActive = !station.isActive;
+    await station.save();
+
+    res.status(200).json({ success: true, station });
   } catch (error) {
-    next(error);
+    res.status(500).json({ success: false, message: "Error toggling station status", error });
   }
 };

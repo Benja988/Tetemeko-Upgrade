@@ -1,26 +1,41 @@
 import express from "express";
 import {
+  createStation,
   getAllStations,
   getStationById,
-  createStation,
   updateStation,
   deleteStation,
-  getLiveStreamInfo,
-  getStationSchedule,
+  toggleStationStatus,
 } from "../controllers/station.controller";
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
+import { UserRole } from "../models/User";
 
 const router = express.Router();
 
-// Public routes
-router.get("/", getAllStations);
-router.get("/:id", getStationById);
-router.get("/:id/live", getLiveStreamInfo);
-router.get("/:id/schedule", getStationSchedule);
+// 🟢 Public Routes
+router.get("/", getAllStations);                // Get all stations
+router.get("/:id", getStationById);             // Get single station by ID
 
-// Protected routes (Admin only)
-router.post("/", authenticateJWT, authorize(["admin"]), createStation);
-router.put("/:id", authenticateJWT, authorize(["admin"]), updateStation);
-router.delete("/:id", authenticateJWT, authorize(["admin"]), deleteStation);
+// 🟡 Authenticated Routes
+router.post(
+  "/",
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
+  createStation
+);                                               // Create a station
+
+router.put(
+  "/:id",
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
+  updateStation
+);                                               // Update a station
+
+router.delete(
+  "/:id",
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
+  deleteStation
+);
 
 export default router;

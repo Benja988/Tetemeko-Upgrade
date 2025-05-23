@@ -45,7 +45,7 @@ export default function ContactSection3() {
               value={formData.name}
               onChange={handleChange}
               placeholder="John Doe"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
           </div>
@@ -59,7 +59,7 @@ export default function ContactSection3() {
               value={formData.email}
               onChange={handleChange}
               placeholder="you@example.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               required
             />
           </div>
@@ -73,7 +73,7 @@ export default function ContactSection3() {
               value={formData.subject}
               onChange={handleChange}
               placeholder="I want to advertise"
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -86,7 +86,7 @@ export default function ContactSection3() {
               value={formData.message}
               onChange={handleChange}
               placeholder="Type your message here..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               required
             ></textarea>
           </div>

@@ -1,34 +1,37 @@
 import React from 'react';
+import { Radio, Tv } from 'lucide-react';
 
 const stations = [
-    { name: 'Station A', listeners: 1200 },
-    { name: 'Station B', listeners: 900 },
-    { name: 'Station C', listeners: 600 },
-  ];
-  
-  export default function TopStationsChart() {
-    const maxListeners = Math.max(...stations.map((s) => s.listeners));
-  
-    return (
-      <section className="bg-white p-5 rounded-2xl shadow-md hover:shadow-lg transition">
-        <h2 className="text-xl sm:text-2xl font-semibold text-[var(--color-primary)] mb-5">Top Stations</h2>
-        <div className="space-y-5">
-          {stations.map((station) => (
-            <div key={station.name}>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium text-gray-700">{station.name}</span>
-                <span className="text-gray-500">{station.listeners}</span>
+  { name: 'Radio Piny Luo', listeners: 1200, icon: <Radio className="w-4 h-4 text-blue-500" /> },
+  { name: 'Tetemeko TV', listeners: 900, icon: <Tv className="w-4 h-4 text-red-500" /> },
+  { name: 'Tetemeko Radio', listeners: 600, icon: <Radio className="w-4 h-4 text-green-500" /> },
+];
+
+export default function TopStationsChart() {
+  const maxListeners = Math.max(...stations.map((s) => s.listeners));
+
+  return (
+    <section className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
+      <h2 className="text-2xl font-bold text-[var(--color-primary)] mb-6">Top Stations</h2>
+      <div className="space-y-6">
+        {stations.map((station) => (
+          <div key={station.name}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {station.icon}
+                <span className="font-medium text-gray-800">{station.name}</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-[var(--color-secondary)] h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(station.listeners / maxListeners) * 100}%` }}
-                />
-              </div>
+              <span className="text-sm text-gray-500">{station.listeners.toLocaleString()} listeners</span>
             </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-  
+            <div className="w-full bg-gray-200 h-2 rounded-full">
+              <div
+                className="h-2 rounded-full bg-gradient-to-r from-[var(--color-secondary)] to-[var(--color-primary)] transition-all duration-500"
+                style={{ width: `${(station.listeners / maxListeners) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

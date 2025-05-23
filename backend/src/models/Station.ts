@@ -1,26 +1,26 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
-interface IStation extends Document {
+export interface IStation extends Document {
   name: string;
-  streamUrl: string;
   description?: string;
-  logo?: string;
-  schedule?: { time: string; program: string }[];
-  createdAt: Date;
+  streamUrl: string;
+  logoUrl?: string;
+  location?: string;
+  genres: string[];
+  isActive: boolean;
+  owner: mongoose.Types.ObjectId; // ref: User
 }
 
-const StationSchema = new Schema<IStation>(
+const StationSchema: Schema = new Schema(
   {
-    name: { type: String, required: true, unique: true },
-    streamUrl: { type: String, required: true },
+    name: { type: String, required: true },
     description: { type: String },
-    logo: { type: String },
-    schedule: [
-      {
-        time: { type: String },
-        program: { type: String },
-      },
-    ],
+    streamUrl: { type: String, required: true },
+    logoUrl: { type: String },
+    location: { type: String },
+    genres: [{ type: String }],
+    isActive: { type: Boolean, default: true },
+    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
 );

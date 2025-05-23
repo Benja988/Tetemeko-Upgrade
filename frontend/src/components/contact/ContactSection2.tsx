@@ -35,7 +35,7 @@ export default function ContactSection2() {
   ];
 
   return (
-    <section className="bg-gray-50 py-20 px-6 md:px-16 text-gray-900">
+    <section className="bg-white py-20 px-6 md:px-16 text-gray-900">
       <div className="max-w-7xl mx-auto">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Contact Directory</h2>
 
