@@ -12,11 +12,18 @@ export interface NewsArticle {
   imageSrc: string;
   text: string;
   tag: string;
-  slug: string;
+  slug?: string;
   category: string;
   videoSrc: string | null;
   listItems: string[];
   relatedArticles: RelatedArticle[];
   createdAt: string;
   updatedAt: string;
+}
+
+interface NewsTableProps {
+  articles: NewsArticle[];
+  search: string;
+  filter: string;
+  onEdit: (article: NewsArticle) => void;
 }
