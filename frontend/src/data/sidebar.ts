@@ -14,12 +14,6 @@ export const navItems: NavItem[] = [
   {
     label: 'Users',
     href: '/admin/dashboard/users',
-    subItems: [
-      { label: 'All Users', href: '/admin/dashboard/users' },
-      { label: 'Create User', href: '/admin/dashboard/users/create' },
-      { label: 'Suspended Users', href: '/admin/dashboard/users/suspended' },
-      { label: 'Roles & Permissions', href: '/admin/dashboard/users/roles' },
-    ],
   },
   {
     label: 'Stations',
