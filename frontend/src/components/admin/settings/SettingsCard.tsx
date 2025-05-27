@@ -1,6 +1,7 @@
 'use client';
 
 import { Setting } from '@/interfaces/Settings';
+import { motion } from 'framer-motion';
 
 interface SettingsCardProps {
   setting: Setting;
@@ -8,39 +9,51 @@ interface SettingsCardProps {
 }
 
 export default function SettingsCard({ setting, onChange }: SettingsCardProps) {
+  const handleInput = (value: any) => onChange(setting.id, value);
+
   return (
-    <div className="border rounded p-4 bg-white shadow-sm space-y-2">
-      <label className="block font-medium">{setting.label}</label>
-      {setting.description && <p className="text-sm text-gray-500">{setting.description}</p>}
+    <motion.div
+      className="bg-white p-4 rounded-lg border shadow-sm space-y-2"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
+      <label className="block font-medium text-gray-800">{setting.label}</label>
+      {setting.description && (
+        <p className="text-sm text-gray-500">{setting.description}</p>
+      )}
+
       {setting.type === 'text' || setting.type === 'email' ? (
         <input
           type={setting.type}
-          value={setting.value as string}
-          onChange={(e) => onChange(setting.id, e.target.value)}
-          className="w-full p-2 border rounded mt-1"
+          value={String(setting.value)}
+          onChange={(e) => handleInput(e.target.value)}
+          className="w-full p-2 border rounded-md"
         />
       ) : setting.type === 'number' ? (
         <input
           type="number"
           value={setting.value as number}
-          onChange={(e) => onChange(setting.id, parseInt(e.target.value))}
-          className="w-full p-2 border rounded mt-1"
+          onChange={(e) => handleInput(Number(e.target.value))}
+          className="w-full p-2 border rounded-md"
         />
       ) : setting.type === 'toggle' ? (
-        <label className="inline-flex items-center space-x-2 mt-1">
+        <label className="inline-flex items-center mt-1">
           <input
             type="checkbox"
             checked={Boolean(setting.value)}
-            onChange={(e) => onChange(setting.id, e.target.checked)}
+            onChange={(e) => handleInput(e.target.checked)}
             className="accent-blue-600"
           />
-          <span>{Boolean(setting.value) ? 'Enabled' : 'Disabled'}</span>
+          <span className="ml-2 text-gray-700">
+            {Boolean(setting.value) ? 'Enabled' : 'Disabled'}
+          </span>
         </label>
       ) : setting.type === 'select' ? (
         <select
-          value={setting.value as string}
-          onChange={(e) => onChange(setting.id, e.target.value)}
-          className="w-full p-2 border rounded mt-1"
+          value={String(setting.value)}
+          onChange={(e) => handleInput(e.target.value)}
+          className="w-full p-2 border rounded-md"
         >
           {setting.options?.map((opt) => (
             <option key={opt} value={opt}>
@@ -49,6 +62,6 @@ export default function SettingsCard({ setting, onChange }: SettingsCardProps) {
           ))}
         </select>
       ) : null}
-    </div>
+    </motion.div>
   );
 }

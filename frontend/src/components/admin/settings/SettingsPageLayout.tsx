@@ -1,66 +1,148 @@
 'use client';
 
-import { useState } from 'react';
-import { settings as allSettings } from '@/data/settings';
-import { Setting } from '@/interfaces/Settings';
+import { useEffect, useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { AnimatePresence, motion } from 'framer-motion';
+
+import CollapsibleSection from './CollapsibleSection';
 import SettingsCategories from './SettingsCategories';
 import SettingsCard from './SettingsCard';
+import Notification from './Notification';
+import SaveCancelButtons from './SaveCancelButtons';
+import ProfileBanner from './ProfileBanner';
 
-export default function SettingsPageLayout({ heading }: { heading: string }) {
-  const categories = Array.from(new Set(allSettings.map((s) => s.category)));
+import { Setting } from '@/interfaces/Settings';
+
+interface SettingsPageLayoutProps {
+  profileImage?: string;
+  title: string;
+  subtitle?: string;
+  categories: string[];
+  settingsByCategory: Record<string, Setting[]>;
+  onSave: (settings: Setting[]) => Promise<void>;
+}
+
+export default function SettingsPageLayout({
+  profileImage,
+  title,
+  subtitle,
+  categories,
+  settingsByCategory,
+  onSave,
+}: SettingsPageLayoutProps) {
+  // If no categories provided, just render the heading + optional subtitle + profile image
+  if (!categories.length) {
+    return (
+      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
+        <ProfileBanner imageUrl={profileImage} title={title} subtitle={subtitle} />
+      </div>
+    );
+  }
+
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
-  const [formState, setFormState] = useState<Record<string, string | boolean | number>>(
-    Object.fromEntries(allSettings.map((s) => [s.id, s.value]))
-  );
+  const [settings, setSettings] = useState<Setting[]>([]);
+  const [originalSettings, setOriginalSettings] = useState<Setting[]>([]);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [debouncedSettings] = useDebounce(settings, 1000);
 
-  const handleChange = (id: string, value: string | boolean | number) => {
-    setFormState((prev) => ({ ...prev, [id]: value }));
+  useEffect(() => {
+    const currentSettings = settingsByCategory[selectedCategory] || [];
+    setSettings(currentSettings);
+    setOriginalSettings(JSON.parse(JSON.stringify(currentSettings)));
+  }, [selectedCategory, settingsByCategory]);
+
+  useEffect(() => {
+    if (JSON.stringify(debouncedSettings) !== JSON.stringify(originalSettings)) {
+      handleAutoSave(debouncedSettings);
+    }
+  }, [debouncedSettings]);
+
+  const handleAutoSave = async (updatedSettings: Setting[]) => {
+    try {
+      await onSave(updatedSettings);
+      setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
+      setNotification({ type: 'success', message: 'Settings auto-saved.' });
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Auto-save failed. Please try again.' });
+    } finally {
+      setTimeout(() => setNotification(null), 4000);
+    }
   };
 
-  const settingsToShow = allSettings.filter((s) => s.category === selectedCategory);
+  const handleChange = (id: string, value: string | boolean | number) => {
+    const updated = settings.map((s) => (s.id === id ? { ...s, value } : s));
+    setSettings(updated);
+  };
+
+  const handleSave = async () => {
+    try {
+      await onSave(settings);
+      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+      setNotification({ type: 'success', message: 'Settings saved successfully.' });
+    } catch (err) {
+      setNotification({ type: 'error', message: 'Save failed. Please try again.' });
+    } finally {
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const handleCancel = () => {
+    setSettings(JSON.parse(JSON.stringify(originalSettings)));
+  };
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Profile Banner */}
-      <div className="relative w-full h-40 bg-blue-100 rounded-md overflow-hidden mb-6">
-        <img
-          src={formState['bgImage'] as string || '/default-bg.jpg'}
-          alt="Background"
-          className="absolute inset-0 w-full h-full object-cover opacity-40"
-        />
-        <div className="relative z-10 flex items-center space-x-4 p-4">
-          <img
-            src={formState['profileImage'] as string || '/default-avatar.png'}
-            className="w-20 h-20 rounded-full border-4 border-white shadow-md"
-            alt="Profile"
-          />
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">Admin Settings</h2>
-            <p className="text-sm text-gray-600">Manage your company settings and preferences.</p>
-          </div>
-        </div>
-      </div>
+    <motion.div
+      className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
+      {notification && (
+        <motion.div
+          key={notification.message}
+          className="mb-4"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Notification type={notification.type} message={notification.message} />
+        </motion.div>
+      )}
 
-      {/* Heading */}
-      <h1 className="text-2xl font-semibold text-gray-800">{heading}</h1>
+      <ProfileBanner imageUrl={profileImage} title={title} subtitle={subtitle} />
 
-      {/* Category Tabs */}
       <SettingsCategories
         categories={categories}
         selected={selectedCategory}
         onSelect={setSelectedCategory}
       />
 
-      {/* Settings Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {settingsToShow.map((setting) => (
-          <SettingsCard
-            key={setting.id}
-            setting={{ ...setting, type: setting.type as "number" | "text" | "email" | "toggle" | "select", value: formState[setting.id] }}
-            onChange={handleChange}
-          />
-        ))}
-      </div>
-    </div>
+      <CollapsibleSection title={`Settings - ${selectedCategory}`}>
+        <motion.div
+          className="space-y-4"
+          layout
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <AnimatePresence mode="wait">
+            {settings.map((setting) => (
+              <motion.div
+                key={setting.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+              >
+                <SettingsCard setting={setting} onChange={handleChange} />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
+
+        <SaveCancelButtons onSave={handleSave} onCancel={handleCancel} />
+      </CollapsibleSection>
+    </motion.div>
   );
 }

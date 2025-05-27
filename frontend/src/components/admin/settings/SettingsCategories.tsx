@@ -12,13 +12,15 @@ export default function SettingsCategories({
   onSelect,
 }: SettingsCategoriesProps) {
   return (
-    <div className="flex gap-3 border-b mb-4">
+    <div className="flex flex-wrap gap-2 border-b pb-2 mb-4">
       {categories.map((cat) => (
         <button
           key={cat}
           onClick={() => onSelect(cat)}
-          className={`py-2 px-4 border-b-2 ${
-            selected === cat ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-blue-500'
+          className={`px-4 py-2 rounded-t-md text-sm font-medium border-b-2 ${
+            selected === cat
+              ? 'text-blue-600 border-blue-600'
+              : 'text-gray-500 border-transparent hover:text-blue-500'
           }`}
         >
           {cat}

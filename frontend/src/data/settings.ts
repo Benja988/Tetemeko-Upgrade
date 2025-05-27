@@ -1,11 +1,13 @@
-export const settings = [
+import type { Setting } from "@/interfaces/Settings";
+
+export const settings: Setting[] = [
   {
     id: 'companyName',
     label: 'Company Name',
     type: 'text',
     value: 'Acme Inc.',
     category: 'Company Info',
-    description: 'Displayed on invoices and communication'
+    description: 'Displayed on invoices and communication',
   },
   {
     id: 'profileImage',
@@ -13,7 +15,7 @@ export const settings = [
     type: 'text',
     value: '',
     category: 'Appearance',
-    description: 'URL for the profile/avatar image'
+    description: 'URL for the profile/avatar image',
   },
   {
     id: 'bgImage',
@@ -21,7 +23,7 @@ export const settings = [
     type: 'text',
     value: '',
     category: 'Appearance',
-    description: 'URL for dashboard banner background'
+    description: 'URL for dashboard banner background',
   },
   {
     id: 'twitter',
@@ -29,7 +31,7 @@ export const settings = [
     type: 'text',
     value: '',
     category: 'Social Links',
-    description: 'e.g. https://twitter.com/yourhandle'
+    description: 'e.g. https://twitter.com/yourhandle',
   },
   {
     id: 'facebook',
@@ -37,7 +39,7 @@ export const settings = [
     type: 'text',
     value: '',
     category: 'Social Links',
-    description: 'e.g. https://facebook.com/yourpage'
+    description: 'e.g. https://facebook.com/yourpage',
   },
   // More settings...
 ];
