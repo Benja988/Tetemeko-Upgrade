@@ -1,148 +1,109 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useDebounce } from 'use-debounce';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useState } from "react";
+import { settingsData } from "@/data/settings";
+import { SettingItem } from "@/interfaces/Settings";
 
-import CollapsibleSection from './CollapsibleSection';
-import SettingsCategories from './SettingsCategories';
-import SettingsCard from './SettingsCard';
-import Notification from './Notification';
-import SaveCancelButtons from './SaveCancelButtons';
-import ProfileBanner from './ProfileBanner';
+import FileUpload from "./FileUpload";
+import Notification from "./Notification";
+import SettingsActions from "./SettingsActions";
+import SettingsTable from "./SettingsTable";
+import CollapsibleSections from "./CollapsibleSections";
+import SettingsTab from "./SettingsTab";
 
-import { Setting } from '@/interfaces/Settings';
+import SocialLinksSettings from "./SocialLinksSettings";
+import CompanyInfoSettings from "./CompanyInfoSettings";
+import FeaturedWorksSettings from "./FeaturedWorksSettings";
+import EventsSettings from "./EventsSettings";
 
-interface SettingsPageLayoutProps {
-  profileImage?: string;
-  title: string;
-  subtitle?: string;
-  categories: string[];
-  settingsByCategory: Record<string, Setting[]>;
-  onSave: (settings: Setting[]) => Promise<void>;
+interface Props {
+  heading: string;
 }
 
-export default function SettingsPageLayout({
-  profileImage,
-  title,
-  subtitle,
-  categories,
-  settingsByCategory,
-  onSave,
-}: SettingsPageLayoutProps) {
-  // If no categories provided, just render the heading + optional subtitle + profile image
-  if (!categories.length) {
-    return (
-      <div className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen">
-        <ProfileBanner imageUrl={profileImage} title={title} subtitle={subtitle} />
-      </div>
-    );
-  }
+export default function SettingsPageLayout({ heading }: Props) {
+  const [activeTab, setActiveTab] = useState("General");
 
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
-  const [settings, setSettings] = useState<Setting[]>([]);
-  const [originalSettings, setOriginalSettings] = useState<Setting[]>([]);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [debouncedSettings] = useDebounce(settings, 1000);
+  const tabSectionMap: Record<string, string[]> = {
+    General: ["Appearance", "Notifications", "System"],
+    Social: ["Social Links"],
+    Company: ["Company Info"],
+    "Featured Works": ["Featured Works"],
+    Events: ["Events"]
+  };
 
-  useEffect(() => {
-    const currentSettings = settingsByCategory[selectedCategory] || [];
-    setSettings(currentSettings);
-    setOriginalSettings(JSON.parse(JSON.stringify(currentSettings)));
-  }, [selectedCategory, settingsByCategory]);
+  const filteredSections = tabSectionMap[activeTab] || [];
 
-  useEffect(() => {
-    if (JSON.stringify(debouncedSettings) !== JSON.stringify(originalSettings)) {
-      handleAutoSave(debouncedSettings);
-    }
-  }, [debouncedSettings]);
-
-  const handleAutoSave = async (updatedSettings: Setting[]) => {
-    try {
-      await onSave(updatedSettings);
-      setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
-      setNotification({ type: 'success', message: 'Settings auto-saved.' });
-    } catch (err) {
-      setNotification({ type: 'error', message: 'Auto-save failed. Please try again.' });
-    } finally {
-      setTimeout(() => setNotification(null), 4000);
+  const getComponent = (setting: SettingItem) => {
+    switch (setting.type) {
+      case "upload":
+        return <FileUpload key={setting.id} />;
+      case "notification":
+        return <Notification key={setting.id} />;
+      case "action":
+        return <SettingsActions key={setting.id} />;
+      case "table":
+        return <SettingsTable key={setting.id} />;
+      default:
+        return null;
     }
   };
 
-  const handleChange = (id: string, value: string | boolean | number) => {
-    const updated = settings.map((s) => (s.id === id ? { ...s, value } : s));
-    setSettings(updated);
-  };
-
-  const handleSave = async () => {
-    try {
-      await onSave(settings);
-      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
-      setNotification({ type: 'success', message: 'Settings saved successfully.' });
-    } catch (err) {
-      setNotification({ type: 'error', message: 'Save failed. Please try again.' });
-    } finally {
-      setTimeout(() => setNotification(null), 4000);
+  const renderCustomTabComponent = () => {
+    switch (activeTab) {
+      case "Social":
+        return <SocialLinksSettings />;
+      case "Company":
+        return <CompanyInfoSettings />;
+      case "Featured Works":
+        return <FeaturedWorksSettings />;
+      case "Events":
+        return <EventsSettings />;
+      default:
+        return null;
     }
-  };
-
-  const handleCancel = () => {
-    setSettings(JSON.parse(JSON.stringify(originalSettings)));
   };
 
   return (
-    <motion.div
-      className="max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      {notification && (
-        <motion.div
-          key={notification.message}
-          className="mb-4"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.3 }}
-        >
-          <Notification type={notification.type} message={notification.message} />
-        </motion.div>
-      )}
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">{heading}</h1>
 
-      <ProfileBanner imageUrl={profileImage} title={title} subtitle={subtitle} />
-
-      <SettingsCategories
-        categories={categories}
-        selected={selectedCategory}
-        onSelect={setSelectedCategory}
+      <SettingsTab
+        currentTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={[
+          { id: "General", label: "General" },
+          { id: "Social", label: "Social Links" },
+          { id: "Company", label: "Company Info" },
+          { id: "Featured Works", label: "Featured Works" },
+          { id: "Events", label: "Events" },
+        ]}
       />
 
-      <CollapsibleSection title={`Settings - ${selectedCategory}`}>
-        <motion.div
-          className="space-y-4"
-          layout
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <AnimatePresence mode="wait">
-            {settings.map((setting) => (
-              <motion.div
-                key={setting.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <SettingsCard setting={setting} onChange={handleChange} />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </motion.div>
+      {/* Render section-based settings if available */}
+      {filteredSections.length > 0 &&
+        filteredSections.map((section) => (
+          <CollapsibleSections key={section} title={section}>
+            {settingsData
+              .filter((item) => item.section === section)
+              .map((setting) => (
+                <div
+                  key={setting.id}
+                  className="border rounded-md shadow-sm mb-4 p-4 bg-white"
+                >
+                  <h2 className="text-lg font-semibold">{setting.title}</h2>
+                  {setting.description && (
+                    <p className="text-sm text-gray-600 mb-2">
+                      {setting.description}
+                    </p>
+                  )}
+                  {getComponent(setting)}
+                </div>
+              ))}
+          </CollapsibleSections>
+        ))}
 
-        <SaveCancelButtons onSave={handleSave} onCancel={handleCancel} />
-      </CollapsibleSection>
-    </motion.div>
+      {/* Render custom tab component if tab has no section-based settings */}
+      {filteredSections.length === 0 && renderCustomTabComponent()}
+    </div>
   );
 }

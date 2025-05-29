@@ -1,19 +1,21 @@
 'use client';
 
-import { useMemo, useState } from "react";
-import dayjs from "dayjs";
-import UserRow from "./UserRow";
-import UserDetailBox from "./UserDetailBox";
-import { UserTableProps, IUser as User } from "@/types/user";
+import { useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import UserRow from './UserRow';
+import UserDetailBox from './UserDetailBox';
+import { UserTableProps, IUser as User } from '@/types/user';
+import { useDebounce } from '@/hooks/useDebounce'; // Custom hook to debounce inputs
 
 export default function UserTable({ users, search, filter }: UserTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const debouncedSearch = useDebounce(search, 300);
 
   const filteredUsers = useMemo(() => {
     let result = [...users];
 
-    if (search.trim()) {
-      const lowerSearch = search.toLowerCase();
+    if (debouncedSearch.trim()) {
+      const lowerSearch = debouncedSearch.toLowerCase();
       result = result.filter(
         (user) =>
           user.name.toLowerCase().includes(lowerSearch) ||
@@ -21,23 +23,23 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
       );
     }
 
-    if (filter && filter !== "all") {
+    if (filter && filter !== 'all') {
       switch (filter) {
-        case "admin":
-        case "manager":
-        case "web_user":
+        case 'admin':
+        case 'manager':
+        case 'web_user':
           result = result.filter((user) => user.role === filter);
           break;
-        case "active":
+        case 'active':
           result = result.filter((user) => user.isActive);
           break;
-        case "inactive":
+        case 'inactive':
           result = result.filter((user) => !user.isActive);
           break;
-        case "verified":
+        case 'verified':
           result = result.filter((user) => user.isVerified);
           break;
-        case "unverified":
+        case 'unverified':
           result = result.filter((user) => !user.isVerified);
           break;
         default:
@@ -46,17 +48,13 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
     }
 
     return result;
-  }, [users, search, filter]);
+  }, [users, debouncedSearch, filter]);
 
   return (
     <div className="flex gap-6">
       {/* Table container */}
       <div
-        className={`custom-scrollbar
-          overflow-x-auto bg-white rounded-lg shadow
-          flex-1
-          max-w-full
-        `}
+        className="custom-scrollbar overflow-x-auto bg-white rounded-lg shadow flex-1 max-w-full"
       >
         <table className="min-w-full text-sm">
           <thead>
@@ -83,44 +81,37 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
                     key={user._id}
                     className="border-b hover:bg-gray-50 transition cursor-default"
                   >
-                    {/* Only name cell is clickable to open detail box */}
-                    <td
-                      className="p-3 text-left whitespace-nowrap cursor-pointer text-blue-600 hover:underline"
-                      onClick={() => setSelectedUser(user)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          setSelectedUser(user);
-                        }
-                      }}
-                      aria-label={`View details for ${user.name}`}
-                    >
-                      {user.name}
+                    <td className="p-3 text-left whitespace-nowrap">
+                      <button
+                        className="text-blue-600 hover:underline"
+                        onClick={() => setSelectedUser(user)}
+                        aria-label={`View details for ${user.name}`}
+                      >
+                        {user.name}
+                      </button>
                     </td>
-
                     <td className="p-3 text-left whitespace-nowrap">{user.email}</td>
                     <td className="p-3 text-left capitalize whitespace-nowrap">{user.role}</td>
                     <td className="p-3 text-left whitespace-nowrap">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           user.isActive
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-red-100 text-red-700'
                         }`}
                       >
-                        {user.isActive ? "Active" : "Inactive"}
+                        {user.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="p-3 text-left whitespace-nowrap">
                       <span
                         className={`px-2 py-1 rounded-full text-xs font-medium ${
                           user.isVerified
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-yellow-100 text-yellow-700'
                         }`}
                       >
-                        {user.isVerified ? "Verified" : "Unverified"}
+                        {user.isVerified ? 'Verified' : 'Unverified'}
                       </span>
                     </td>
                     <td className="p-3 text-center whitespace-nowrap">
@@ -135,8 +126,8 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
                     </td>
                     <td className="p-3 text-left whitespace-nowrap">
                       {user.createdAt
-                        ? dayjs(user.createdAt).format("MMM D, YYYY")
-                        : "-"}
+                        ? dayjs(user.createdAt).format('MMM D, YYYY')
+                        : '-'}
                     </td>
                     <td className="p-3 text-left whitespace-nowrap">
                       <UserRow user={user} />
@@ -144,6 +135,12 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
                   </tr>
                 );
               })
+            ) : users.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="text-center text-gray-500 py-6">
+                  No users found.
+                </td>
+              </tr>
             ) : (
               <tr>
                 <td colSpan={9} className="text-center text-gray-500 py-6">
