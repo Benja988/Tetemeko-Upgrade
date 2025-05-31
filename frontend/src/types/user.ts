@@ -6,6 +6,7 @@ export enum UserRole {
   WEB_USER = "web_user",
 }
 
+// Main user interface aligned with backend
 export interface IUser {
   _id: string;
   name: string;
@@ -13,13 +14,15 @@ export interface IUser {
   role: UserRole;
   isActive: boolean;
   isVerified: boolean;
-  failedLoginAttempts?: number;
-  lockUntil?: string | Date;
-  createdAt?: string;
-  updatedAt?: string;
+  failedLoginAttempts: number; // Ensure this is always a number
+  lockUntil?: string | Date;   // Optional in case user is not locked
+  createdAt: string;
+  updatedAt: string;
+
+  profilePictureUrl?: string;
 }
 
-// ✅ Add this below IUser
+// Props for the user table component
 export interface UserTableProps {
   users: IUser[];
   search: string;

@@ -12,6 +12,7 @@ import { registerUser } from "@/services/auth/registerUser";
 import { registerManager } from "@/services/auth/registerManager";
 import { forgotPassword } from "@/services/auth/forgotPassword";
 import { resendVerification } from "@/services/auth/resendVerification";
+import { resetPassword } from "@/services/auth/resetPassword";
 import { logout as handleLogout } from "@/services/auth/logout";
 
 interface User {
@@ -30,10 +31,12 @@ interface AuthContextType {
   registerUser: (name: string, email: string, password: string) => Promise<void>;
   registerAdmin: (name: string, email: string, password: string, adminSecret: string) => Promise<void>;
   registerManager: (name: string, email: string, password: string, invitationCode: string, router: any) => Promise<void>;
-  login: (email: string, password: string) => Promise<User | null>; 
+  login: (email: string, password: string) => Promise<User | null>;
   forgotPassword: (email: string) => Promise<void>;
   resendVerification: (email: string) => Promise<void>;
   logout: () => void;
+
+  resetPassword: (token: string, password: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,7 +83,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
     return loggedInUser; // ✅ Ensure the function returns a value
   };
-  
+
 
   return (
     <AuthContext.Provider
@@ -96,6 +99,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         forgotPassword,
         resendVerification,
         logout,
+
+        resetPassword,
       }}
     >
 

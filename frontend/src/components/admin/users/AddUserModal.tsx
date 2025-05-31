@@ -32,6 +32,9 @@ export default function AddUserModal({ isOpen, onClose, onAdd }: AddUserModalPro
       role,
       isActive,
       isVerified: false,
+      failedLoginAttempts: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     onAdd(newUser);  // call onAdd here

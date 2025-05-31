@@ -26,7 +26,7 @@ export const registerUser = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, email, password } = req.body
+    const { name, email, password, profilePictureUrl } = req.body
 
     if (await User.findOne({ email })) {
       res.status(400).json({ message: 'Email already registered' })
@@ -43,6 +43,7 @@ export const registerUser = async (
       role: UserRole.WEB_USER,
       isVerified: false,
       verificationToken,
+      profilePictureUrl: profilePictureUrl || '',
     })
 
     await newUser.save()
@@ -222,7 +223,7 @@ export const inviteManager = async (req: Request, res: Response) => {
 // ✅ Admin Registration (Most Secure Method)
 export const registerAdmin = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, email, password, adminSecret } = req.body;
+    const { name, email, password, adminSecret, profilePictureUrl } = req.body;
 
     if (!name || !email || !password || !adminSecret) {
       res.status(400).json({ message: 'All fields are required.' });
@@ -248,6 +249,7 @@ export const registerAdmin = async (req: Request, res: Response): Promise<void> 
       password: hashedPassword,
       role: UserRole.ADMIN,
       isVerified: true,
+      profilePictureUrl: profilePictureUrl || '',
     });
 
     await newAdmin.save();
@@ -269,7 +271,7 @@ export const registerManager = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, email, password, invitationCode } = req.body
+    const { name, email, password, invitationCode, profilePictureUrl } = req.body
 
     if (!invitationCode) {
       res.status(400).json({ message: 'Invalid invitation code' })
@@ -293,6 +295,7 @@ export const registerManager = async (
       role: UserRole.MANAGER,
       isVerified: false,
       verificationToken, // Store token in DB
+      profilePictureUrl: profilePictureUrl || '',
     })
 
     await newManager.save()
@@ -384,16 +387,22 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     const { token } = req.query;
     const { newPassword } = req.body;
 
-    console.log("🔍 Reset Password Request:");
-    console.log("🔑 Token:", token);
-    console.log("🛡️ New Password:", newPassword ? "Provided" : "Not Provided");
+    console.log("Reset Password Request:");
+    console.log("Token:", token);
+    console.log("New Password:", newPassword ? "Provided" : "Not Provided");
 
-    if (!token) {
-      res.status(400).json({ message: "No reset token provided." });
+    if (!token || typeof token !== "string") {
+      res.status(400).json({ message: "No or invalid reset token provided." });
       return;
     }
 
-    // ✅ 1. Find the user with a valid reset token that hasn't expired
+    if (!newPassword || typeof newPassword !== "string" || newPassword.length < 6) {
+      res.status(400).json({ message: "Password must be at least 6 characters." });
+      return;
+    }
+
+    console.log("Current Date:", new Date());
+
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: new Date() },
@@ -407,30 +416,28 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     console.log("✅ User found:", user.email);
 
-    // ✅ 2. Hash the new password
-    console.log("🔒 Hashing new password...");
+    // 🔒 Hash new password
     user.password = await bcrypt.hash(newPassword, 10);
 
-    // ✅ 3. Clear the reset token and expiration date
+    // 🧹 Clear reset token fields
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
 
-    // ✅ 4. Save the updated user document
-    console.log("💾 Saving updated user document...");
+    // 💾 Save updated user
     await user.save();
-    console.log("✅ User document saved successfully");
+    console.log("✅ Password updated successfully for:", user.email);
 
-    // ✅ 5. Send confirmation email
+    // 📧 Send confirmation email
     const emailContent = generatePasswordResetSuccessEmail(user.name || "User");
+
     try {
       await sendEmail(user.email, "Password Reset Successful", emailContent);
       console.log(`✅ Confirmation email sent to ${user.email}`);
-    } catch (error) {
-      console.error("❌ Failed to send email:", error);
+    } catch (emailError) {
+      console.error("❌ Failed to send confirmation email:", emailError);
     }
 
     res.status(200).json({ message: "Password reset successful" });
-    console.log("🎉 Password reset completed successfully!");
   } catch (err) {
     console.error("🔥 Error in resetPassword handler:", err);
     res.status(500).json({ message: "Server error" });

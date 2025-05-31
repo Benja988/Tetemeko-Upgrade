@@ -5,7 +5,6 @@ import {
   getStationById,
   updateStation,
   deleteStation,
-  toggleStationStatus,
 } from "../controllers/station.controller";
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
 import { UserRole } from "../models/User";

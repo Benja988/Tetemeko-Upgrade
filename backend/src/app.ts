@@ -14,7 +14,7 @@ import productRoutes from "./routes/product.routes";
 import categoryRoutes from "./routes/category.routes";
 import episodeRoutes from "./routes/episode.routes";
 import scheduleRoutes from "./routes/schedule.routes";
-// import stationRoutes from "./routes/station.routes";
+import stationRoutes from "./routes/station.routes";
 import podcastRoutes from "./routes/podcast.routes";
 import authorRoutes from "./routes/author.routes"; // ✅ Author routes
 import newsRoutes from "./routes/news.routes";

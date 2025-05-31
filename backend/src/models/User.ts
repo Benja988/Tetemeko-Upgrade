@@ -25,6 +25,8 @@ export interface IUser extends Document {
 
   incrementFailedLogins: () => Promise<void>;
   resetFailedLogins: () => Promise<void>;
+
+  profilePictureUrl?: string;
 }
 
 const UserSchema: Schema = new Schema(
@@ -61,6 +63,8 @@ const UserSchema: Schema = new Schema(
     lockUntil: { type: Date },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+
+    profilePictureUrl: { type: String, default: "" }, 
   },
   { timestamps: true }
 );

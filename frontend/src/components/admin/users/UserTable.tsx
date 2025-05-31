@@ -1,161 +1,77 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import dayjs from 'dayjs';
+import { useMemo } from 'react';
 import UserRow from './UserRow';
-import UserDetailBox from './UserDetailBox';
-import { UserTableProps, IUser as User } from '@/types/user';
-import { useDebounce } from '@/hooks/useDebounce'; // Custom hook to debounce inputs
+import { IUser } from '@/types/user';
+import { useDebounce } from '@/hooks/useDebounce';
+
+interface UserTableProps {
+  users: IUser[];
+  search: string;
+  filter: string;
+}
 
 export default function UserTable({ users, search, filter }: UserTableProps) {
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const debouncedSearch = useDebounce(search, 300);
 
   const filteredUsers = useMemo(() => {
-    let result = [...users];
+    if (!Array.isArray(users)) return [];
 
-    if (debouncedSearch.trim()) {
-      const lowerSearch = debouncedSearch.toLowerCase();
-      result = result.filter(
-        (user) =>
-          user.name.toLowerCase().includes(lowerSearch) ||
-          user.email.toLowerCase().includes(lowerSearch)
-      );
-    }
+    return users.filter((user) => {
+      const matchesSearch =
+        !debouncedSearch.trim() ||
+        user.name?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        user.email?.toLowerCase().includes(debouncedSearch.toLowerCase());
 
-    if (filter && filter !== 'all') {
-      switch (filter) {
-        case 'admin':
-        case 'manager':
-        case 'web_user':
-          result = result.filter((user) => user.role === filter);
-          break;
-        case 'active':
-          result = result.filter((user) => user.isActive);
-          break;
-        case 'inactive':
-          result = result.filter((user) => !user.isActive);
-          break;
-        case 'verified':
-          result = result.filter((user) => user.isVerified);
-          break;
-        case 'unverified':
-          result = result.filter((user) => !user.isVerified);
-          break;
-        default:
-          break;
-      }
-    }
+      const matchesFilter = {
+        admin: user.role === 'admin',
+        manager: user.role === 'manager',
+        web_user: user.role === 'web_user',
+        active: user.isActive,
+        inactive: !user.isActive,
+        verified: user.isVerified,
+        unverified: !user.isVerified,
+        all: true,
+        '': true,
+      }[filter] ?? true;
 
-    return result;
+      return matchesSearch && matchesFilter;
+    });
   }, [users, debouncedSearch, filter]);
 
   return (
-    <div className="flex gap-6">
-      {/* Table container */}
-      <div
-        className="custom-scrollbar overflow-x-auto bg-white rounded-lg shadow flex-1 max-w-full"
-      >
+    <div className="flex flex-col lg:flex-row gap-6">
+      <div className="custom-scrollbar overflow-x-auto bg-white rounded-lg shadow flex-1 max-w-full">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="bg-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              <th className="p-3 text-left whitespace-nowrap">Name</th>
-              <th className="p-3 text-left whitespace-nowrap">Email</th>
-              <th className="p-3 text-left whitespace-nowrap">Role</th>
-              <th className="p-3 text-left whitespace-nowrap">Account Status</th>
-              <th className="p-3 text-left whitespace-nowrap">Verified</th>
-              <th className="p-3 text-center whitespace-nowrap">Login Attempts</th>
-              <th className="p-3 text-center whitespace-nowrap">Locked?</th>
-              <th className="p-3 text-left whitespace-nowrap">Created</th>
-              <th className="p-3 text-left whitespace-nowrap">Actions</th>
+              <th className="p-3 text-left">Profile</th>
+              <th className="p-3 text-left">Name</th>
+              <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Role</th>
+              <th className="p-3 text-left">Status</th>
+              <th className="p-3 text-left">Verified</th>
+              <th className="p-3 text-left">Locked</th>
+              <th className="p-3 text-left">Created At</th>
+              {/* <th className="p-3 text-left">Last Login</th> */}
+              <th className="p-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => {
-                const isLocked =
-                  user.lockUntil && new Date(user.lockUntil) > new Date();
-
-                return (
-                  <tr
-                    key={user._id}
-                    className="border-b hover:bg-gray-50 transition cursor-default"
-                  >
-                    <td className="p-3 text-left whitespace-nowrap">
-                      <button
-                        className="text-blue-600 hover:underline"
-                        onClick={() => setSelectedUser(user)}
-                        aria-label={`View details for ${user.name}`}
-                      >
-                        {user.name}
-                      </button>
-                    </td>
-                    <td className="p-3 text-left whitespace-nowrap">{user.email}</td>
-                    <td className="p-3 text-left capitalize whitespace-nowrap">{user.role}</td>
-                    <td className="p-3 text-left whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.isActive
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {user.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-left whitespace-nowrap">
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          user.isVerified
-                            ? 'bg-blue-100 text-blue-700'
-                            : 'bg-yellow-100 text-yellow-700'
-                        }`}
-                      >
-                        {user.isVerified ? 'Verified' : 'Unverified'}
-                      </span>
-                    </td>
-                    <td className="p-3 text-center whitespace-nowrap">
-                      {user.failedLoginAttempts ?? 0}
-                    </td>
-                    <td className="p-3 text-center whitespace-nowrap">
-                      {isLocked ? (
-                        <span className="text-red-600 font-semibold">Yes</span>
-                      ) : (
-                        <span className="text-green-600">No</span>
-                      )}
-                    </td>
-                    <td className="p-3 text-left whitespace-nowrap">
-                      {user.createdAt
-                        ? dayjs(user.createdAt).format('MMM D, YYYY')
-                        : '-'}
-                    </td>
-                    <td className="p-3 text-left whitespace-nowrap">
-                      <UserRow user={user} />
-                    </td>
-                  </tr>
-                );
-              })
-            ) : users.length === 0 ? (
+            {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center text-gray-500 py-6">
+                <td colSpan={9} className="text-center py-4 text-gray-500">
                   No users found.
                 </td>
               </tr>
             ) : (
-              <tr>
-                <td colSpan={9} className="text-center text-gray-500 py-6">
-                  No users match the current criteria.
-                </td>
-              </tr>
+              filteredUsers.map((user) => (
+                <UserRow key={user._id} user={user} />
+              ))
             )}
           </tbody>
         </table>
       </div>
-
-      {/* User detail box only shows when user selected */}
-      {selectedUser && (
-        <UserDetailBox user={selectedUser} onClose={() => setSelectedUser(null)} />
-      )}
     </div>
   );
 }

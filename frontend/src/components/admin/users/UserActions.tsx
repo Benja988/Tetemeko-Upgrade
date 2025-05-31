@@ -23,7 +23,8 @@ function Button({
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
 }) {
-  const base = 'inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
+  const base =
+    'inline-flex items-center px-4 py-2 rounded text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2';
   const variants = {
     default: 'bg-blue-600 text-white hover:bg-blue-700',
     outline: 'border border-gray-300 text-gray-700 hover:bg-gray-100',
@@ -43,7 +44,13 @@ function Button({
 }
 
 // Define union type for user actions
-type UserAction = 'view' | 'edit' | 'resetPassword' | 'promote' | 'toggleActive' | 'delete';
+export type UserAction =
+  | 'view'
+  | 'edit'
+  | 'resetPassword'
+  | 'promote'
+  | 'toggleActive'
+  | 'delete';
 
 // Props interface
 interface UserActionsProps {
@@ -66,7 +73,9 @@ export default function UserActions({
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
-  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left?: number; right?: number }>({ top: 0 });
+  const [dropdownStyle, setDropdownStyle] = useState<{ top: number; left?: number; right?: number }>({
+    top: 0,
+  });
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -143,19 +152,19 @@ export default function UserActions({
   const renderUserDropdown = () => {
     if (!user) return null;
 
-    const actions = [
-      { label: 'View', action: 'view' as UserAction },
-      { label: 'Edit', action: 'edit' as UserAction },
-      { label: 'Reset Password', action: 'resetPassword' as UserAction },
-      { label: 'Promote to Manager', action: 'promote' as UserAction },
+    const actions: { label: string; action: UserAction; destructive?: boolean }[] = [
+      { label: 'View', action: 'view' },
+      { label: 'Edit', action: 'edit' },
+      { label: 'Reset Password', action: 'resetPassword' },
+      { label: 'Promote to Manager', action: 'promote' },
       {
         label: user.isActive ? 'Deactivate' : 'Reactivate',
-        action: 'toggleActive' as UserAction,
+        action: 'toggleActive',
         destructive: user.isActive,
       },
       {
         label: 'Delete',
-        action: 'delete' as UserAction,
+        action: 'delete',
         destructive: true,
       },
     ];

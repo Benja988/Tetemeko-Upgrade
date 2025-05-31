@@ -27,7 +27,7 @@ export const sendVerificationSuccessEmail = (name: string, email: string): strin
     <p style="font-size: 16px; line-height: 1.6;">
       Your email has been successfully verified. You can now log in to your Tetemeko Media Group account and start exploring our services, streaming content, and more.
     </p>
-    <a href="${process.env.FRONTEND_URL}/login" style="display: inline-block; padding: 14px 28px; margin: 20px 0; background-color: #07131F; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 6px;">
+    <a href="${process.env.FRONTEND_URL}/admin/login" style="display: inline-block; padding: 14px 28px; margin: 20px 0; background-color: #07131F; color: #ffffff; font-weight: bold; text-decoration: none; border-radius: 6px;">
       Login to My Account
     </a>
     <p style="font-size: 14px; margin-top: 20px;">
@@ -41,7 +41,7 @@ export const sendVerificationSuccessEmail = (name: string, email: string): strin
 
 
 export const generateResetPasswordEmail = (name: string, resetToken: string): string => {
-  const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+  const resetLink = `${process.env.FRONTEND_URL}/admin/reset-password?token=${resetToken}`;
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 24px; border-radius: 8px; background-color: #f1f4f6; color: #07131F;">
@@ -63,7 +63,7 @@ export const generatePasswordResetSuccessEmail = (name: string): string => {
       <h2 style="color: #07131F;">Your Password Was Reset</h2>
       <p>Hi ${name || "User"},</p>
       <p>This is a confirmation that your password has been successfully reset. You can now log in with your new password.</p>
-      <a href="${process.env.FRONTEND_URL}/login" style="display: inline-block; padding: 14px 28px; margin: 20px 0; background-color: #07131F; color: #ffffff; text-decoration: none; border-radius: 6px;">Go to Login</a>
+      <a href="${process.env.FRONTEND_URL}/admin/login" style="display: inline-block; padding: 14px 28px; margin: 20px 0; background-color: #07131F; color: #ffffff; text-decoration: none; border-radius: 6px;">Go to Login</a>
       <p>If you did not perform this action, please contact our support team immediately.</p>
       <hr style="margin: 40px 0; border: none; border-top: 1px solid #ccc;">
       <p style="font-size: 14px; color: #999;">Need help? Email us at <a href="mailto:support@tetemeko.com" style="color: #07131F;">support@tetemeko.com</a></p>

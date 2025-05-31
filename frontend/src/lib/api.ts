@@ -21,12 +21,12 @@ async function refreshToken() {
   return response.json(); // Should return { accessToken, refreshToken? }
 }
 
-export const apiRequest = async (
+export const apiRequest = async <T = any>(
   url: string,
   method = "GET",
   body: any = null,
   token: string | null = null
-) => {
+): Promise<T> => {
   let authToken = token || localStorage.getItem("token");
 
   const makeRequest = async (tokenToUse: string | null) => {
@@ -50,20 +50,16 @@ export const apiRequest = async (
   let response = await makeRequest(authToken);
 
   if (response.status === 401) {
-    // Try refreshing token
     try {
       const data = await refreshToken();
 
-      // Update tokens in localStorage
       localStorage.setItem("token", data.accessToken);
       if (data.refreshToken) {
         localStorage.setItem("refreshToken", data.refreshToken);
       }
 
-      // Retry original request with new token
       response = await makeRequest(data.accessToken);
     } catch (err) {
-      // Refresh token failed -> logout user
       localStorage.removeItem("token");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
@@ -76,6 +72,5 @@ export const apiRequest = async (
     throw new Error(errorBody?.message || response.statusText || "Request failed");
   }
 
-  return response.json();
+  return response.json() as Promise<T>;
 };
-
