@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import UserRow from './UserRow';
 import { IUser } from '@/types/user';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -9,10 +9,12 @@ interface UserTableProps {
   users: IUser[];
   search: string;
   filter: string;
+  onSelectUsers: (ids: string[]) => void;
 }
 
-export default function UserTable({ users, search, filter }: UserTableProps) {
+export default function UserTable({ users, search, filter, onSelectUsers }: UserTableProps) {
   const debouncedSearch = useDebounce(search, 300);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   const filteredUsers = useMemo(() => {
     if (!Array.isArray(users)) return [];
@@ -39,38 +41,60 @@ export default function UserTable({ users, search, filter }: UserTableProps) {
     });
   }, [users, debouncedSearch, filter]);
 
+  useEffect(() => {
+    onSelectUsers(selectedUserIds);
+  }, [selectedUserIds, onSelectUsers]);
+
+  const handleCheckboxChange = (userId: string, checked: boolean) => {
+    setSelectedUserIds((prev) =>
+      checked ? [...prev, userId] : prev.filter((id) => id !== userId)
+    );
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6">
-      <div className="custom-scrollbar overflow-x-auto bg-white rounded-lg shadow flex-1 max-w-full">
+    <div className="w-full overflow-x-auto">
+      <div className="bg-white shadow-md rounded-xl overflow-hidden">
         <table className="min-w-full text-sm">
-          <thead>
-            <tr className="bg-gray-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-              <th className="p-3 text-left">Profile</th>
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Email</th>
-              <th className="p-3 text-left">Role</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Verified</th>
-              <th className="p-3 text-left">Locked</th>
-              <th className="p-3 text-left">Created At</th>
-              {/* <th className="p-3 text-left">Last Login</th> */}
-              <th className="p-3 text-left">Actions</th>
+          <thead className="sticky top-0 bg-gray-50 z-10">
+            <tr className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+              <th className="p-3 text-left">Select</th>
+              <th className="p-3 text-left whitespace-nowrap">Profile</th>
+              <th className="p-3 text-left whitespace-nowrap">Name</th>
+              <th className="p-3 text-left whitespace-nowrap">Email</th>
+              <th className="p-3 text-left whitespace-nowrap">Role</th>
+              <th className="p-3 text-left whitespace-nowrap">Status</th>
+              <th className="p-3 text-left whitespace-nowrap">Verified</th>
+              <th className="p-3 text-left whitespace-nowrap">Locked</th>
+              <th className="p-3 text-left whitespace-nowrap">Created At</th>
+              <th className="p-3 text-left whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-4 text-gray-500">
+                <td colSpan={10} className="text-center py-6 text-gray-500">
                   No users found.
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => (
-                <UserRow key={user._id} user={user} />
+              filteredUsers.map((user, index) => (
+                <UserRow
+  key={user._id}
+  user={user}
+  isSelected={selectedUserIds.includes(user._id)}
+  onCheckboxChange={handleCheckboxChange}
+  rowClassName={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+/>
+
               ))
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Optional helper below the table on small screens */}
+      <div className="mt-2 text-sm text-gray-400 text-center lg:hidden">
+        Swipe horizontally to view more →
       </div>
     </div>
   );

@@ -121,6 +121,9 @@ select {
 option {
   background-color: #f0f2f6; 
 }
+textarea {
+  background-color: #f0f2f6; 
+}
 
 
 

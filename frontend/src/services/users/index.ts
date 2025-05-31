@@ -196,3 +196,33 @@ export const promoteToManager = async (
     'Promotion failed.'
   )
 }
+
+
+// src/services/upload.ts
+export const uploadProfilePicture = async (file: File): Promise<string | null> => {
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await apiRequest<{ url: string }>(
+      '/upload/profile-picture',
+      'POST',
+      formData
+    );
+    return response.url;
+  } catch {
+    toast.error('Image upload failed');
+    return null;
+  }
+};
+
+// Invite multiple users by email
+export const inviteUsers = async (emails: string[]): Promise<boolean> => {
+  const result = await withToast(
+    () => apiRequest(`/auth/invite-manager`, 'POST', { emails }),
+    'Invitations sent.',
+    'Failed to send invitations.'
+  );
+  return !!result;
+};
+

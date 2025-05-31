@@ -19,62 +19,73 @@ type UserAction =
   | 'toggleActive'
   | 'view';
 
-export default function UserRow({ user }: { user: IUser }) {
-  const isLocked = user.lockUntil ? dayjs(user.lockUntil).isAfter(dayjs()) : false;
+interface UserRowProps {
+  user: IUser;
+  isSelected: boolean;
+  onCheckboxChange: (userId: string, checked: boolean) => void;
+  rowClassName?: string;
+}
 
+export default function UserRow({
+  user,
+  isSelected,
+  onCheckboxChange,
+  rowClassName = '',
+}: UserRowProps) {
   const [openModal, setOpenModal] = useState<UserAction | null>(null);
+
+  const isLocked =
+    user.lockUntil && dayjs(user.lockUntil).isAfter(dayjs());
 
   const handleUserAction = (action: UserAction) => {
     setOpenModal(action);
   };
 
-  const closeModal = () => {
-    setOpenModal(null);
-  };
+  const closeModal = () => setOpenModal(null);
 
-  const renderStatusBadge = (status: boolean, type: 'active' | 'verified') => {
-    const baseClasses = 'inline-block px-2 py-1 rounded-full text-xs font-medium';
-    const badgeColor =
-      type === 'active'
-        ? status
-          ? 'bg-green-100 text-green-700'
-          : 'bg-red-100 text-red-700'
-        : status
+  const renderBadge = (status: boolean, type: 'active' | 'verified') => {
+    const classes =
+      'inline-block px-2 py-1 rounded-full text-xs font-medium';
+    const config = {
+      active: status
+        ? 'bg-green-100 text-green-700'
+        : 'bg-red-100 text-red-700',
+      verified: status
         ? 'bg-blue-100 text-blue-700'
-        : 'bg-yellow-100 text-yellow-700';
+        : 'bg-yellow-100 text-yellow-700',
+    };
+    const label = {
+      active: status ? 'Active' : 'Inactive',
+      verified: status ? 'Verified' : 'Unverified',
+    };
 
-    const label =
-      type === 'active'
-        ? status
-          ? 'Active'
-          : 'Inactive'
-        : status
-        ? 'Verified'
-        : 'Unverified';
-
-    return <span className={`${baseClasses} ${badgeColor}`}>{label}</span>;
+    return <span className={`${classes} ${config[type]}`}>{label[type]}</span>;
   };
 
   return (
     <>
-      <tr className="border-b hover:bg-gray-50 transition-colors duration-150">
-
-        <td className="p-3 whitespace-nowrap">
-    <img
-      src={user.profilePictureUrl || '/avatar.jpg'} // fallback image
-      alt={`${user.name}'s profile`}
-      className="h-8 w-8 rounded-full object-cover"
-      loading="lazy"
-    />
-  </td>
-        <td className="p-3 whitespace-nowrap">{user.name}</td>
-        <td className="p-3 whitespace-nowrap">{user.email}</td>
-        <td className="p-3 whitespace-nowrap capitalize">{user.role}</td>
-        <td className="p-3 whitespace-nowrap">{renderStatusBadge(user.isActive, 'active')}</td>
-        <td className="p-3 whitespace-nowrap">{renderStatusBadge(user.isVerified, 'verified')}</td>
-        
-        {/* Locked column */}
-        <td className="p-3 whitespace-nowrap">
+      <tr className={`${rowClassName} border-b hover:bg-gray-50 transition-colors`}>
+        <td className="p-3">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={(e) => onCheckboxChange(user._id, e.target.checked)}
+          />
+        </td>
+        <td className="p-3">
+          <img
+            src={user.profilePictureUrl || '/avatar.jpg'}
+            alt={`${user.name}'s profile`}
+            className="h-8 w-8 rounded-full object-cover"
+            loading="lazy"
+          />
+        </td>
+        <td className="p-3">{user.name}</td>
+        <td className="p-3">{user.email}</td>
+        <td className="p-3 capitalize">{user.role}</td>
+        <td className="p-3">{renderBadge(user.isActive, 'active')}</td>
+        <td className="p-3">{renderBadge(user.isVerified, 'verified')}</td>
+        <td className="p-3">
           {isLocked ? (
             <span
               className="text-red-600 text-xs"
@@ -86,30 +97,22 @@ export default function UserRow({ user }: { user: IUser }) {
             <span className="text-green-600 text-xs">Not Locked</span>
           )}
         </td>
-
-        {/* Created At */}
-        <td className="p-3 whitespace-nowrap">
-          {user.createdAt ? dayjs(user.createdAt).format('MMM D, YYYY') : 'N/A'}
+        <td className="p-3">
+          {user.createdAt
+            ? dayjs(user.createdAt).format('MMM D, YYYY')
+            : 'N/A'}
         </td>
-
-        {/* Last Login
-        <td className="p-3 whitespace-nowrap">
-          {user.lastLogin ? dayjs(user.lastLogin).format('MMM D, YYYY h:mm A') : 'Never'}
-        </td> */}
-
-        {/* Actions */}
-        <td className="p-3 whitespace-nowrap flex space-x-2 items-center">
+        <td className="p-3 flex space-x-2">
           <UserActions user={user} onUserAction={handleUserAction} />
         </td>
       </tr>
 
-      {/* Modals */}
       <EditUserModal
         isOpen={openModal === 'edit'}
         onClose={closeModal}
         user={user}
         onSave={(updatedUser) => {
-          console.log('Updated user:', updatedUser);
+          console.log('User updated:', updatedUser);
           closeModal();
         }}
       />
@@ -117,8 +120,9 @@ export default function UserRow({ user }: { user: IUser }) {
       <ConfirmDeleteModal
         isOpen={openModal === 'delete'}
         onClose={closeModal}
-        onConfirm={() => {
-          console.log('Deleted user:', user);
+        userId={user._id}
+        onDeleted={() => {
+          console.log('User deleted:', user);
           closeModal();
         }}
         message={`Are you sure you want to delete ${user.name}?`}
@@ -129,7 +133,7 @@ export default function UserRow({ user }: { user: IUser }) {
         onClose={closeModal}
         user={user}
         onPromote={() => {
-          console.log('Promoted user:', user);
+          console.log('User promoted:', user);
           closeModal();
         }}
       />
@@ -149,7 +153,7 @@ export default function UserRow({ user }: { user: IUser }) {
         onClose={closeModal}
         user={user}
         onToggle={() => {
-          console.log('Toggled active status:', user);
+          console.log('User active status toggled:', user);
           closeModal();
         }}
       />

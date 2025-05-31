@@ -10,12 +10,10 @@ import { IUser, UserRole } from '@/types/user';
 import {
   getUsers,
   searchUsers,
+  deleteUser,
 } from '@/services/users';
-
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { InviteUserModal } from './InviteUserModal';
 import { ExportUsersModal } from './ExportUsersModal';
-import AddUserModal from './AddUserModal';
 
 interface UsersPageLayoutProps {
   heading: string;
@@ -30,39 +28,29 @@ export default function UsersPageLayout({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterOption, setFilterOption] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [isInviteModalOpen, setInviteModalOpen] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
-  const [isAddUserModalOpen, setAddUserModalOpen] = useState(false);
 
   const combinedFilter = filterOption || defaultFilter;
 
-  // Fetch users from API
   const fetchUsers = async () => {
-  try {
-    setIsLoading(true);
-    const role = combinedFilter as UserRole;
-    const data = await getUsers(1, 50, role);
-    console.log('Raw data from getUsers:', data);
+    try {
+      setIsLoading(true);
+      const role = combinedFilter as UserRole;
+      const response = await getUsers(1, 50, role);
+      setUsers(response?.users ?? []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    const fetchedUsers = data.users;  // <-- key fix here
-    setUsers(fetchedUsers ?? []);
-    console.log('Fetched users:', fetchedUsers);
-
-  } catch (error) {
-    console.error('Error fetching users:', error);
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-
-  // Fetch users on mount & when filter changes
   useEffect(() => {
     fetchUsers();
   }, [combinedFilter]);
 
-  // Handle search input
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
 
@@ -73,7 +61,7 @@ export default function UsersPageLayout({
 
     try {
       setIsLoading(true);
-      const results: IUser[] = await searchUsers(query);
+      const results = await searchUsers(query);
       setUsers(results);
     } catch (error) {
       console.error('Search error:', error);
@@ -82,74 +70,66 @@ export default function UsersPageLayout({
     }
   };
 
-  const handleFilter = (filter: string) => setFilterOption(filter);
+  const handleDeleteConfirm = async () => {
+    try {
+      // await deleteUser(selectedUserIds);
+      await fetchUsers();
+      setSelectedUserIds([]);
+    } catch (error) {
+      console.error('Failed to delete users:', error);
+    } finally {
+      setDeleteModalOpen(false);
+    }
+  };
 
   return (
     <section className="min-h-screen bg-[var(--color-light)] p-6">
-      {/* Header */}
       <header className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold text-[var(--color-primary)]">{heading}</h1>
+          <h1 className="text-3xl font-bold text-[var(--color-primary)]">
+            {heading}
+          </h1>
         </div>
         <div className="mt-4">
           <UsersTabs />
         </div>
       </header>
 
-      {/* Search & Filter */}
       <div className="flex flex-wrap gap-2 mb-4">
         <UserSearchBar onSearch={handleSearch} />
-        <UserFilterBar onFilter={handleFilter} />
+        <UserFilterBar onFilter={setFilterOption} />
       </div>
 
-      {/* Actions & Table */}
       <main>
         <UserActions
-          onAddUser={() => setAddUserModalOpen(true)}
-          onInviteUser={() => setInviteModalOpen(true)}
           onExport={() => setExportModalOpen(true)}
           onDeleteSelected={() => setDeleteModalOpen(true)}
         />
 
         <UserTable
-          users={users ?? []}
+          users={users}
           search={searchQuery}
           filter={combinedFilter}
+          onSelectUsers={setSelectedUserIds}
         />
       </main>
 
-      {/* Modals */}
       <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={() => {
-          console.log('Confirmed delete selected users');
-        }}
-        message="Are you sure you want to delete selected users?"
-      />
+  isOpen={isDeleteModalOpen}
+  onClose={() => setDeleteModalOpen(false)}
+  userId={selectedUserIds[0] || ''} // you must provide a userId, just use first or empty
+  onDeleted={() => {
+    handleDeleteConfirm();
+  }}
+  message={`Are you sure you want to delete ${selectedUserIds.length} selected user(s)?`}
+/>
 
-      <InviteUserModal
-        isOpen={isInviteModalOpen}
-        onClose={() => setInviteModalOpen(false)}
-        onInvite={(emails: string[]) => {
-          console.log('Invited users:', emails);
-        }}
-      />
 
       <ExportUsersModal
         isOpen={isExportModalOpen}
         onClose={() => setExportModalOpen(false)}
         onExport={() => {
-          console.log('Exported user list');
-        }}
-      />
-
-      <AddUserModal
-        isOpen={isAddUserModalOpen}
-        onClose={() => setAddUserModalOpen(false)}
-        onAdd={(newUser: IUser) => {
-          console.log('Added new user', newUser);
-          fetchUsers(); // Refresh user list
+          console.log('Export triggered');
         }}
       />
     </section>

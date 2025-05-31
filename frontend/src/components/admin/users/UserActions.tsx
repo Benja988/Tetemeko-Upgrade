@@ -47,15 +47,11 @@ function Button({
 export type UserAction =
   | 'view'
   | 'edit'
-  | 'resetPassword'
-  | 'promote'
   | 'toggleActive'
   | 'delete';
 
 // Props interface
 interface UserActionsProps {
-  onAddUser?: () => void;
-  onInviteUser?: () => void;
   onExport?: () => void;
   onDeleteSelected?: () => void;
   user?: IUser;
@@ -63,8 +59,6 @@ interface UserActionsProps {
 }
 
 export default function UserActions({
-  onAddUser,
-  onInviteUser,
   onExport,
   onDeleteSelected,
   user,
@@ -116,23 +110,11 @@ export default function UserActions({
   }, [open]);
 
   const renderAdminButtons = () => {
-    const show = onAddUser || onInviteUser || onExport || onDeleteSelected;
+    const show =   onExport || onDeleteSelected;
     if (!show) return null;
 
     return (
       <div className="flex flex-wrap gap-3 items-center mb-6">
-        {onAddUser && (
-          <Button onClick={onAddUser} ariaLabel="Add new user">
-            <Plus className="mr-2 h-4 w-4" />
-            Add User
-          </Button>
-        )}
-        {onInviteUser && (
-          <Button onClick={onInviteUser} variant="outline" ariaLabel="Invite user by email">
-            <Mail className="mr-2 h-4 w-4" />
-            Invite User
-          </Button>
-        )}
         {onExport && (
           <Button onClick={onExport} variant="outline" ariaLabel="Export user list">
             <Download className="mr-2 h-4 w-4" />
@@ -155,8 +137,6 @@ export default function UserActions({
     const actions: { label: string; action: UserAction; destructive?: boolean }[] = [
       { label: 'View', action: 'view' },
       { label: 'Edit', action: 'edit' },
-      { label: 'Reset Password', action: 'resetPassword' },
-      { label: 'Promote to Manager', action: 'promote' },
       {
         label: user.isActive ? 'Deactivate' : 'Reactivate',
         action: 'toggleActive',
