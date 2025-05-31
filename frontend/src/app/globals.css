@@ -110,6 +110,18 @@ body {
   scrollbar-color: #4a90e2 #f9fafb;
 }
 
+input {
+  background-color: #f0f2f6; 
+}
+
+select {
+  background-color: #f0f2f6; 
+}
+
+option {
+  background-color: #f0f2f6; 
+}
+
 
 
 a {
