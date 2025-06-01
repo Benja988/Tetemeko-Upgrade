@@ -10,8 +10,7 @@ interface AuthorTabsProps {
 const tabs = [
   { label: 'All', value: '' },
   { label: 'Unverified', value: 'unverified' },
-  { label: 'Inactive', value: 'inactive' },
-  { label: 'Locked', value: 'locked' },
+  { label: 'verified', value: 'verified' },
 ];
 
 export default function AuthorTabs({ activeFilter, setFilter }: AuthorTabsProps) {

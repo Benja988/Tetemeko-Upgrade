@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 
 export interface IStation extends Document {
   name: string;
@@ -8,10 +8,9 @@ export interface IStation extends Document {
   location?: string;
   genres: string[];
   isActive: boolean;
-  owner: mongoose.Types.ObjectId; // ref: User
 }
 
-const StationSchema: Schema = new Schema(
+const StationSchema: Schema<IStation> = new Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
@@ -20,9 +19,9 @@ const StationSchema: Schema = new Schema(
     location: { type: String },
     genres: [{ type: String }],
     isActive: { type: Boolean, default: true },
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<IStation>("Station", StationSchema);
+const Station = mongoose.model<IStation>("Station", StationSchema);
+export default Station;

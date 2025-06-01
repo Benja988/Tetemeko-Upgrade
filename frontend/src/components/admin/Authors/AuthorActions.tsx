@@ -11,8 +11,9 @@ interface AuthorActionsProps {
   disableDelete?: boolean;
 }
 
-const buttonBaseClasses = `flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold transition 
-  focus:outline-none focus:ring-2 focus:ring-offset-1`;
+const buttonBaseClasses = `flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-semibold transition 
+  focus:outline-none focus:ring-2 focus:ring-offset-1
+  w-full sm:w-auto`; // full width on mobile, auto width on larger
 
 export default function AuthorActions({
   onCreate,
@@ -25,7 +26,7 @@ export default function AuthorActions({
   disableDelete = false,
 }: AuthorActionsProps) {
   return (
-    <div className="flex flex-wrap justify-end gap-3 mb-6">
+    <div className="flex flex-col sm:flex-row sm:flex-wrap justify-end gap-3 mb-6">
       
       <button
         onClick={onCreate}

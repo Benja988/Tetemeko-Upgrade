@@ -30,7 +30,7 @@ app.use(
   cors({
     origin: "http://localhost:3000", // ✅ Frontend URL
     credentials: true,               // ✅ Allow cookies and credentials
-    methods: ["GET", "POST", "PUT", "DELETE"], // ✅ Explicit methods
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // ✅ Explicit methods
     allowedHeaders: ["Content-Type", "Authorization"], // ✅ Headers allowed
   })
 );
@@ -58,7 +58,7 @@ app.use("/api/news", newsRoutes); // ✅ News routes
 // app.use("/api/coupons", couponRoutes); // ✅ Coupon routes
 // app.use("/api/reviews", reviewRoutes); // ✅ Review routes
 app.use("/api/users", userRoutes); // ✅ User routes (for admin)
-// app.use("/api/stations", stationRoutes);
+app.use("/api/stations", stationRoutes);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/podcasts", podcastRoutes);
 app.use("/api/episodes", episodeRoutes);
