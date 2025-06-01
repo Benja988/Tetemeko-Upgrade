@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { Plus, Mail, Trash2, Download, MoreVertical } from 'lucide-react';
 import { IUser } from '@/types/user';
 
-// Button Component
+// Button Component (unchanged)
 function Button({
   children,
   onClick,
@@ -44,16 +44,14 @@ function Button({
 }
 
 // Define union type for user actions
-export type UserAction =
-  | 'view'
-  | 'edit'
-  | 'toggleActive'
-  | 'delete';
+export type UserAction = 'view' | 'edit' | 'toggleActive' | 'delete';
 
 // Props interface
 interface UserActionsProps {
   onExport?: () => void;
   onDeleteSelected?: () => void;
+  onSelectAll?: (selectAll: boolean) => void;  // New callback for Select All
+  allSelected?: boolean;                        // Prop: whether all users are selected
   user?: IUser;
   onUserAction?: (action: UserAction, user: IUser) => void;
 }
@@ -61,6 +59,8 @@ interface UserActionsProps {
 export default function UserActions({
   onExport,
   onDeleteSelected,
+  onSelectAll,
+  allSelected = false,
   user,
   onUserAction,
 }: UserActionsProps) {
@@ -89,18 +89,16 @@ export default function UserActions({
   useEffect(() => {
     if (open && buttonRef.current) {
       const buttonRect = buttonRef.current.getBoundingClientRect();
-      const dropdownWidth = 192; // 48 * 4 (w-48 = 12rem = 192px)
+      const dropdownWidth = 192;
       const spaceRight = window.innerWidth - buttonRect.left;
       const spaceLeft = buttonRect.right;
 
       if (spaceRight < dropdownWidth && spaceLeft >= dropdownWidth) {
-        // Show to the left
         setDropdownStyle({
           top: buttonRect.bottom + window.scrollY + 4,
           right: window.innerWidth - buttonRect.right + window.scrollX,
         });
       } else {
-        // Show to the right (default)
         setDropdownStyle({
           top: buttonRect.bottom + window.scrollY + 4,
           left: buttonRect.left + window.scrollX,
@@ -109,12 +107,26 @@ export default function UserActions({
     }
   }, [open]);
 
-  const renderAdminButtons = () => {
-    const show =   onExport || onDeleteSelected;
-    if (!show) return null;
+  // Render select all checkbox + admin buttons
+  const renderAdminControls = () => {
+    // Show only if any admin actions available
+    const showAdminControls = onExport || onDeleteSelected || onSelectAll;
+    if (!showAdminControls) return null;
 
     return (
-      <div className="flex flex-wrap gap-3 items-center mb-6">
+      <div className="flex flex-wrap items-center gap-3 mb-6">
+        {onSelectAll && (
+          <label className="inline-flex items-center cursor-pointer select-none text-gray-700">
+            <input
+              type="checkbox"
+              checked={allSelected}
+              onChange={(e) => onSelectAll(e.target.checked)}
+              className="form-checkbox h-5 w-5 text-blue-600"
+            />
+            <span className="ml-2">Select All</span>
+          </label>
+        )}
+
         {onExport && (
           <Button onClick={onExport} variant="outline" ariaLabel="Export user list">
             <Download className="mr-2 h-4 w-4" />
@@ -131,6 +143,7 @@ export default function UserActions({
     );
   };
 
+  // User dropdown unchanged
   const renderUserDropdown = () => {
     if (!user) return null;
 
@@ -200,7 +213,7 @@ export default function UserActions({
 
   return (
     <>
-      {renderAdminButtons()}
+      {renderAdminControls()}
       {renderUserDropdown()}
     </>
   );

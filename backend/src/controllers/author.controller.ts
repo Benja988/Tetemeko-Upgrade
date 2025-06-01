@@ -156,3 +156,29 @@ export const getCurrentAuthorProfile = async (
     res.status(500).json({ message: "Error fetching profile", error });
   }
 };
+
+
+export const searchAuthors = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { query } = req.query;
+
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      res.status(400).json({ message: "Query parameter is required" });
+      return;
+    }
+
+    // Case-insensitive partial match on name or email
+    const regex = new RegExp(query.trim(), "i");
+
+    const authors = await Author.find({
+      $or: [{ name: regex }, { email: regex }],
+    }).limit(50);
+
+    res.status(200).json(authors);
+  } catch (error) {
+    res.status(500).json({ message: "Error searching authors", error });
+  }
+};

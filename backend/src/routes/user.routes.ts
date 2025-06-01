@@ -10,6 +10,7 @@ import {
   searchUsers,
   reactivateUser,
   promoteToManager,
+  deleteUsers,
 } from "../controllers/user.controller";
 
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
@@ -37,6 +38,8 @@ router.put("/:userId", updateUser);
 
 // Soft delete (deactivate) user by ID
 router.delete("/:userId", deleteUser);
+
+router.delete("/", deleteUsers);
 
 // Lock user account
 router.post("/:userId/lock", lockUser);

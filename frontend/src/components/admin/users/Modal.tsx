@@ -11,14 +11,12 @@ interface ModalProps {
   className?: string;
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
 
-  // Prevent background scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
-      // Focus modal on open
       setTimeout(() => {
         modalRef.current?.focus();
       }, 0);
@@ -30,7 +28,6 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
     };
   }, [isOpen]);
 
-  // Close modal on Escape key
   useEffect(() => {
     if (!isOpen) return;
 
@@ -49,7 +46,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm transition-opacity"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm transition-opacity p-4 sm:p-6"
       onClick={onClose}
       aria-modal="true"
       role="dialog"
@@ -57,29 +54,33 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
       tabIndex={-1}
     >
       <div
-        className="bg-white rounded-2xl border border-gray-200 shadow-xl max-w-3xl w-full p-8 sm:p-10
-                   transform transition-transform duration-300 ease-out scale-100
-                   focus:outline-none focus:ring-4 focus:ring-blue-400"
+        className={`bg-white rounded-2xl border border-gray-200 shadow-xl
+          w-full max-w-lg sm:max-w-3xl max-h-[90vh] overflow-y-auto
+          p-6 sm:p-10
+          transform transition-transform duration-300 ease-out scale-100
+          focus:outline-none focus:ring-4 focus:ring-blue-400
+          ${className ?? ''}
+        `}
         onClick={(e) => e.stopPropagation()}
         ref={modalRef}
-        tabIndex={0} // make div focusable for accessibility
+        tabIndex={0}
       >
         {title && (
-          <header className="flex items-center justify-between mb-8">
+          <header className="flex items-center justify-between mb-6 sm:mb-8">
             <h2
               id="modal-title"
-              className="text-3xl font-semibold text-gray-900"
+              className="text-2xl sm:text-3xl font-semibold text-gray-900"
             >
               {title}
             </h2>
             <button
               onClick={onClose}
               aria-label="Close modal"
-              className="text-gray-400 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition"
+              className="text-gray-400 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded p-2 sm:p-1 transition"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-7 w-7"
+                className="h-6 w-6 sm:h-7 sm:w-7"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"

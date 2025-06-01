@@ -87,7 +87,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
       isOpen={isOpen}
       onClose={onClose}
       title={`Edit User: ${user?.name || ''}`}
-      className="max-w-lg w-full p-6 rounded-lg shadow-xl bg-white backdrop-blur-md"
+      className="max-w-lg w-full p-4 sm:p-6 rounded-lg shadow-xl bg-white backdrop-blur-md mx-3 sm:mx-auto"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Profile Picture Section */}
@@ -106,7 +106,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
           </div>
           <label
             htmlFor="profilePictureFile"
-            className="inline-block cursor-pointer px-5 py-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-blue-400 transition"
+            className="inline-block cursor-pointer px-4 py-2 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-semibold shadow-md hover:brightness-110 focus:outline-none focus:ring-4 focus:ring-blue-400 transition text-sm sm:text-base"
           >
             Upload New Picture
           </label>
@@ -258,7 +258,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
         )}
 
         {/* Actions */}
-        <div className="flex justify-end gap-3 flex-wrap pt-6">
+        <div className="flex flex-col sm:flex-row justify-end gap-3 flex-wrap pt-6">
           <button
             type="button"
             onClick={onClose}
@@ -277,5 +277,6 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
         </div>
       </form>
     </Modal>
+
   );
 }

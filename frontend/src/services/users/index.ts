@@ -95,14 +95,16 @@ export const getUsers = async (
 // Search users
 export const searchUsers = async (query: string): Promise<User[]> => {
   try {
-    return await apiRequest<User[]>(
-      `/users/search?q=${encodeURIComponent(query)}`
-    )
+    const response = await apiRequest<{ results: User[] }>(
+      `/users/search?query=${encodeURIComponent(query)}`
+    );
+    return response.results ?? [];
   } catch (error) {
-    toast.error('User search failed.')
-    return []
+    toast.error('User search failed.');
+    return [];
   }
-}
+};
+
 
 // Get one user
 export const getUserById = async (userId: string): Promise<User | null> => {
@@ -136,6 +138,24 @@ export const updateUser = async (
   )
 }
 
+export const deleteUsers = async (userIds: string[]): Promise<boolean> => {
+  try {
+    const results = await Promise.all(
+      userIds.map((id) =>
+        withToast(
+          () => apiRequest(`/users/${id}`, 'DELETE'),
+          'User deactivated.',
+          'Failed to deactivate user.'
+        )
+      )
+    );
+    return results.every(Boolean);
+  } catch {
+    return false;
+  }
+};
+
+
 // Soft delete user
 export const deleteUser = async (userId: string): Promise<boolean> => {
   const result = await withToast(
@@ -167,14 +187,14 @@ export const unlockUser = async (userId: string): Promise<boolean> => {
 }
 
 // Admin password reset
-export const adminResetPassword = async (userId: string): Promise<boolean> => {
-  const result = await withToast(
-    () => apiRequest(`/users/${userId}/reset-password`, 'POST'),
-    'Reset email sent.',
-    'Failed to send reset email.'
-  )
-  return !!result
-}
+// export const adminResetPassword = async (userId: string): Promise<boolean> => {
+//   const result = await withToast(
+//     () => apiRequest(`/users/${userId}/reset-password`, 'POST'),
+//     'Reset email sent.',
+//     'Failed to send reset email.'
+//   )
+//   return !!result
+// }
 
 // Reactivate user
 export const reactivateUser = async (userId: string): Promise<boolean> => {
@@ -187,15 +207,15 @@ export const reactivateUser = async (userId: string): Promise<boolean> => {
 }
 
 // Promote to manager
-export const promoteToManager = async (
-  userId: string
-): Promise<User | null> => {
-  return withToast(
-    () => apiRequest<User>(`/users/${userId}/promote`, 'POST'),
-    'User promoted.',
-    'Promotion failed.'
-  )
-}
+// export const promoteToManager = async (
+//   userId: string
+// ): Promise<User | null> => {
+//   return withToast(
+//     () => apiRequest<User>(`/users/${userId}/promote`, 'POST'),
+//     'User promoted.',
+//     'Promotion failed.'
+//   )
+// }
 
 
 // src/services/upload.ts

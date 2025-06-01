@@ -7,30 +7,34 @@ import { toast } from 'sonner';
 interface ConfirmDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
-  userId: string;
-  onDeleted?: () => void; // Optional callback after successful deletion
+  userIds: string[]; // always an array, even for single user
+  onDeleted?: () => void;
   message?: string;
+  userNames?: string[]; // optional, to show names instead of IDs
 }
 
 export function ConfirmDeleteModal({
   isOpen,
   onClose,
-  userId,
+  userIds,
   onDeleted,
   message,
+  userNames,
 }: ConfirmDeleteModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirm = async () => {
     setIsDeleting(true);
     try {
-      const success = await deleteUser(userId);
-      if (success) {
-        toast.success('User deleted successfully');
+      const results = await Promise.all(userIds.map(id => deleteUser(id)));
+      const allSuccess = results.every(success => success);
+
+      if (allSuccess) {
+        toast.success(`${userIds.length} user(s) deleted successfully`);
         onDeleted?.();
         onClose();
       } else {
-        toast.error('Failed to delete user');
+        toast.error('Failed to delete some users');
       }
     } catch (error) {
       toast.error('An error occurred while deleting');
@@ -39,11 +43,30 @@ export function ConfirmDeleteModal({
     }
   };
 
+  const count = userIds.length;
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Confirm Delete">
       <p className="mb-4">
-        {message || 'Are you sure you want to delete this user?'}
+        {message ||
+          (count === 1
+            ? `Are you sure you want to delete ${
+                userNames?.[0] || userIds[0]
+              }?`
+            : `Are you sure you want to delete ${count} selected users?`)}
       </p>
+
+      {/* Show list of user names or IDs only if more than one */}
+      {count > 1 && (
+        <ul className="max-h-40 overflow-auto mb-4 border p-2 rounded bg-gray-50">
+          {(userNames || userIds).map((item, index) => (
+            <li key={userIds[index]} className="text-sm text-gray-700 break-all">
+              {item}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="flex justify-end space-x-2">
         <button
           onClick={onClose}

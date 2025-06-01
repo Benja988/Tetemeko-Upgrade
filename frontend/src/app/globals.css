@@ -125,6 +125,43 @@ textarea {
   background-color: #f0f2f6; 
 }
 
+/* Remove default appearance */
+input[type="checkbox"].custom-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  width: 16px;
+  height: 16px;
+  background-color: white; /* white background */
+  border: 2px solid gray; /* gray border */
+  border-radius: 3px;
+  cursor: pointer;
+  position: relative;
+  vertical-align: middle;
+}
+
+/* The checkmark - only visible when checked */
+input[type="checkbox"].custom-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 10px;
+  border: solid blue;  /* color of the check */
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Focus style */
+input[type="checkbox"].custom-checkbox:focus {
+  outline: 2px solid #3b82f6; /* Tailwind blue-500 */
+  outline-offset: 2px;
+}
+
+
+
 
 
 a {

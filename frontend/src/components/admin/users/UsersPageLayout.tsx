@@ -10,7 +10,7 @@ import { IUser, UserRole } from '@/types/user';
 import {
   getUsers,
   searchUsers,
-  deleteUser,
+  deleteUsers,
 } from '@/services/users';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ExportUsersModal } from './ExportUsersModal';
@@ -24,22 +24,43 @@ export default function UsersPageLayout({
   heading,
   defaultFilter = '',
 }: UsersPageLayoutProps) {
+  const [rawUsers, setRawUsers] = useState<IUser[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterOption, setFilterOption] = useState('');
+  const [filterOption, setFilterOption] = useState(defaultFilter);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
+  const [uiFilter, setUiFilter] = useState(''); // Tabs filter like locked, pending
 
-  const combinedFilter = filterOption || defaultFilter;
+  const applyUiFilter = (users: IUser[], filter: string): IUser[] => {
+    switch (filter) {
+      case 'pending':
+        return users.filter((u) => !u.isVerified);
+      case 'invited':
+        return users.filter((u) => !u.isVerified); // Modify if invited is separate
+      case 'locked':
+        return users.filter((u) => u.failedLoginAttempts >= 3);
+      case 'inactive':
+        return users.filter((u) => !u.isActive);
+      case 'admins':
+        return users.filter((u) => ['admin', 'manager'].includes(u.role));
+      default:
+        return users;
+    }
+  };
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
-      const role = combinedFilter as UserRole;
+      const role = filterOption as UserRole;
       const response = await getUsers(1, 50, role);
-      setUsers(response?.users ?? []);
+      const fetchedUsers = response?.users ?? [];
+      setRawUsers(fetchedUsers);
+      setUsers(applyUiFilter(fetchedUsers, uiFilter));
+      setSelectedUserIds([]);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -49,7 +70,21 @@ export default function UsersPageLayout({
 
   useEffect(() => {
     fetchUsers();
-  }, [combinedFilter]);
+  }, [filterOption]);
+
+  useEffect(() => {
+    setUsers(applyUiFilter(rawUsers, uiFilter));
+  }, [uiFilter, rawUsers]);
+
+  useEffect(() => {
+  // Find names of selected users from rawUsers
+  const names = selectedUserIds.map(id => {
+    const user = rawUsers.find(u => u._id === id);
+    return user ? user.name : id; // fallback to id if not found
+  });
+  setSelectedUserNames(names);
+}, [selectedUserIds, rawUsers]);
+
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query);
@@ -61,10 +96,14 @@ export default function UsersPageLayout({
 
     try {
       setIsLoading(true);
-      const results = await searchUsers(query);
-      setUsers(results);
+      const response = await searchUsers(query);
+      const filtered = applyUiFilter(response, uiFilter);
+      setUsers(filtered);
+      setSelectedUserIds([]);
     } catch (error) {
       console.error('Search error:', error);
+      setUsers([]);
+      setSelectedUserIds([]);
     } finally {
       setIsLoading(false);
     }
@@ -72,13 +111,22 @@ export default function UsersPageLayout({
 
   const handleDeleteConfirm = async () => {
     try {
-      // await deleteUser(selectedUserIds);
+      if (selectedUserIds.length === 0) return;
+      await deleteUsers(selectedUserIds);
       await fetchUsers();
-      setSelectedUserIds([]);
     } catch (error) {
       console.error('Failed to delete users:', error);
     } finally {
       setDeleteModalOpen(false);
+      setSelectedUserIds([]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedUserIds.length === users.length) {
+      setSelectedUserIds([]);
+    } else {
+      setSelectedUserIds(users.map((u) => u._id));
     }
   };
 
@@ -91,7 +139,7 @@ export default function UsersPageLayout({
           </h1>
         </div>
         <div className="mt-4">
-          <UsersTabs />
+          <UsersTabs activeFilter={uiFilter} setFilter={setUiFilter} />
         </div>
       </header>
 
@@ -109,28 +157,27 @@ export default function UsersPageLayout({
         <UserTable
           users={users}
           search={searchQuery}
-          filter={combinedFilter}
+          filter={filterOption}
           onSelectUsers={setSelectedUserIds}
+          selectedUserIds={selectedUserIds}
+          onToggleSelectAll={toggleSelectAll}
+          // isLoading={isLoading}
         />
       </main>
 
       <ConfirmDeleteModal
-  isOpen={isDeleteModalOpen}
-  onClose={() => setDeleteModalOpen(false)}
-  userId={selectedUserIds[0] || ''} // you must provide a userId, just use first or empty
-  onDeleted={() => {
-    handleDeleteConfirm();
-  }}
-  message={`Are you sure you want to delete ${selectedUserIds.length} selected user(s)?`}
-/>
-
+        isOpen={isDeleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        userIds={selectedUserIds}
+        userNames={selectedUserNames}
+        onDeleted={handleDeleteConfirm}
+        message={`Are you sure you want to delete ${selectedUserIds.length} selected user(s)?`}
+      />
 
       <ExportUsersModal
         isOpen={isExportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        onExport={() => {
-          console.log('Export triggered');
-        }}
+        users={users}
       />
     </section>
   );

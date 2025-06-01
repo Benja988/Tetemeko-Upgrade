@@ -27,7 +27,7 @@ export default function UserFilterBar({ onFilter }: { onFilter: (role: string) =
         >
           <option value="">All Roles</option>
           <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
+          {/* <option value="manager">Manager</option> */}
           <option value="web_user">Web User</option>
         </select>
 

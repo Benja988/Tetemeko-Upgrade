@@ -135,6 +135,38 @@ export const deleteUser = async (
   }
 }
 
+export const deleteUsers = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userIds } = req.body // expect array of IDs in body
+
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      res.status(400).json({ message: 'No user IDs provided.' })
+      return
+    }
+
+    // Validate all IDs
+    const invalidIds = userIds.filter(id => !mongoose.Types.ObjectId.isValid(id))
+    if (invalidIds.length > 0) {
+      res.status(400).json({ message: 'Some user IDs are invalid.', invalidIds })
+      return
+    }
+
+    // Soft delete all users by setting isActive to false
+    const result = await User.updateMany(
+      { _id: { $in: userIds } },
+      { $set: { isActive: false } }
+    )
+
+    // result.nModified or result.modifiedCount depending on Mongoose version
+    res.status(200).json({
+      message: `${result.modifiedCount || result.modifiedCount} user(s) deactivated successfully.`,
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: 'Failed to deactivate users.' })
+  }
+}
+
 // Lock user account manually (admin can lock user)
 export const lockUser = async (req: Request, res: Response): Promise<void> => {
   try {
