@@ -6,23 +6,37 @@ interface StationsTabsProps {
 }
 
 export default function StationsTabs({ currentFilter, onChangeFilter }: StationsTabsProps) {
-  const tabs = ['All', 'Live', 'Offline'];
+  const tabs = ['All', 'Active', 'Inactive'];
 
   return (
-    <div className="flex gap-4 mb-4">
-      {tabs.map((tab) => (
-        <button
-          key={tab}
-          onClick={() => onChangeFilter(tab)}
-          className={`px-4 py-2 rounded-full font-medium ${
-            currentFilter === tab
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          {tab}
-        </button>
-      ))}
+    <div className="inline-flex rounded-full bg-gray-100 p-1 shadow-sm select-none">
+      {tabs.map((tab) => {
+        const isActive = currentFilter === tab;
+
+        return (
+          <button
+            key={tab}
+            onClick={() => onChangeFilter(tab)}
+            type="button"
+            aria-pressed={isActive}
+            className={`
+              relative px-5 py-2 text-sm font-semibold rounded-full
+              transition-colors duration-200 ease-in-out
+              focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
+              ${
+                isActive
+                  ? 'bg-blue-600 text-white shadow-md'
+                  : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'
+              }
+            `}
+          >
+            {tab}
+            {isActive && (
+              <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-6 h-1 rounded-full bg-white shadow-sm"></span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

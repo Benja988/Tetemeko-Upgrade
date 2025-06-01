@@ -76,18 +76,23 @@ export const updateStation = async (req: Request, res: Response): Promise<void> 
  */
 export const deleteStation = async (req: Request, res: Response): Promise<void> => {
   try {
+    console.log("Deleting station with id:", req.params.id);
     const station = await Station.findById(req.params.id);
     if (!station) {
+      console.log("Station not found");
       res.status(404).json({ message: "Station not found" });
       return;
     }
 
     await Station.findByIdAndDelete(req.params.id);
+    console.log("Station deleted successfully");
     res.status(200).json({ message: "Station deleted successfully" });
   } catch (error) {
+    console.error("Failed to delete station", error);
     res.status(500).json({ message: "Failed to delete station", error });
   }
 };
+
 
 /**
  * Toggle station's isActive status (still assumes admin-only route protection)
