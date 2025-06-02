@@ -62,22 +62,27 @@ export const updateStation = async (
 
 // Delete station
 export const deleteStation = async (id: string): Promise<boolean> => {
+  if (!id) {
+    console.error("deleteStation called with invalid id:", id);
+    return false;
+  }
   try {
     const result = await withToast(
       async () => {
-        await apiRequest(`/stations/${id}`, 'DELETE')
-        return true
+        await apiRequest(`/stations/${id}`, 'DELETE');
+        return true;
       },
       'Station deleted successfully.',
       'Failed to delete station.'
     );
-
     return result ?? false;
   } catch (err) {
     console.error("Delete failed", err);
     return false;
   }
 };
+
+
 
 
 // Toggle station isActive status (admin only)

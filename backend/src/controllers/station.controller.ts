@@ -6,7 +6,7 @@ import Station from "../models/Station";
  */
 export const getAllStations = async (req: Request, res: Response): Promise<void> => {
   try {
-    const stations = await Station.find({ isActive: true });
+    const stations = await Station.find(); // No filter here, fetch all
     res.status(200).json(stations);
   } catch (error) {
     res.status(500).json({ message: "Failed to retrieve stations", error });

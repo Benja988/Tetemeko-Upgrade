@@ -7,7 +7,6 @@ interface ConfirmDeleteModalProps {
   onConfirm: () => void;
   count: number;
 }
-
 export default function ConfirmDeleteModal({
   isOpen,
   onClose,
@@ -27,8 +26,8 @@ export default function ConfirmDeleteModal({
           Cancel
         </button>
         <button
-          onClick={() => {
-            onConfirm();
+          onClick={async () => {
+            await onConfirm(); // wait for delete to complete
             onClose();
           }}
           className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"

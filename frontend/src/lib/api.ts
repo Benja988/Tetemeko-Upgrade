@@ -1,5 +1,4 @@
 // src/lib/api.ts
-
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 async function refreshToken() {
@@ -18,7 +17,7 @@ async function refreshToken() {
     throw new Error("Failed to refresh token");
   }
 
-  return response.json(); // Should return { accessToken, refreshToken? }
+  return response.json(); // { accessToken, refreshToken? }
 }
 
 export const apiRequest = async <T = any>(
@@ -30,18 +29,14 @@ export const apiRequest = async <T = any>(
   let authToken = token || localStorage.getItem("token");
 
   const makeRequest = async (tokenToUse: string | null) => {
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-    };
-
-    if (tokenToUse) {
-      headers["Authorization"] = `Bearer ${tokenToUse}`;
-    }
+    const headers: HeadersInit = {};
+    if (tokenToUse) headers["Authorization"] = `Bearer ${tokenToUse}`;
+    if (body) headers["Content-Type"] = "application/json";
 
     const response = await fetch(`${API_BASE_URL}${url}`, {
       method,
       headers,
-      body: body ? JSON.stringify(body) : null,
+      body: body ? JSON.stringify(body) : undefined,
     });
 
     return response;
@@ -49,6 +44,7 @@ export const apiRequest = async <T = any>(
 
   let response = await makeRequest(authToken);
 
+  // Handle expired token
   if (response.status === 401) {
     try {
       const data = await refreshToken();
@@ -60,9 +56,7 @@ export const apiRequest = async <T = any>(
 
       response = await makeRequest(data.accessToken);
     } catch (err) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("refreshToken");
-      localStorage.removeItem("user");
+      localStorage.clear(); // Clear all session-related data
       throw new Error("Session expired. Please log in again.");
     }
   }

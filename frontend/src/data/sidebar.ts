@@ -22,11 +22,6 @@ export const navItems: NavItem[] = [
   {
     label: 'Stations',
     href: '/admin/dashboard/stations',
-    subItems: [
-      { label: 'All Stations', href: '/admin/dashboard/stations' },
-      { label: 'Add Station', href: '/admin/dashboard/stations/create' },
-      { label: 'Categories', href: '/admin/dashboard/stations/categories' },
-    ],
   },
   {
     label: 'News',

@@ -11,7 +11,7 @@ export default function StationsTabs({ currentFilter, onChangeFilter }: Stations
   return (
     <div className="inline-flex rounded-full bg-gray-100 p-1 shadow-sm select-none">
       {tabs.map((tab) => {
-        const isActive = currentFilter === tab;
+        const isActive: boolean = currentFilter === tab;
 
         return (
           <button
@@ -25,8 +25,8 @@ export default function StationsTabs({ currentFilter, onChangeFilter }: Stations
               focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
               ${
                 isActive
-                  ? 'bg-blue-600 text-white shadow-md'
-                  : 'text-gray-700 hover:bg-blue-100 hover:text-blue-700'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-gray-700 hover:bg-secondary hover:text-blue-700'
               }
             `}
           >
