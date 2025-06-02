@@ -11,7 +11,7 @@ import {
 import StationsActions from "./StationsActions";
 import StationsTabs from "./StationsTabs";
 import StationsSearchFilter from "./StationsSearchFilter";
-import StationsTable from "./StationsTable";
+import StationsCards from "./StationCards";
 import StationFormModal from "./StationFormModal";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
@@ -22,10 +22,8 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
   const [selectedStations, setSelectedStations] = useState<Station[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | undefined>();
-
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Station | Station[] | null>(null);
-
   const [toggledStation, setToggledStation] = useState<Station | null>(null);
 
   useEffect(() => {
@@ -55,7 +53,6 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
     } else {
       setEditingStation(station);
     }
-
     setIsModalOpen(true);
   };
 
@@ -89,7 +86,6 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
       } else {
         await deleteStation(deleteTarget._id);
       }
-
       await fetchStations();
       setSelectedStations([]);
     } catch (error) {
@@ -104,21 +100,20 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
     try {
       const updatedStation = await toggleStationStatus(station._id);
       setToggledStation(updatedStation);
-      await fetchStations(); // Refresh stations after toggling
+      await fetchStations();
     } catch (error) {
       console.error(error);
     }
   };
 
-  // Filter stations by statusFilter using isActive boolean
-  const filteredStations = stations.filter((station) => {
-    if (statusFilter === "All") return true;
-    if (statusFilter === "Active") return station.isActive === true;
-    if (statusFilter === "Inactive") return station.isActive === false;
-    return true;
-  }).filter(station =>
-    station.name.toLowerCase().includes(searchTerm.toLowerCase()) // Optional: also filter by searchTerm
-  );
+  const filteredStations = stations
+    .filter((station) => {
+      if (statusFilter === "All") return true;
+      if (statusFilter === "Active") return station.isActive === true;
+      if (statusFilter === "Inactive") return station.isActive === false;
+      return true;
+    })
+    .filter((station) => station.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   const handleExport = () => {
     const dataToExport = selectedStations.length > 0 ? selectedStations : stations;
@@ -144,7 +139,7 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
   };
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <section className="max-w-7xl mx-auto px-6 py-8 space-y-8">
       <StationFormModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -165,35 +160,95 @@ export default function StationsPageLayout({ heading }: { heading: string }) {
         count={Array.isArray(deleteTarget) ? deleteTarget.length : 1}
       />
 
-      <div className="sticky top-0 z-10 pb-4 border-b border-gray-200 bg-white">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">{heading}</h1>
+      {/* Header */}
+      <header className="sticky top-0 z-20 bg-white border-b border-gray-300 py-6 px-6 rounded-md shadow-md">
+        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900">{heading}</h1>
+        <p className="mt-1 text-gray-600 max-w-xl">
+          Manage your stations, update information, toggle active status, and more.
+        </p>
+      </header>
 
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Filters + Actions */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div className="flex flex-wrap gap-4 md:gap-6 items-center">
           <StationsTabs
             currentFilter={statusFilter}
             onChangeFilter={setStatusFilter}
           />
-          <StationsSearchFilter
+          
+        </div>
+        
+
+        <div className="flex gap-4">
+          <button
+            onClick={handleAddStation}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-white text-sm font-semibold shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Add Station
+          </button>
+
+          <button
+            onClick={handleExport}
+            disabled={stations.length === 0}
+            className={`inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400 transition
+              ${stations.length === 0 ? "opacity-50 cursor-not-allowed" : ""}
+            `}
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
+      </div>
+      <div>
+        <StationsSearchFilter
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
           />
-        </div>
-
-        <div className="mt-4">
-          <StationsActions onAddStation={handleAddStation} onExport={handleExport} />
-        </div>
       </div>
+      
 
-      <div className="pt-2">
-        <StationsTable
-          stations={filteredStations}
-          selectedStations={selectedStations}
-          onSelectStations={setSelectedStations}
-          onDeleteStation={handleDeleteStation}
-          onEditStation={handleEditStation}
-          onToggleStatus={handleToggleStatus}
-        />
-      </div>
+      {/* Stations Table or Empty State */}
+      
+        {filteredStations.length > 0 ? (
+          <StationsCards
+
+            stations={filteredStations}
+            selectedStations={selectedStations}
+            onSelectStations={setSelectedStations}
+            onDeleteStation={handleDeleteStation}
+            onEditStation={handleEditStation}
+            onToggleStatus={handleToggleStatus}
+          />
+        ) : (
+          <div className="p-8 text-center text-gray-500 text-lg font-medium">
+            No stations found. Try adjusting your filters or adding a new station.
+          </div>
+        )}
     </section>
   );
 }

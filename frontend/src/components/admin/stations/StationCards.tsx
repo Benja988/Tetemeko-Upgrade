@@ -11,7 +11,7 @@ import {
   ToggleRight,
 } from "lucide-react";
 
-interface StationsTableProps {
+interface StationsCardsProps {
   stations: Station[];
   onEditStation: (station: Station) => void;
   onDeleteStation: (station: Station) => void;
@@ -20,12 +20,12 @@ interface StationsTableProps {
   onSelectStations?: (selected: Station[]) => void;
 }
 
-export default function StationsTable({
+export default function StationCards({
   stations,
   onEditStation,
   onDeleteStation,
   onToggleStatus,
-}: StationsTableProps) {
+}: StationsCardsProps) {
   if (stations.length === 0) {
     return (
       <div className="p-10 text-center text-gray-500 text-lg select-none">
