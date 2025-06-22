@@ -143,6 +143,7 @@ input[type="checkbox"].custom-checkbox {
   vertical-align: middle;
 }
 
+
 /* The checkmark - only visible when checked */
 input[type="checkbox"].custom-checkbox:checked::after {
   content: "";
@@ -163,7 +164,9 @@ input[type="checkbox"].custom-checkbox:focus {
 }
 
 
-
+/* .btn-primary { @apply bg-primary text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:bg-primary-dark transition flex items-center; }
+.btn-secondary { @apply bg-white text-primary px-6 py-3 rounded-2xl font-semibold shadow-lg hover:bg-gray-100 transition flex items-center; }
+.btn-tertiary { @apply bg-gray-800 text-white px-6 py-3 rounded-2xl font-semibold shadow-lg hover:bg-gray-700 transition flex items-center; } */
 
 
 a {

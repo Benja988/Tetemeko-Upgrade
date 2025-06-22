@@ -1,27 +1,38 @@
 import AboutUs from "@/components/AboutUs";
+import CustomerCareChat from "@/components/CustomerCareChat";
 import Events from "@/components/Events";
-import FeaturedWork from "@/components/FeaturedWork";
+import FAQs from "@/components/FAQs";
 import Feedback from "@/components/Feedback";
 import Footer from "@/components/Footer";
 import Hero from "@/components/Hero";
+import LiveNow from "@/components/LiveNow";
 import OurServices from "@/components/OurServices";
-import PodcastsAndNews from "@/components/PodcastsAndNews";
+import ShopFromUs from "@/components/ShopFromUs";
+import TrendingNews from "@/components/TrendingNews";
+import TrendingPodcasts from "@/components/TrendingPodcasts";
 
 export default function Home() {
   return (
-    <main className="">
+    <main className="relative">
       <Hero />
       <AboutUs />
       <OurServices />
-      <FeaturedWork />
+      <LiveNow />
+      <TrendingPodcasts />
+      <TrendingNews />
+      <ShopFromUs />
+      {/* <FeaturedWork /> */}
 
       {/* <PodcastProvider>
         <PodcastsAndNews />
       </PodcastProvider> */}
-      
+
       <Events />
+      <FAQs />
       <Feedback />
       <Footer />
+
+      <CustomerCareChat />
     </main>
   )
 }

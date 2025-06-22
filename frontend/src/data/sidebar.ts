@@ -65,7 +65,7 @@ export const navItems: NavItem[] = [
     href: '/admin/dashboard/settings',
     subItems: [
       { label: 'General', href: '/admin/dashboard/settings' },
-      { label: 'Security', href: '/admin/dashboard/settings/security' },
+      { label: 'Categories', href: '/admin/dashboard/settings/categories' },
       { label: 'Appearance', href: '/admin/dashboard/settings/appearance' },
     ],
   },

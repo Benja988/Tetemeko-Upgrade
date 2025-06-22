@@ -1,16 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
+import ReserveButton from "../ReserveButton";
 
 const features = [
   {
     id: 1,
     title: "24/7 Live Streaming",
     description:
-      "Never miss a beat — access our radio and TV stations live anytime, anywhere.",
+      "Stay in tune day or night — catch our broadcasts anytime, anywhere on any device.",
     icon: (
       <svg
-        className="w-10 h-10 text-indigo-400"
+        className="w-10 h-10 text-indigo-400 group-hover:text-indigo-300 transition duration-300"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -27,10 +28,10 @@ const features = [
     id: 2,
     title: "Diverse Content",
     description:
-      "Music, talk shows, news, and entertainment – our stations offer something for everyone.",
+      "From music to breaking news — enjoy a wide range of radio and TV programming.",
     icon: (
       <svg
-        className="w-10 h-10 text-indigo-400"
+        className="w-10 h-10 text-indigo-400 group-hover:text-indigo-300 transition duration-300"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -46,10 +47,10 @@ const features = [
     id: 3,
     title: "Community Connection",
     description:
-      "Engage with your community through interactive programs and live events.",
+      "Join the conversation with interactive shows, local news, and audience participation.",
     icon: (
       <svg
-        className="w-10 h-10 text-indigo-400"
+        className="w-10 h-10 text-indigo-400 group-hover:text-indigo-300 transition duration-300"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -65,12 +66,12 @@ const features = [
   },
   {
     id: 4,
-    title: "On-Demand Content",
+    title: "On-Demand Access",
     description:
-      "Listen and watch your favorite shows whenever you want, at your convenience.",
+      "Rewind, replay, and relive your favorite shows whenever it suits you.",
     icon: (
       <svg
-        className="w-10 h-10 text-indigo-400"
+        className="w-10 h-10 text-indigo-400 group-hover:text-indigo-300 transition duration-300"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
@@ -104,7 +105,7 @@ export default function StationsSection4() {
           transition={{ delay: 0.2, duration: 0.6 }}
           viewport={{ once: true }}
         >
-          We bring you the most dynamic, community-driven, and diverse media experience available.
+          We're more than just media — we’re your platform for culture, creativity, and connection.
         </motion.p>
       </div>
 
@@ -112,17 +113,21 @@ export default function StationsSection4() {
         {features.map(({ id, title, description, icon }, i) => (
           <motion.div
             key={id}
-            className="bg-white/10 rounded-xl p-8 flex flex-col items-center text-center shadow-lg hover:bg-white/20 transition cursor-default"
+            className="group bg-white/10 backdrop-blur-lg rounded-2xl p-8 flex flex-col items-center text-center shadow-md border border-white/10 hover:shadow-xl hover:border-white/20 transition duration-300"
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.15, duration: 0.5 }}
             viewport={{ once: true }}
           >
             <div className="mb-4">{icon}</div>
-            <h3 className="text-xl font-poppins font-semibold mb-2">{title}</h3>
-            <p className="text-gray-300 font-inter">{description}</p>
+            <h3 className="text-xl font-semibold mb-2">{title}</h3>
+            <p className="text-gray-300 font-light">{description}</p>
           </motion.div>
         ))}
+      </div>
+
+      <div className="mt-16 flex justify-center">
+        <ReserveButton />
       </div>
     </section>
   );

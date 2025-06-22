@@ -1,144 +1,111 @@
-'use client';
+// ... other imports
+import { toast } from 'sonner';
+import NewsArticleForm from './create/NewsArticleForm';
+import NewsHeader from './NewsHeader';
+import NewsSearchFilterBar from './NewsSearchFilterBar';
+import NewsStats from './NewsStats';
+import NewsTable from './NewsTable';
+import { deleteNewsById, getAllNews, getNewsStats, toggleBreakingNews } from '@/services/news/newsService';
+import { useEffect, useState } from 'react';
+import { News } from '@/interfaces/News';
 
-import { useState, useCallback, useMemo } from 'react';
-import { NewsItems } from '@/data/news';
-import { NewsArticle } from '@/interfaces/News';
-
-import NewsActions from './NewsActions';
-import NewsSearchBar from './NewsSearchBar';
-import NewsFilterBar from './NewsFilterBar';
-import NewsTabs from './NewsTabs';
-import AddNewsModal from './AddNewsModal';
-import EditNewsModal from './EditNewsModal';
-import { ConfirmDeleteModal } from './ConfirmDeleteModal';
-import { ExportNewsModal } from './ExportNewsModal';
-import NewsCards from './NewsCards';
-
-interface NewsPageLayoutProps {
+interface Props {
   heading: string;
-  defaultFilter?: string;
 }
-
-export default function NewsPageLayout({
-  heading,
-  defaultFilter = '',
-}: NewsPageLayoutProps) {
-  // States for UI and data
+export default function NewsPageLayout({ heading }: Props) {
+  const [newsList, setNewsList] = useState<News[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterOption, setFilterOption] = useState('');
-  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [stats, setStats] = useState({ totalNews: 0, publishedNews: 0, unpublishedNews: 0 });
+  const [refresh, setRefresh] = useState(false);
 
-  const [isAddModalOpen, setAddModalOpen] = useState(false);
-  const [isEditModalOpen, setEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [isExportModalOpen, setExportModalOpen] = useState(false);
+  useEffect(() => {
+    const fetchAll = async () => {
+      const [newsRes, statsRes] = await Promise.all([
+        getAllNews(),
+        getNewsStats()
+      ]);
 
-  // Combine filter with defaultFilter; memoize to avoid unnecessary recalcs
-  const combinedFilter = useMemo(() => filterOption || defaultFilter, [
-    filterOption,
-    defaultFilter,
-  ]);
+      if (newsRes) setNewsList(newsRes.news);
+      if (statsRes) setStats(statsRes);
+    };
 
-  // Handlers - useCallback to memoize and avoid recreations
-  const handleSearch = useCallback((query: string) => setSearchQuery(query), []);
-  const handleFilter = useCallback((filter: string) => setFilterOption(filter), []);
+    fetchAll();
+  }, [refresh]);
 
-  // Open edit modal with an article or slug string
-  const openEditModalWithArticle = useCallback(
-    (articleOrSlug: NewsArticle | string) => {
-      if (typeof articleOrSlug === 'string') {
-        const article = NewsItems.find((a) => a.slug === articleOrSlug) || null;
-        setSelectedArticle(article);
-      } else {
-        setSelectedArticle(articleOrSlug);
-      }
-      setEditModalOpen(true);
-    },
-    []
-  );
+  const refetch = () => setRefresh(!refresh);
 
-  // Handle edit by article ID
-  const handleEditById = useCallback((articleId: string) => {
-    const article = NewsItems.find((a) => a._id === articleId) || null;
-    setSelectedArticle(article);
-    setEditModalOpen(true);
-  }, []);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this news article?')) return;
 
-  // Render
+    const res = await deleteNewsById(id);
+    if (res) {
+      toast.success('News deleted');
+      refetch();
+    }
+  };
+
+  const handleToggleBreaking = async (id: string) => {
+    const res = await toggleBreakingNews(id);
+    if (res) {
+      toast.success('Breaking news updated');
+      refetch();
+    }
+  };
+
+  const filteredNews = newsList.filter((news) => {
+    const matchSearch =
+      news.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      news.tags?.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchCategory =
+      !categoryFilter || (typeof news.category === 'object' && news.category?._id === categoryFilter) ||
+      news.category === categoryFilter;
+
+    const matchStatus =
+      !statusFilter ||
+      (statusFilter === 'published' && news.isPublished) ||
+      (statusFilter === 'unpublished' && !news.isPublished);
+
+    return matchSearch && matchCategory && matchStatus;
+  });
+
   return (
-    <section className="min-h-screen bg-[var(--color-light)] p-6">
-      <header className="mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-3xl font-bold text-[var(--color-primary)]">{heading}</h1>
+    <div className="p-6 max-w-7xl mx-auto space-y-8">
+      <NewsHeader heading={heading} showForm={showForm} onCreate={() => setShowForm(!showForm)} />
+
+      <NewsStats
+        total={stats.totalNews}
+        published={stats.publishedNews}
+        unpublished={stats.unpublishedNews}
+      />
+
+      <NewsSearchFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+      />
+
+      {showForm && (
+        <div className="bg-white p-6 rounded-xl shadow animate-fade-in">
+          <NewsArticleForm onSuccess={() => {
+            setShowForm(false);
+            refetch();
+          }} />
         </div>
-        <div className="mt-4">
-          <NewsTabs />
-        </div>
-      </header>
+      )}
 
-      <div className="flex flex-wrap gap-2 mb-4">
-        <NewsSearchBar onSearch={handleSearch} />
-        <NewsFilterBar onFilter={handleFilter} />
-      </div>
-
-      <main>
-        {/* <NewsActions
-          onAddNews={() => setAddModalOpen(true)}
-          onEditNews={handleEditById}
-          onDeleteSelected={() => setDeleteModalOpen(true)}
-          onExport={() => setExportModalOpen(true)}
-        /> */}
-
-        <NewsCards
-          articles={NewsItems}
-          search={searchQuery}
-          filter={combinedFilter}
-          onEdit={openEditModalWithArticle}
-        />
-      </main>
-
-      {/* Modals */}
-      <AddNewsModal
-        isOpen={isAddModalOpen}
-        onClose={() => setAddModalOpen(false)}
-        onAdd={(newArticle: NewsArticle) => {
-          console.log('Added article', newArticle);
-          setAddModalOpen(false);
-        }}
+      <NewsTable
+        newsList={filteredNews}
+        onDelete={handleDelete}
+        onToggleBreaking={handleToggleBreaking}
+        refetch={refetch}
       />
-
-      <EditNewsModal
-        isOpen={isEditModalOpen}
-        article={selectedArticle}
-        onClose={() => {
-          setSelectedArticle(null);
-          setEditModalOpen(false);
-        }}
-        onEdit={(updatedArticle: NewsArticle) => {
-          console.log('Edited article', updatedArticle);
-          setEditModalOpen(false);
-          setSelectedArticle(null);
-        }}
-      />
-
-      <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={() => {
-          console.log('Deleted selected articles');
-          setDeleteModalOpen(false);
-        }}
-        message="Are you sure you want to delete selected news articles?"
-      />
-
-      <ExportNewsModal
-        isOpen={isExportModalOpen}
-        onClose={() => setExportModalOpen(false)}
-        onExport={() => {
-          console.log('Exported news list');
-          setExportModalOpen(false);
-        }}
-      />
-    </section>
+    </div>
   );
 }

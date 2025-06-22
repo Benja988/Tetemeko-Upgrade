@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { News } from "../models/News";  // Adjust the path as needed
 import mongoose from "mongoose";
+import { uploadMedia } from "../utils/uploadMedia";
 
 /**
  * Create a news post
@@ -18,12 +19,30 @@ export const createNews = async (req: Request, res: Response): Promise<void> => 
       isPublished,
       thumbnail,
       featuredImage,
+      videoUrl,
       seoTitle,
       seoDescription,
       readingTime,
       isFeatured,
       isBreaking,
     } = req.body;
+
+    let uploadedThumbnail = thumbnail;
+    let uploadedFeaturedImage = featuredImage;
+    let uploadedVideoUrl = videoUrl;
+
+    // Upload images to Cloudinary if base64 string is provided
+    if (thumbnail?.startsWith("data:")) {
+      uploadedThumbnail = await uploadMedia(thumbnail, "news/thumbnails");
+    }
+
+    if (featuredImage?.startsWith("data:")) {
+      uploadedFeaturedImage = await uploadMedia(featuredImage, "news/featured");
+    }
+
+    if (videoUrl?.startsWith("data")) {
+      uploadedVideoUrl = await uploadMedia(videoUrl, "news/vidoes", "video");
+    }
 
     const news = new News({
       title,
@@ -34,8 +53,9 @@ export const createNews = async (req: Request, res: Response): Promise<void> => 
       tags,
       publishedAt,
       isPublished,
-      thumbnail,
-      featuredImage,
+      thumbnail: uploadedThumbnail,
+      featuredImage: uploadedFeaturedImage,
+      videoUrl: uploadedVideoUrl,
       seoTitle,
       seoDescription,
       readingTime,
@@ -51,7 +71,6 @@ export const createNews = async (req: Request, res: Response): Promise<void> => 
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 /**
  * Get all news with optional filters & pagination
  */
@@ -67,6 +86,7 @@ export const getAllNews = async (req: Request, res: Response): Promise<void> => 
 
     const newsList = await News.find(filters)
       .populate("author", "name email") // populate author name & email
+      .populate("category", "name slug")
       .sort({ publishedAt: -1 })
       .skip((+page - 1) * +limit)
       .limit(+limit);
@@ -331,3 +351,28 @@ export const getNewsStats = async (req: Request, res: Response): Promise<void> =
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
+
+
+export const toggleBreakingNews = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    const news = await News.findById(id);
+    if (!news) {
+      res.status(404).json({ error: "News not found" });
+      return;
+    }
+
+    news.isBreaking = !news.isBreaking;
+    await news.save();
+
+    res.status(200).json({
+      message: `News has been ${news.isBreaking ? "marked" : "unmarked"} as breaking`,
+      news,
+    });
+  } catch (error) {
+    console.error("Error toggling breaking status:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+

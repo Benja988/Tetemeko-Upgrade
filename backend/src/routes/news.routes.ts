@@ -12,6 +12,7 @@ import {
   getNewsByCategory,
   getRecentNews,
   getNewsStats,
+  toggleBreakingNews,
 } from "../controllers/news.controller";
 
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
@@ -51,5 +52,7 @@ router.delete(
   authorize([UserRole.ADMIN]),
   deleteNewsById
 );
+
+router.patch("/:id/toggle-breaking", authenticateJWT, authorize([UserRole.ADMIN]), toggleBreakingNews)
 
 export default router;

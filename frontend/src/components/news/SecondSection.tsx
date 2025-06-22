@@ -1,25 +1,34 @@
-"use client";
+'use client';
 
-import React from "react";
-import Link from "next/link";
-import { NewsItems } from "@/data/news";
-import { categoriesRow1, categoriesRow2 } from "@/data/categories"; // Import categories
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { getRecentNews } from '@/services/news/newsService';
+import { getCategories } from '@/services/categories/categoryService';
+import { News } from '@/interfaces/News';
+import { Category } from '@/interfaces/Category';
+import { slugify } from '@/utils/slugify';
 
 const SecondSection: React.FC = () => {
-  // **Data Categorization**
-  const trendingStories = NewsItems.slice(5, 8); // Next three for Trending Stories
+  const [trendingStories, setTrendingStories] = useState<News[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  // Flatten categories into a single list
-  const categories = [
-    ...categoriesRow1.map((cat) => cat.title),
-    ...categoriesRow2.map((cat) => cat.title),
-  ];
+  useEffect(() => {
+    const fetchTrendingAndCategories = async () => {
+      const news = await getRecentNews(8);
+      const categoryList = await getCategories('news');
+
+      if (news) setTrendingStories(news.slice(1, 4)); // mimic original behavior
+      if (categoryList) setCategories(categoryList);
+    };
+
+    fetchTrendingAndCategories();
+  }, []);
 
   const sponsoredContent = {
-    title: "Sponsored Content",
-    text: "Check out our latest promotions and deals from trusted brands.",
-    link: "/sponsored",
-    imageSrc: "https://picsum.photos/600/400?random=5",
+    title: 'Sponsored Content',
+    text: 'Check out our latest promotions and deals from trusted brands.',
+    link: '/sponsored',
+    imageSrc: 'https://picsum.photos/600/400?random=5',
   };
 
   return (
@@ -31,11 +40,11 @@ const SecondSection: React.FC = () => {
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingStories.map((story, index) => (
-            <Link href={`/news/${story.slug}`} key={index}>
+          {trendingStories.map((story) => (
+            <Link href={`/news/${slugify(story.title)}`} key={story._id}>
               <div className="group relative overflow-hidden rounded-lg shadow-lg hover:scale-105 transition-transform duration-300">
                 <img
-                  src={story.imageSrc}
+                  src={story.thumbnail || story.featuredImage}
                   alt={story.title}
                   className="w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-300"
                 />
@@ -43,7 +52,9 @@ const SecondSection: React.FC = () => {
                   <h3 className="text-xl font-bold text-white font-serif">
                     {story.title}
                   </h3>
-                  <p className="text-white mt-2 line-clamp-3">{story.text}</p>
+                  <p className="text-white mt-2 line-clamp-3">
+                    {story.summary || story.content?.slice(0, 100) + '...'}
+                  </p>
                 </div>
               </div>
             </Link>
@@ -57,14 +68,14 @@ const SecondSection: React.FC = () => {
           Categories
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-          {categories.map((category, index) => (
+          {categories.map((category) => (
             <Link
-              href={`/category/${category.toLowerCase().replace(/ /g, "-")}`}
-              key={index}
+              href={`/news/category/${category.slug}`}
+              key={category._id}
             >
               <div className="group relative overflow-hidden rounded-lg shadow-lg hover:scale-105 transition-all duration-300 bg-secondary text-center py-6 px-4 flex flex-col justify-center items-center hover:bg-primary">
                 <h3 className="text-2xl font-semibold text-white font-serif group-hover:text-primaryText">
-                  {category}
+                  {category.name}
                 </h3>
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
               </div>

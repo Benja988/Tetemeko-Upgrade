@@ -1,29 +1,31 @@
-// interfaces/news.ts
+// @/interfaces/News.ts
 
-export interface RelatedArticle {
-  text: string;
-  imageSrc: string;
-  slug: string;
-}
+import { Category } from "./Category";
 
-export interface NewsArticle {
+export interface News {
   _id: string;
   title: string;
-  imageSrc: string;
-  text: string;
-  tag: string;
-  slug?: string;
-  category: string;
-  videoSrc: string | null;
-  listItems: string[];
-  relatedArticles: RelatedArticle[];
-  createdAt: string;
-  updatedAt: string;
+  content: string;
+  summary?: string;
+  author?: string; // or Author object if populated
+  category?: string | Category;
+  tags?: string[];
+  publishedAt?: string;
+  isPublished: boolean;
+  thumbnail?: string;
+  featuredImage?: string;
+  videoUrl?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  readingTime?: number;
+  viewsCount: number;
+  isFeatured: boolean;
+  isBreaking: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-interface NewsTableProps {
-  articles: NewsArticle[];
-  search: string;
-  filter: string;
-  onEdit: (article: NewsArticle) => void;
-}
+export type NewsInput = Omit<
+  News,
+  "_id" | "viewsCount" | "createdAt" | "updatedAt"
+>;

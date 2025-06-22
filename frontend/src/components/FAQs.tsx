@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ReserveButton from "./ReserveButton";
 
 const faqs = [
   {
@@ -59,6 +60,9 @@ export default function FAQs() {
             </div>
           ))}
         </div>
+      </div>
+      <div>
+        <ReserveButton />
       </div>
     </section>
   );

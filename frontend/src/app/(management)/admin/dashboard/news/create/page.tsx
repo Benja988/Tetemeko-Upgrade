@@ -1,6 +1,6 @@
 // src/app/(management)/admin/dashboard/news/create/page.tsx
 
-import NewsArticleForm from "@/components/admin/news/NewsArticleForm";
+import NewsArticleForm from "@/components/admin/news/create/NewsArticleForm";
 
 export default function CreateNewsPage() {
   return (

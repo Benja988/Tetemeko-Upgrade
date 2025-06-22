@@ -1,24 +1,34 @@
-import mongoose, { Document, Schema, Types } from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
 export interface IStation extends Document {
   name: string;
   description?: string;
-  streamUrl: string;
-  logoUrl?: string;
-  location?: string;
-  genres: string[];
+  streamUrl?: string;
+  imageUrl: string;
+  location: string;
+  genre: string[];
   isActive: boolean;
+  type: "Radio Station" | "TV Station";
+  liveShow?: string;
+  listenerz?: number;
 }
 
 const StationSchema: Schema<IStation> = new Schema(
   {
     name: { type: String, required: true },
     description: { type: String },
-    streamUrl: { type: String, required: true },
-    logoUrl: { type: String },
-    location: { type: String },
-    genres: [{ type: String }],
+    streamUrl: { type: String }, // optional
+    imageUrl: { type: String, required: false }, // renamed from logoUrl
+    location: { type: String, required: true },
+    genre: [{ type: String }], // aligned with frontend
     isActive: { type: Boolean, default: true },
+    type: {
+      type: String,
+      enum: ["Radio Station", "TV Station"],
+      required: true,
+    },
+    liveShow: { type: String },
+    listenerz: { type: Number },
   },
   { timestamps: true }
 );

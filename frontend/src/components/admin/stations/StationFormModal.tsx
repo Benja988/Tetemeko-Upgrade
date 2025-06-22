@@ -1,11 +1,12 @@
 import { useState, useEffect, ChangeEvent } from "react";
-import { Station } from "@/interfaces/Station";
+import { Station, StationInput } from "@/interfaces/Station";
 import Modal from "./Modal";
+import { toBase64 } from "@/utils/toBase64";
 
 interface StationFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (station: Partial<Station>) => void;
+  onSubmit: (station: StationInput) => Promise<void>;
   initialData?: Station;
 }
 
@@ -18,176 +19,263 @@ export default function StationFormModal({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [streamUrl, setStreamUrl] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [location, setLocation] = useState("");
   const [genres, setGenres] = useState("");
+  const [type, setType] = useState<"Radio Station" | "TV Station">("Radio Station");
+  const [isActive, setIsActive] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [liveShow, setLiveShow] = useState("");
+  const [listenerz, setListenerz] = useState<number | string>("");
 
-  // Local state for file upload preview
-  const [logoFile, setLogoFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (initialData) {
       setName(initialData.name || "");
       setDescription(initialData.description || "");
       setStreamUrl(initialData.streamUrl || "");
-      setLogoUrl(initialData.imageUrl || "");
+      setImageUrl(initialData.imageUrl || "");
       setLocation(initialData.location || "");
-      setGenres((initialData.genres || []).join(", "));
-      setLogoFile(null);
+      setGenres((initialData.genre || []).join(", "));
+      setType(initialData.type || "Radio Station");
+      setIsActive(initialData.isActive ?? true);
+      setLiveShow(initialData.liveShow || "");
+      setListenerz(initialData.listenerz || "");
     } else {
       setName("");
       setDescription("");
       setStreamUrl("");
-      setLogoUrl("");
+      setImageUrl("");
       setLocation("");
       setGenres("");
-      setLogoFile(null);
+      setType("Radio Station");
+      setIsActive(true);
+      setLiveShow("");
+      setListenerz("");
     }
   }, [initialData]);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setLogoFile(file);
-      // Show local preview for uploaded image
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setLogoUrl(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
+      try {
+        const base64 = await toBase64(file);
+        setImageUrl(base64); // this will be sent in request body as imageUrl
+      } catch (error) {
+        console.error("Error converting image:", error);
+        alert("Failed to process image. Please try a different file.");
+      }
     }
   };
 
-  const handleSubmit = () => {
-    // Note: Upload logic of logoFile to your backend/cloud is out of scope here
-    onSubmit({
+  const handleSubmit = async () => {
+    if (!name || !location || !type) {
+      alert("Please fill in required fields: name, location, and type.");
+      return;
+    }
+
+    const stationData: StationInput = {
       name,
       description,
       streamUrl,
-      imageUrl: logoUrl,
+      imageUrl,
       location,
-      genres: genres.split(",").map((g) => g.trim()),
-    });
-    onClose();
+      genre: genres.split(",").map((g) => g.trim()).filter(Boolean),
+      type,
+      isActive,
+      liveShow,
+      listenerz: Number(listenerz) || 0,
+    };
+
+    try {
+      setLoading(true);
+      await onSubmit(stationData);
+      onClose();
+    } catch (error) {
+      console.error("Station submission failed:", error);
+      alert("Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={initialData ? "Edit Station" : "Add Station"}
+      title={initialData ? "Edit Station" : "Add New Station"}
     >
       <form
         onSubmit={(e) => {
           e.preventDefault();
           handleSubmit();
         }}
-        className="space-y-6"
+        className="space-y-5"
       >
         {/* Station Name */}
-        <div>
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Station Name
-          </label>
-          <input
-            id="name"
-            type="text"
-            required
-            placeholder="Enter station name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          />
-        </div>
+        <InputField
+          label="Station Name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. East Radio 92.7"
+        />
 
         {/* Description */}
-        <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            Description
-          </label>
-          <textarea
-            id="description"
-            placeholder="Brief description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={3}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition resize-none"
-          />
-        </div>
+        <TextAreaField
+          label="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Brief station description"
+        />
 
         {/* Stream URL */}
-        <div>
-          <label htmlFor="streamUrl" className="block text-sm font-medium text-gray-700 mb-1">
-            Stream URL
-          </label>
-          <input
-            id="streamUrl"
-            type="url"
-            placeholder="https://example.com/stream"
-            value={streamUrl}
-            onChange={(e) => setStreamUrl(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          />
-        </div>
+        <InputField
+          label="Stream URL"
+          type="url"
+          value={streamUrl}
+          onChange={(e) => setStreamUrl(e.target.value)}
+          placeholder="https://stream.example.com/live"
+        />
 
         {/* Logo Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Station Logo</label>
-          {logoUrl && (
+          <label className="block text-sm font-medium text-gray-700 mb-1">Logo (optional)</label>
+          {imageUrl && (
             <img
-              src={logoUrl}
-              alt="Station logo preview"
-              className="mb-2 h-28 w-28 object-contain rounded border border-gray-300 shadow-sm"
+              src={imageUrl}
+              alt="Preview"
+              className="mb-2 h-24 w-24 object-contain rounded border"
             />
           )}
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer"
-          />
+          <input type="file" accept="image/*" onChange={handleFileChange} />
         </div>
 
         {/* Location */}
-        <div>
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-            Location
-          </label>
-          <input
-            id="location"
-            type="text"
-            placeholder="Enter location"
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
-          />
-        </div>
+        <InputField
+          label="Location"
+          required
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+          placeholder="e.g. Nairobi, Kenya"
+        />
 
         {/* Genres */}
+        <InputField
+          label="Genres"
+          value={genres}
+          onChange={(e) => setGenres(e.target.value)}
+          placeholder="Comma-separated e.g. Pop, Rock"
+        />
+
+        {/* Type */}
         <div>
-          <label htmlFor="genres" className="block text-sm font-medium text-gray-700 mb-1">
-            Genres (comma-separated)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Station Type</label>
+          <select
+            value={type}
+            onChange={(e) => setType(e.target.value as "Radio Station" | "TV Station")}
+            className="w-full border px-3 py-2 rounded-md"
+          >
+            <option value="Radio Station">Radio Station</option>
+            <option value="TV Station">TV Station</option>
+          </select>
+        </div>
+        {/* Live Show Title */}
+        <InputField
+          label="Live Show Title"
+          value={liveShow}
+          onChange={(e) => setLiveShow(e.target.value)}
+          placeholder="e.g. The Morning Drive"
+        />
+
+        {/* Listenerz */}
+        <InputField
+          label="Listener Count"
+          type="number"
+          value={String(listenerz)}
+          onChange={(e) => setListenerz(Number(e.target.value))}
+          placeholder="e.g. 150"
+        />
+
+
+        {/* Active Status */}
+        <div className="flex items-center gap-2 mt-2">
           <input
-            id="genres"
-            type="text"
-            placeholder="Rock, Jazz, Hip-hop"
-            value={genres}
-            onChange={(e) => setGenres(e.target.value)}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition"
+            id="isActive"
+            type="checkbox"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="h-4 w-4 text-blue-600 border-gray-300 rounded"
           />
+          <label htmlFor="isActive" className="text-sm text-gray-700">
+            Active
+          </label>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition"
+          disabled={loading}
+          className="w-full py-3 bg-primary text-white font-semibold rounded-lg hover:bg-secondary transition disabled:opacity-50"
         >
-          {initialData ? "Update" : "Add"} Station
+          {loading ? "Saving..." : initialData ? "Update Station" : "Create Station"}
         </button>
       </form>
     </Modal>
+  );
+}
+
+/* -------------------- Reusable InputField Component -------------------- */
+interface InputProps {
+  label: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+}
+
+function InputField({ label, value, onChange, placeholder, type = "text", required }: InputProps) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        required={required}
+        placeholder={placeholder}
+        className="w-full border rounded-md px-3 py-2"
+      />
+    </div>
+  );
+}
+
+function TextAreaField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  rows = 3,
+}: {
+  label: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
+  placeholder?: string;
+  rows?: number;
+}) {
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <textarea
+        value={value}
+        onChange={onChange}
+        rows={rows}
+        placeholder={placeholder}
+        className="w-full border rounded-md px-3 py-2 resize-none"
+      />
+    </div>
   );
 }

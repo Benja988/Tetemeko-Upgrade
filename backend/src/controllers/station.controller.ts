@@ -1,12 +1,13 @@
 import { Request, Response } from "express";
 import Station from "../models/Station";
+import { uploadMedia } from "../utils/uploadMedia";
 
 /**
- * Get all active stations (publicly accessible)
+ * Get all stations (publicly accessible)
  */
 export const getAllStations = async (req: Request, res: Response): Promise<void> => {
   try {
-    const stations = await Station.find(); // No filter here, fetch all
+    const stations = await Station.find();
     res.status(200).json(stations);
   } catch (error) {
     res.status(500).json({ message: "Failed to retrieve stations", error });
@@ -14,7 +15,7 @@ export const getAllStations = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Get a single station by ID (publicly accessible)
+ * Get a single station by ID
  */
 export const getStationById = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -30,29 +31,59 @@ export const getStationById = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Create a new station (authenticated users — no ownership tracking)
+ * Create a new station
  */
 export const createStation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { name, description, streamUrl, logoUrl, location, genres } = req.body;
-
-    const station = await Station.create({
+    const {
       name,
-      description,
-      streamUrl,
-      logoUrl,
+      description = "",
+      streamUrl = "",
+      imageUrl = "",
       location,
-      genres,
+      genre = [],
+      isActive = true,
+      type,
+      liveShow = null,
+      listenerz = 0,
+    } = req.body;
+
+    if (!name?.trim() || !location?.trim() || !type?.trim()) {
+      res.status(400).json({ message: "Missing required fields: name, location, type" });
+      return;
+    }
+
+    let uploadedImageUrl = "";
+
+    // Upload only if it's a base64 image string
+    if (typeof imageUrl === "string" && imageUrl.startsWith("data:image/")) {
+      uploadedImageUrl = await uploadMedia(imageUrl, "stations", "image");
+    } else {
+      uploadedImageUrl = imageUrl?.trim?.() || "";
+    }
+
+    const newStation = await Station.create({
+      name: name.trim(),
+      description: description.trim(),
+      streamUrl: streamUrl.trim(),
+      imageUrl: uploadedImageUrl,
+      location: location.trim(),
+      genre: Array.isArray(genre) ? genre : genre.split(",").map((g: string) => g.trim()),
+      isActive,
+      type: type.trim(),
+      liveShow,
+      listenerz,
     });
 
-    res.status(201).json(station);
+    res.status(201).json(newStation);
   } catch (error) {
-    res.status(500).json({ message: "Failed to create station", error });
+    console.error("Error creating station:", error);
+    res.status(500).json({ message: "Failed to create station" });
   }
 };
 
 /**
- * Update a station (authenticated — no ownership check)
+ * Update a station
  */
 export const updateStation = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -62,7 +93,8 @@ export const updateStation = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    Object.assign(station, req.body);
+    const updates = req.body;
+    Object.assign(station, updates);
     await station.save();
 
     res.status(200).json(station);
@@ -72,30 +104,25 @@ export const updateStation = async (req: Request, res: Response): Promise<void> 
 };
 
 /**
- * Delete a station (authenticated — no ownership check)
+ * Delete a station
  */
 export const deleteStation = async (req: Request, res: Response): Promise<void> => {
   try {
-    console.log("Deleting station with id:", req.params.id);
     const station = await Station.findById(req.params.id);
     if (!station) {
-      console.log("Station not found");
       res.status(404).json({ message: "Station not found" });
       return;
     }
 
     await Station.findByIdAndDelete(req.params.id);
-    console.log("Station deleted successfully");
     res.status(200).json({ message: "Station deleted successfully" });
   } catch (error) {
-    console.error("Failed to delete station", error);
     res.status(500).json({ message: "Failed to delete station", error });
   }
 };
 
-
 /**
- * Toggle station's isActive status (still assumes admin-only route protection)
+ * Toggle station active status
  */
 export const toggleStationStatus = async (req: Request, res: Response): Promise<void> => {
   try {

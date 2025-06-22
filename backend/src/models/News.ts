@@ -11,6 +11,7 @@ export interface INews extends Document {
   isPublished: boolean;
   thumbnail?: string;             // URL of thumbnail image
   featuredImage?: string;         // URL of featured image/banner
+  videoUrl?: string;
   seoTitle?: string;              // SEO optimized title
   seoDescription?: string;        // SEO meta description
   readingTime?: number;           // Estimated reading time in minutes
@@ -27,13 +28,14 @@ const NewsSchema = new Schema<INews>(
     title: { type: String, required: true },
     content: { type: String, required: true },
     summary: { type: String },
-    author: { type: Schema.Types.ObjectId, ref: "Author", required: true },
+    author: { type: Schema.Types.ObjectId, ref: "Author" },
     category: { type: Schema.Types.ObjectId, ref: "Category" }, 
     tags: [{ type: String }],
     publishedAt: { type: Date },
-    isPublished: { type: Boolean, default: false },
+    isPublished: { type: Boolean, default: true },
     thumbnail: { type: String },
     featuredImage: { type: String },
+    videoUrl: { type: String },
     seoTitle: { type: String },
     seoDescription: { type: String },
     readingTime: { type: Number },

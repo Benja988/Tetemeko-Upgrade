@@ -1,5 +1,6 @@
-"use client";
+'use client';
 
+import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import StationsFooter from "@/components/stations/StationsFooter";
 import StationsSection1 from "@/components/stations/StationsSection1";
@@ -11,32 +12,44 @@ import { motion } from "framer-motion";
 
 export default function StationsPage() {
   return (
-    <div className="bg-primary text-white min-h-screen">
-      <Navbar />
-
-      {/* Section 1 */}
-      <motion.section
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+    <div className="relative bg-primary text-white min-h-screen overflow-hidden">
+      {/* Background Video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute top-0 left-0 w-full h-full object-cover z-0"
       >
-        <StationsSection1 />
-      </motion.section>
+        <source src="/netvid.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
 
-      {/* Section 2 */}
-      <StationsSection2 />
+      {/* Overlay (optional for contrast) */}
+      <div className="absolute inset-0 bg-black/60 z-10" />
 
-      {/* Section 3 */}
-      <StationsSection3 />
+      {/* Page Content */}
+      <div className="relative z-20">
+        <Navbar />
 
-      {/* Section 4 */}
-      <StationsSection4 />
+        {/* Section 1 */}
+        <motion.section
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <StationsSection1 />
+        </motion.section>
 
-      {/* Section 5 */}
-      <StationsSection5 />
+        {/* Sections 2-5 */}
+        <StationsSection2 />
+        <StationsSection3 />
+        <StationsSection4 />
+        <StationsSection5 />
 
-      {/* Footer */}
-      <StationsFooter />
+        {/* Footer */}
+        <Footer />
+      </div>
     </div>
   );
 }

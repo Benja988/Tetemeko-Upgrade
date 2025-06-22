@@ -1,8 +1,8 @@
 import { apiRequest } from '@/lib/api'
 import { toast } from 'sonner'
-import { Station } from "@/interfaces/Station";
+import { Station, StationInput } from "@/interfaces/Station"
 
-/* ------------------------- TOAST HANDLER WRAPPER ------------------------ */
+/* ------------------------ TOAST HANDLER WRAPPER ------------------------ */
 
 const withToast = async <T>(
   fn: () => Promise<T>,
@@ -14,45 +14,48 @@ const withToast = async <T>(
     toast.success(successMsg)
     return result
   } catch (e: any) {
-    toast.error(e.message || errorMsg)
+    toast.error(e?.message || errorMsg)
     return null
   }
 }
 
 /* ---------------------------- STATION SERVICES ----------------------------- */
 
-// Get all active stations
+// ✅ Get all stations
 export const getStations = async (): Promise<Station[]> => {
   try {
-    return await apiRequest<Station[]>('/stations')
+    const stations = await apiRequest<Station[]>('/stations')
+    return stations
   } catch (e: any) {
-    toast.error(e.message || 'Failed to fetch stations.')
+    toast.error(e?.message || 'Failed to fetch stations.')
     return []
   }
 }
 
-// Get single station by ID
+// ✅ Get a single station by ID
 export const getStationById = async (id: string): Promise<Station | null> => {
   try {
     return await apiRequest<Station>(`/stations/${id}`)
   } catch (e: any) {
-    toast.error(e.message || 'Failed to fetch station.')
+    toast.error(e?.message || 'Failed to fetch station.')
     return null
   }
 }
 
-// Create a new station
-export const createStation = async (data: Partial<Station>): Promise<Station | null> =>
+// ✅ Create a new station
+export const createStation = async (
+  data: StationInput
+): Promise<Station | null> =>
   withToast(
     () => apiRequest<Station>('/stations', 'POST', data),
     'Station created successfully.',
     'Failed to create station.'
   )
 
-// Update station
+// ✅ Update a station
 export const updateStation = async (
   id: string,
-  data: Partial<Station>
+  data: Partial<Omit<Station, 'id'>>
 ): Promise<Station | null> =>
   withToast(
     () => apiRequest<Station>(`/stations/${id}`, 'PUT', data),
@@ -60,12 +63,13 @@ export const updateStation = async (
     'Failed to update station.'
   )
 
-// Delete station
+// ✅ Delete a station
 export const deleteStation = async (id: string): Promise<boolean> => {
   if (!id) {
-    console.error("deleteStation called with invalid id:", id);
+    console.error('❌ deleteStation called with invalid id:', id);
     return false;
   }
+  console.log("🗑️ Deleting station with ID:", id);
   try {
     const result = await withToast(
       async () => {
@@ -77,15 +81,13 @@ export const deleteStation = async (id: string): Promise<boolean> => {
     );
     return result ?? false;
   } catch (err) {
-    console.error("Delete failed", err);
+    console.error('❌ Delete failed', err);
     return false;
   }
 };
 
 
-
-
-// Toggle station isActive status (admin only)
+// ✅ Toggle station isActive status
 export const toggleStationStatus = async (id: string): Promise<Station | null> =>
   withToast(
     () => apiRequest<Station>(`/stations/${id}/toggle-status`, 'PATCH'),
