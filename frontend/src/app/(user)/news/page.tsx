@@ -42,3 +42,4 @@ const NewsAndBlogsPage: FC = () => {
 };
 
 export default NewsAndBlogsPage;
+

@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import { toast } from "sonner";
 import { Category, CategoryInput } from "@/interfaces/Category";
+import { News } from "@/interfaces/News";
 
 /* ---------------------- Toast Wrapper ---------------------- */
 const withToast = async <T>(
@@ -28,7 +29,6 @@ export const getCategories = async (
     const query = type ? `?type=${type}` : "";
     return await apiRequest<Category[]>(`/categories${query}`);
   } catch (e: any) {
-    // toast.error(e?.message || "Failed to fetch categories.");
     return [];
   }
 };
@@ -81,3 +81,5 @@ export const deleteCategory = async (slug: string): Promise<boolean> => {
     return false;
   }
 };
+
+

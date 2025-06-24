@@ -31,11 +31,11 @@ export default function FirstSection() {
       }
 
       if (recentList) {
-        setMoreStories(recentList.slice(1, 3));
+        setMoreStories(recentList.slice(1, 4));
       }
 
       if (featuredList) {
-        setFeaturedStories(featuredList.slice(0, 2));
+        setFeaturedStories(featuredList.slice(0, 3));
       }
     };
 
@@ -82,7 +82,7 @@ export default function FirstSection() {
               <div key={article._id}>
                 <RelatedCard
                   link={`/news/${slugify(article.title)}`}
-                  text={article.summary || article.title}
+                  text={article.title}
                   imageSrc={getImage(article)}
                 />
                 {index < moreStories.length - 1 && (
@@ -106,6 +106,7 @@ export default function FirstSection() {
               imageSrc={getImage(card)}
               tag={card.tags?.[0] || 'News'}
               text={card.title}
+              summary={card.summary?.slice(0, 20) || card.content?.slice(0, 10) + '...'}
             />
             {index < moreStories.length - 1 && (
               <div className="border-t border-gray-700/50 my-2" />

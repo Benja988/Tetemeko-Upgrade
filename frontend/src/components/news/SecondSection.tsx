@@ -17,12 +17,18 @@ const SecondSection: React.FC = () => {
       const news = await getRecentNews(8);
       const categoryList = await getCategories('news');
 
-      if (news) setTrendingStories(news.slice(1, 4)); // mimic original behavior
+      if (news) {
+        // Shuffle the news array and pick 4 random ones
+        const shuffled = news.sort(() => 0.5 - Math.random());
+        setTrendingStories(shuffled.slice(0, 4));
+      }
+
       if (categoryList) setCategories(categoryList);
     };
 
     fetchTrendingAndCategories();
   }, []);
+
 
   const sponsoredContent = {
     title: 'Sponsored Content',
@@ -32,27 +38,29 @@ const SecondSection: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 px-4 py-16 text-primaryText">
-      {/* 📰 Trending Stories Section */}
-      <div className="w-full space-y-6">
+    <div className="flex flex-col gap-16 px-4 py-16 text-primaryText">
+      {/* Trending Stories Section */}
+      <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white font-serif underline decoration-4 decoration-secondary">
           Trending Stories
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {trendingStories.map((story) => (
             <Link href={`/news/${slugify(story.title)}`} key={story._id}>
-              <div className="group relative overflow-hidden rounded-lg shadow-lg hover:scale-105 transition-transform duration-300">
-                <img
-                  src={story.thumbnail || story.featuredImage}
-                  alt={story.title}
-                  className="w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-300"
-                />
-                <div className="absolute bottom-4 left-4 right-4 bg-gradient-to-t from-black to-transparent p-4">
-                  <h3 className="text-xl font-bold text-white font-serif">
+              <div className="group flex flex-col h-full bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <div className="relative w-full aspect-[4/3] overflow-hidden">
+                  <img
+                    src={story.thumbnail || story.featuredImage}
+                    alt={story.title}
+                    className="absolute inset-0 w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-300"
+                  />
+                </div>
+                <div className="flex flex-col justify-between flex-1 p-4">
+                  <h3 className="text-xl font-bold text-white font-serif line-clamp-2">
                     {story.title}
                   </h3>
-                  <p className="text-white mt-2 line-clamp-3">
+                  <p className="text-white text-sm mt-2 line-clamp-3">
                     {story.summary || story.content?.slice(0, 100) + '...'}
                   </p>
                 </div>
@@ -60,36 +68,33 @@ const SecondSection: React.FC = () => {
             </Link>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* 📚 Categories Section */}
-      <div className="w-full">
-        <h2 className="text-3xl font-bold text-white font-serif underline decoration-4 decoration-secondary mb-6">
+      {/* Categories Section */}
+      <section className="space-y-6">
+        <h2 className="text-3xl font-bold text-white font-serif underline decoration-4 decoration-secondary">
           Categories
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           {categories.map((category) => (
-            <Link
-              href={`/news/category/${category.slug}`}
-              key={category._id}
-            >
-              <div className="group relative overflow-hidden rounded-lg shadow-lg hover:scale-105 transition-all duration-300 bg-secondary text-center py-6 px-4 flex flex-col justify-center items-center hover:bg-primary">
-                <h3 className="text-2xl font-semibold text-white font-serif group-hover:text-primaryText">
+            <Link href={`/news/${category.slug}`} key={category._id}>
+              <div className="group relative flex items-center justify-center h-32 sm:h-36 bg-secondary rounded-lg shadow-lg hover:bg-primary transition-all duration-300 overflow-hidden">
+                <h3 className="z-10 text-xl font-semibold text-white font-serif group-hover:text-primaryText transition-colors">
                   {category.name}
                 </h3>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black opacity-40 group-hover:opacity-60 transition-opacity duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent group-hover:opacity-70 transition-opacity duration-300" />
               </div>
             </Link>
           ))}
         </div>
-      </div>
+      </section>
 
-      {/* 💡 Sponsored Section */}
-      <div className="w-full p-4 rounded-lg shadow-lg flex flex-col items-center justify-center">
+      {/* Sponsored Section */}
+      <section className="flex flex-col items-center justify-center w-full bg-gray-900 p-6 rounded-lg shadow-lg text-center">
         <h2 className="text-2xl font-bold text-white font-serif mb-3">
           {sponsoredContent.title}
         </h2>
-        <p className="text-white mb-4 font-sans text-sm">
+        <p className="text-white mb-4 font-sans text-sm max-w-md">
           {sponsoredContent.text}
         </p>
         <Link href={sponsoredContent.link}>
@@ -100,9 +105,9 @@ const SecondSection: React.FC = () => {
         <img
           src={sponsoredContent.imageSrc}
           alt="Sponsored Content"
-          className="mt-4 w-full h-48 object-cover rounded-lg"
+          className="mt-6 w-full max-w-lg h-48 object-cover rounded-lg"
         />
-      </div>
+      </section>
     </div>
   );
 };

@@ -26,7 +26,12 @@ export const apiRequest = async <T = any>(
   body: any = null,
   token: string | null = null
 ): Promise<T> => {
-  let authToken = token || localStorage.getItem("token");
+  let authToken = token;
+
+  // ✅ Only access localStorage in the browser
+  if (!authToken && typeof window !== "undefined") {
+    authToken = localStorage.getItem("token");
+  }
 
   const makeRequest = async (tokenToUse: string | null) => {
     const headers: HeadersInit = {};
@@ -44,10 +49,10 @@ export const apiRequest = async <T = any>(
 
   let response = await makeRequest(authToken);
 
-  // Handle expired token
-  if (response.status === 401) {
+  // 🔐 Handle expired token (401) — only on client side
+  if (response.status === 401 && typeof window !== "undefined") {
     try {
-      const data = await refreshToken();
+      const data = await refreshToken(); // Refresh token from cookies or API
 
       localStorage.setItem("token", data.accessToken);
       if (data.refreshToken) {
@@ -56,7 +61,7 @@ export const apiRequest = async <T = any>(
 
       response = await makeRequest(data.accessToken);
     } catch (err) {
-      localStorage.clear(); // Clear all session-related data
+      localStorage.clear();
       throw new Error("Session expired. Please log in again.");
     }
   }
@@ -68,3 +73,4 @@ export const apiRequest = async <T = any>(
 
   return response.json() as Promise<T>;
 };
+

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { News } from "../models/News";  // Adjust the path as needed
 import mongoose from "mongoose";
 import { uploadMedia } from "../utils/uploadMedia";
+import { Category } from "../models/Category";
 
 /**
  * Create a news post
@@ -292,31 +293,55 @@ export const getNewsByCategory = async (req: Request, res: Response): Promise<vo
     const { category } = req.params;
     const { page = 1, limit = 10 } = req.query;
 
+    if (!category) {
+      res.status(400).json({ error: 'Category slug or ID is required.' });
+      return;
+    }
+
+    // ✅ Check if it's a valid ObjectId
+    const isObjectId = mongoose.Types.ObjectId.isValid(category);
+
+    const categoryDoc = await Category.findOne(
+      isObjectId
+        ? { _id: category }
+        : { slug: category }
+    );
+
+    if (!categoryDoc) {
+      res.status(404).json({ error: 'Category not found.' });
+      return;
+    }
+
     const filters = {
-      category,
+      category: categoryDoc._id,
       isPublished: true,
     };
 
+    const skip = (Number(page) - 1) * Number(limit);
+
     const newsList = await News.find(filters)
-      .populate("author", "name")
-      .skip((+page - 1) * +limit)
-      .limit(+limit)
-      .sort({ publishedAt: -1 });
+      .populate('author', 'name')
+      .populate('category', 'name slug')
+      .select('-comments')
+      .sort({ publishedAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
 
     const total = await News.countDocuments(filters);
 
     res.status(200).json({
+      success: true,
+      category: categoryDoc.name,
       total,
-      page: +page,
-      limit: +limit,
+      page: Number(page),
+      limit: Number(limit),
       news: newsList,
     });
   } catch (error) {
-    console.error("Error fetching news by category:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error fetching news by category:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
-
 
 export const getRecentNews = async (req: Request, res: Response): Promise<void> => {
   try {

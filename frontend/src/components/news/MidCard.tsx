@@ -8,9 +8,10 @@ interface MidCardProps {
   imageSrc: string;
   tag?: string;
   text: string;
+  summary: string;
 }
 
-const MidCard: React.FC<MidCardProps> = ({ lnk, imageSrc, tag, text }) => {
+const MidCard: React.FC<MidCardProps> = ({ lnk, imageSrc, tag, text, summary }) => {
   return (
     <Link href={lnk} className="block group">
       <div className="relative aspect-video overflow-hidden rounded-lg mb-2">
@@ -28,6 +29,9 @@ const MidCard: React.FC<MidCardProps> = ({ lnk, imageSrc, tag, text }) => {
 
       <h3 className="text-lg font-semibold group-hover:text-red-600 transition duration-300">
         {text}
+      </h3>
+      <h3 className="text-lg font-semibold group-hover:text-red-600 transition duration-300">
+        {summary}
       </h3>
     </Link>
   );
