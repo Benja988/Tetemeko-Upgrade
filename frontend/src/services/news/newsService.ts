@@ -56,6 +56,16 @@ export const getNewsById = async (id: string): Promise<News | null> =>
     'Failed to load news.'
   )
 
+// ✅ Get single news by slug
+export const getNewsBySlug = async (slug: string): Promise<News | null> =>
+  withToast(
+    () => apiRequest<News>(`/news/${encodeURIComponent(slug)}`, 'GET'),
+    'Fetched news by slug.',
+    'Failed to fetch news by slug.'
+  );
+
+
+
 // ✅ Update news
 export const updateNewsById = async (
   id: string,

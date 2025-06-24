@@ -112,23 +112,63 @@ export const getAllNews = async (req: Request, res: Response): Promise<void> => 
 export const getNewsById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    console.log("Requested ID:", id); // For debugging
 
+    // Check if ID is a valid MongoDB ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      res.status(400).json({ error: "Invalid news ID" });
+       res.status(400).json({ error: "Invalid news ID format" });
+       return;
+    }
+
+    // Fetch news by ID with related fields populated
+    const newsItem = await News.findById(id)
+      .populate("author", "name email")
+      .populate("category", "name slug")
+      .populate("comments"); // Optional: remove if not needed
+
+    // If news item not found
+    if (!newsItem) {
+       res.status(404).json({ error: "News article not found" });
+       return;
+    }
+
+    // Optionally increment view count
+    newsItem.viewsCount += 1;
+    await newsItem.save();
+
+    res.status(200).json(newsItem);
+  } catch (error) {
+    console.error("Error in getNewsById:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+
+/**
+ * Get single news article by slug
+ */
+export const getNewsBySlug = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug) {
+      res.status(400).json({ error: 'Slug is required.' });
       return;
     }
 
-    const news = await News.findById(id).populate("author", "name email");
+    const news = await News.findOne({ slug, isPublished: true })
+      .populate('author', 'name email')
+      .populate('category', 'name slug');
 
     if (!news) {
-      res.status(404).json({ error: "News not found" });
+      res.status(404).json({ error: 'News not found.' });
       return;
     }
 
     res.status(200).json(news);
   } catch (error) {
-    console.error("Error fetching news by ID:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error('Error fetching news by slug:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 

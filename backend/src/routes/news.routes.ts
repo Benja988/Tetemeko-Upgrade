@@ -13,6 +13,7 @@ import {
   getRecentNews,
   getNewsStats,
   toggleBreakingNews,
+  getNewsBySlug,
 } from "../controllers/news.controller";
 
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
@@ -26,6 +27,7 @@ router.get("/featured", getFeaturedNews);
 router.get("/breaking", getBreakingNews);
 router.get("/search", searchNews);
 router.get("/category/:category", getNewsByCategory);
+router.get('/:slug', getNewsBySlug);
 router.get("/recent", getRecentNews);
 router.get("/stats", getNewsStats);
 router.get("/:id", getNewsById);
