@@ -44,7 +44,8 @@ export default function FirstSection() {
 
   if (!breaking) return null;
 
-  const getImage = (news: News) => news.thumbnail || news.featuredImage || '/placeholder.jpg';
+  const getImage = (news: News) =>
+    news.thumbnail || news.featuredImage || '/placeholder.jpg';
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
@@ -54,7 +55,7 @@ export default function FirstSection() {
           Breaking News
         </h2>
 
-        <Link href={`/news/${slugify(breaking.title)}`}>
+        <Link href={`/news/article/${slugify(breaking.title)}-${breaking._id}`}>
           <div className="relative group mb-6 cursor-pointer">
             <div className="relative aspect-video overflow-hidden rounded-lg mb-3 shadow-lg">
               <img
@@ -81,7 +82,7 @@ export default function FirstSection() {
             {moreStories.map((article, index) => (
               <div key={article._id}>
                 <RelatedCard
-                  link={`/news/${slugify(article.title)}`}
+                  link={`/news/article/${slugify(article.title)}-${article._id}`}
                   text={article.title}
                   imageSrc={getImage(article)}
                 />
@@ -102,11 +103,13 @@ export default function FirstSection() {
         {moreStories.map((card, index) => (
           <div key={card._id}>
             <MidCard
-              lnk={`/news/${slugify(card.title)}`}
+              lnk={`/news/article/${slugify(card.title)}-${card._id}`}
               imageSrc={getImage(card)}
               tag={card.tags?.[0] || 'News'}
               text={card.title}
-              summary={card.summary?.slice(0, 20) || card.content?.slice(0, 10) + '...'}
+              summary={
+                card.summary?.slice(0, 20) || card.content?.slice(0, 10) + '...'
+              }
             />
             {index < moreStories.length - 1 && (
               <div className="border-t border-gray-700/50 my-2" />
@@ -133,7 +136,10 @@ export default function FirstSection() {
           Featured Stories
         </h2>
         {featuredStories.map((card, index) => (
-          <Link key={card._id} href={`/news/${slugify(card.title)}`}>
+          <Link
+            key={card._id}
+            href={`/news/article/${slugify(card.title)}-${card._id}`}
+          >
             <div className="flex gap-4 items-start group hover:bg-opacity-90 p-2 rounded-lg transition cursor-pointer">
               <div className="w-1/3">
                 <img

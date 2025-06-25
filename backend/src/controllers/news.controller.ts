@@ -106,40 +106,33 @@ export const getAllNews = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+
 /**
- * Get single news by ID
+ * Get a single news article by MongoDB ObjectId
  */
 export const getNewsById = async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+     res.status(400).json({ message: "Invalid news ID format." });
+     return
+  }
+
   try {
-    const { id } = req.params;
-    console.log("Requested ID:", id); // For debugging
-
-    // Check if ID is a valid MongoDB ObjectId
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-       res.status(400).json({ error: "Invalid news ID format" });
-       return;
-    }
-
-    // Fetch news by ID with related fields populated
     const newsItem = await News.findById(id)
-      .populate("author", "name email")
-      .populate("category", "name slug")
-      .populate("comments"); // Optional: remove if not needed
+      .populate("author", "name")      // Ensure the Author model exists
+      .populate("category", "name")    // Ensure the Category model exists
+      // .populate("comments");           // Ensure the Comment model exists
 
-    // If news item not found
     if (!newsItem) {
-       res.status(404).json({ error: "News article not found" });
-       return;
+       res.status(404).json({ message: "News article not found." });
+       return
     }
-
-    // Optionally increment view count
-    newsItem.viewsCount += 1;
-    await newsItem.save();
 
     res.status(200).json(newsItem);
   } catch (error) {
-    console.error("Error in getNewsById:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    console.error("Error in getNewsById:", error); // Add this line
+    res.status(500).json({ error: "Internal Server Error", details: error instanceof Error ? error.message : error });
   }
 };
 

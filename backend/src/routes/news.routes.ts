@@ -27,7 +27,7 @@ router.get("/featured", getFeaturedNews);
 router.get("/breaking", getBreakingNews);
 router.get("/search", searchNews);
 router.get("/category/:category", getNewsByCategory);
-router.get('/:slug', getNewsBySlug);
+// router.get('/:slug', getNewsBySlug);
 router.get("/recent", getRecentNews);
 router.get("/stats", getNewsStats);
 router.get("/:id", getNewsById);

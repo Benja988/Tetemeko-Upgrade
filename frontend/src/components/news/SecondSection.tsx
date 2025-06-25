@@ -18,17 +18,20 @@ const SecondSection: React.FC = () => {
       const categoryList = await getCategories('news');
 
       if (news) {
-        // Shuffle the news array and pick 4 random ones
         const shuffled = news.sort(() => 0.5 - Math.random());
         setTrendingStories(shuffled.slice(0, 4));
       }
 
-      if (categoryList) setCategories(categoryList);
+      if (categoryList) {
+        setCategories(categoryList);
+      }
     };
 
     fetchTrendingAndCategories();
   }, []);
 
+  const getImage = (news: News) =>
+    news.thumbnail || news.featuredImage || '/placeholder.jpg';
 
   const sponsoredContent = {
     title: 'Sponsored Content',
@@ -39,7 +42,7 @@ const SecondSection: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-16 px-4 py-16 text-primaryText">
-      {/* Trending Stories Section */}
+      {/* 🚀 Trending Stories */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white font-serif underline decoration-4 decoration-secondary">
           Trending Stories
@@ -47,11 +50,14 @@ const SecondSection: React.FC = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {trendingStories.map((story) => (
-            <Link href={`/news/${slugify(story.title)}`} key={story._id}>
+            <Link
+              key={story._id}
+              href={`/news/article/${slugify(story.title)}-${story._id}`}
+            >
               <div className="group flex flex-col h-full bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
                 <div className="relative w-full aspect-[4/3] overflow-hidden">
                   <img
-                    src={story.thumbnail || story.featuredImage}
+                    src={getImage(story)}
                     alt={story.title}
                     className="absolute inset-0 w-full h-full object-cover group-hover:opacity-80 transition-opacity duration-300"
                   />
@@ -70,14 +76,17 @@ const SecondSection: React.FC = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* 📚 Categories Section */}
       <section className="space-y-6">
         <h2 className="text-3xl font-bold text-white font-serif underline decoration-4 decoration-secondary">
           Categories
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
           {categories.map((category) => (
-            <Link href={`/news/${category.slug}`} key={category._id}>
+            <Link
+              key={category._id}
+              href={`/news/category/${category.slug}`}
+            >
               <div className="group relative flex items-center justify-center h-32 sm:h-36 bg-secondary rounded-lg shadow-lg hover:bg-primary transition-all duration-300 overflow-hidden">
                 <h3 className="z-10 text-xl font-semibold text-white font-serif group-hover:text-primaryText transition-colors">
                   {category.name}
@@ -89,7 +98,7 @@ const SecondSection: React.FC = () => {
         </div>
       </section>
 
-      {/* Sponsored Section */}
+      {/* 💼 Sponsored Section */}
       <section className="flex flex-col items-center justify-center w-full bg-gray-900 p-6 rounded-lg shadow-lg text-center">
         <h2 className="text-2xl font-bold text-white font-serif mb-3">
           {sponsoredContent.title}
