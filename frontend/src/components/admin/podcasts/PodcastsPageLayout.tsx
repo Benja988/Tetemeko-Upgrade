@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Podcast } from "@/interfaces/podcasts";
 import { podcasts as allPodcasts } from "@/data/podcasts";
+import { Plus, Edit, Trash2, Download } from "lucide-react";
 
 import PodcastsActions from "./PodcastsActions";
 import PodcastsTabs from "./PodcastsTabs";
@@ -19,32 +20,35 @@ export default function PodcastsPageLayout({ heading }: { heading: string }) {
       podcast.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       podcast.host.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "All" || podcast.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "All" || podcast.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
   const handleAddPodcast = () => {};
-  const handleEditPodcast = (podcast?: Podcast | string) => {};
+  const handleEditPodcast = () => {};
   const handleDeleteSelected = () => {};
   const handleExport = () => {};
 
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-xl font-semibold">{heading}</h1>
+    <section className="p-6 space-y-6">
+      <header className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold tracking-tight">{heading}</h1>
+      </header>
 
-      <PodcastsActions
-        onAddPodcast={handleAddPodcast}
-        onEditPodcast={handleEditPodcast}
-        onDeleteSelected={handleDeleteSelected}
-        onExport={handleExport}
-      />
-
-      <PodcastsTabs currentFilter={statusFilter} onChangeFilter={setStatusFilter} />
-
-      <PodcastsSearchFilter searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <PodcastsTabs currentFilter={statusFilter} onChangeFilter={setStatusFilter} />
+        <PodcastsSearchFilter searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+        <PodcastsActions
+          onAddPodcast={handleAddPodcast}
+          onEditPodcast={handleEditPodcast}
+          onDeleteSelected={handleDeleteSelected}
+          onExport={handleExport}
+        />
+      </div>
 
       <PodcastsTable podcasts={filteredPodcasts} />
-    </div>
+    </section>
   );
 }
