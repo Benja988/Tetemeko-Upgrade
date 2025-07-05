@@ -11,6 +11,7 @@ export interface IUser extends Document {
   name: string;
   password: string;
   role: UserRole;
+  // subscriptions?: Types.ObjectId[];
   isVerified: boolean;
   isActive: boolean;
   refreshToken?: string;
@@ -46,6 +47,7 @@ const UserSchema: Schema = new Schema(
       enum: Object.values(UserRole),
       default: UserRole.WEB_USER,
     },
+    // subscriptions: [{ type: Schema.Types.ObjectId, ref: "Podcast" }],
     isVerified: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },
     refreshToken: { type: String, unique: true, sparse: true }, // For JWT refresh token
