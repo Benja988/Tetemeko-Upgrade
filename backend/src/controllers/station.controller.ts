@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import Station from "../models/Station";
-import { uploadMedia } from "../utils/uploadMedia";
+import { uploadMedia, CloudinaryUploadResult } from "../utils/uploadMedia";
+import mongoose from "mongoose";
 
 /**
  * Get all stations (publicly accessible)
@@ -10,7 +11,8 @@ export const getAllStations = async (req: Request, res: Response): Promise<void>
     const stations = await Station.find();
     res.status(200).json(stations);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve stations", error });
+    console.error("Error retrieving stations:", error);
+    res.status(500).json({ error: "Failed to retrieve stations" });
   }
 };
 
@@ -19,14 +21,22 @@ export const getAllStations = async (req: Request, res: Response): Promise<void>
  */
 export const getStationById = async (req: Request, res: Response): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
-    if (!station) {
-      res.status(404).json({ message: "Station not found" });
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid station ID" });
       return;
     }
+
+    const station = await Station.findById(id);
+    if (!station) {
+      res.status(404).json({ error: "Station not found" });
+      return;
+    }
+
     res.status(200).json(station);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching station", error });
+    console.error("Error fetching station:", error);
+    res.status(500).json({ error: "Failed to fetch station" });
   }
 };
 
@@ -35,50 +45,36 @@ export const getStationById = async (req: Request, res: Response): Promise<void>
  */
 export const createStation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const {
-      name,
-      description = "",
-      streamUrl = "",
-      imageUrl = "",
-      location,
-      genre = [],
-      isActive = true,
-      type,
-      liveShow = null,
-      listenerz = 0,
-    } = req.body;
+    const { name, description, streamUrl, imageUrl, location, genre, isActive, type, liveShow, listenerz } = req.body;
 
-    if (!name?.trim() || !location?.trim() || !type?.trim()) {
-      res.status(400).json({ message: "Missing required fields: name, location, type" });
+    if (!name || !location || !type) {
+      res.status(400).json({ error: "Missing required fields: name, location, type" });
       return;
     }
 
-    let uploadedImageUrl = "";
-
-    // Upload only if it's a base64 image string
+    let uploadedImageUrl = imageUrl || "";
     if (typeof imageUrl === "string" && imageUrl.startsWith("data:image/")) {
-      uploadedImageUrl = await uploadMedia(imageUrl, "stations", "image");
-    } else {
-      uploadedImageUrl = imageUrl?.trim?.() || "";
+      const result = await uploadMedia(imageUrl, "stations", "image") as CloudinaryUploadResult;
+      uploadedImageUrl = result.secure_url;
     }
 
     const newStation = await Station.create({
-      name: name.trim(),
-      description: description.trim(),
-      streamUrl: streamUrl.trim(),
+      name,
+      description: description || "",
+      streamUrl: streamUrl || "",
       imageUrl: uploadedImageUrl,
-      location: location.trim(),
-      genre: Array.isArray(genre) ? genre : genre.split(",").map((g: string) => g.trim()),
-      isActive,
-      type: type.trim(),
-      liveShow,
-      listenerz,
+      location,
+      genre: Array.isArray(genre) ? genre : genre ? genre.split(",").map((g: string) => g.trim()) : [],
+      isActive: isActive !== undefined ? isActive : true,
+      type,
+      liveShow: liveShow || null,
+      listenerz: listenerz || 0,
     });
 
-    res.status(201).json(newStation);
+    res.status(201).json({ message: "Station created successfully", station: newStation });
   } catch (error) {
     console.error("Error creating station:", error);
-    res.status(500).json({ message: "Failed to create station" });
+    res.status(500).json({ error: "Failed to create station" });
   }
 };
 
@@ -87,19 +83,34 @@ export const createStation = async (req: Request, res: Response): Promise<void> 
  */
 export const updateStation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
-    if (!station) {
-      res.status(404).json({ message: "Station not found" });
+    const { id } = req.params;
+    const updates = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid station ID" });
       return;
     }
 
-    const updates = req.body;
-    Object.assign(station, updates);
-    await station.save();
+    if (updates.imageUrl && typeof updates.imageUrl === "string" && updates.imageUrl.startsWith("data:image/")) {
+      const result = await uploadMedia(updates.imageUrl, "stations", "image") as CloudinaryUploadResult;
+      updates.imageUrl = result.secure_url;
+    }
 
-    res.status(200).json(station);
+    const updatedStation = await Station.findByIdAndUpdate(
+      id,
+      { ...updates, genre: updates.genre ? (Array.isArray(updates.genre) ? updates.genre : updates.genre.split(",").map((g: string) => g.trim())) : undefined },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedStation) {
+      res.status(404).json({ error: "Station not found" });
+      return;
+    }
+
+    res.status(200).json({ message: "Station updated successfully", station: updatedStation });
   } catch (error) {
-    res.status(500).json({ message: "Failed to update station", error });
+    console.error("Error updating station:", error);
+    res.status(500).json({ error: "Failed to update station" });
   }
 };
 
@@ -108,16 +119,23 @@ export const updateStation = async (req: Request, res: Response): Promise<void> 
  */
 export const deleteStation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
-    if (!station) {
-      res.status(404).json({ message: "Station not found" });
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid station ID" });
       return;
     }
 
-    await Station.findByIdAndDelete(req.params.id);
+    const station = await Station.findByIdAndDelete(id);
+    if (!station) {
+      res.status(404).json({ error: "Station not found" });
+      return;
+    }
+
     res.status(200).json({ message: "Station deleted successfully" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete station", error });
+    console.error("Error deleting station:", error);
+    res.status(500).json({ error: "Failed to delete station" });
   }
 };
 
@@ -126,9 +144,16 @@ export const deleteStation = async (req: Request, res: Response): Promise<void> 
  */
 export const toggleStationStatus = async (req: Request, res: Response): Promise<void> => {
   try {
-    const station = await Station.findById(req.params.id);
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      res.status(400).json({ error: "Invalid station ID" });
+      return;
+    }
+
+    const station = await Station.findById(id);
     if (!station) {
-      res.status(404).json({ message: "Station not found" });
+      res.status(404).json({ error: "Station not found" });
       return;
     }
 
@@ -140,6 +165,7 @@ export const toggleStationStatus = async (req: Request, res: Response): Promise<
       station,
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to toggle station status", error });
+    console.error("Error toggling station status:", error);
+    res.status(500).json({ error: "Failed to toggle station status" });
   }
 };

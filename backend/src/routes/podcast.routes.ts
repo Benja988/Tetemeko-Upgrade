@@ -6,8 +6,8 @@ import {
   updatePodcast,
   deletePodcast,
   togglePodcastStatus,
-  subscribeToPodcast,
-  unsubscribeFromPodcast,
+  // subscribeToPodcast,
+  // unsubscribeFromPodcast,
 } from "../controllers/podcast.controller";
 import { authenticateJWT, authorize } from "../middlewares/auth.middleware";
 import { UserRole } from "../models/User";
@@ -54,18 +54,18 @@ router.delete(
   authorize([UserRole.ADMIN]),
   deletePodcast
 ); // Delete a podcast
-router.post(
-  "/:id/subscribe",
-  authenticateJWT,
-  authorize([UserRole.ADMIN]),
-  subscribeToPodcast
-); // Subscribe to a podcast
-router.post(
-  "/:id/unsubscribe",
-  authenticateJWT,
-  authorize([UserRole.ADMIN]),
-  unsubscribeFromPodcast
-); // Unsubscribe from a podcast
+// router.post(
+//   "/:id/subscribe",
+//   authenticateJWT,
+//   authorize([UserRole.ADMIN]),
+//   subscribeToPodcast
+// ); // Subscribe to a podcast
+// router.post(
+//   "/:id/unsubscribe",
+//   authenticateJWT,
+//   authorize([UserRole.ADMIN]),
+//   unsubscribeFromPodcast
+// ); // Unsubscribe from a podcast
 
 // 🔴 Admin-only route
 router.patch(

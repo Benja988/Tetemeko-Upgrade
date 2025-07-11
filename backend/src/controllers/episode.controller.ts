@@ -1,16 +1,10 @@
 import Episode, { IEpisode } from "../models/Episode";
 import Podcast, { IPodcast } from "../models/Podcast";
 import { Request, Response, NextFunction } from "express";
-import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import mongoose, { Types } from "mongoose";
 import { uploadMedia, CloudinaryUploadResult } from "../utils/uploadMedia";
 import { z } from "zod";
 import logger from "../utils/logger";
-
-// Extend AuthenticatedRequest to include multer file
-interface AuthenticatedRequestWithFile extends AuthenticatedRequest {
-  file?: Express.Multer.File;
-}
 
 // Episode creation/update schemas
 const createEpisodeSchema = z.object({
@@ -34,29 +28,19 @@ const updateEpisodeSchema = z.object({
 // 🎧 Add an episode to a podcast
 export const addEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { user } = req;
-    if (!user?.id) {
-      res.status(401).json({ error: "Unauthorized" });
-      return;
-    }
+    const { podcastId } = req.params;
+    const validatedData = createEpisodeSchema.parse(req.body);
 
-    if (!mongoose.isValidObjectId(req.params.podcastId)) {
+    if (!mongoose.isValidObjectId(podcastId)) {
       res.status(400).json({ error: "Invalid podcast ID" });
       return;
     }
 
-    const podcast = await Podcast.findById(req.params.podcastId) as IPodcast | null;
+    const podcast = await Podcast.findById(podcastId) as IPodcast | null;
     if (!podcast) {
       res.status(404).json({ error: "Podcast not found" });
       return;
     }
-
-    if (podcast.createdBy.toString() !== user.id) {
-      res.status(403).json({ error: "Unauthorized to add episodes to this podcast" });
-      return;
-    }
-
-    const validatedData = createEpisodeSchema.parse(req.body);
 
     let uploadedAudioUrl: string | undefined = validatedData.audioUrl;
     if (req.file) {
@@ -76,15 +60,12 @@ export const addEpisode = async (req: Request, res: Response): Promise<void> => 
       ...validatedData,
       audioUrl: uploadedAudioUrl,
       podcast: podcast._id,
-      createdBy: new Types.ObjectId(user.id),
     });
 
     podcast.episodes.push(episode._id as Types.ObjectId);
     await podcast.save();
 
-    res.status(201).json({
-      episode,
-    });
+    res.status(201).json({ message: "Episode created successfully", episode });
   } catch (error) {
     console.error("Error adding episode:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -92,45 +73,32 @@ export const addEpisode = async (req: Request, res: Response): Promise<void> => 
 };
 
 // ✏️ Update an episode
-export const updateEpisode = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const updateEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { user } = req;
-    if (!user?.id) {
-      res.status(401).json({ message: "Unauthorized" });
-      return;
-    }
-
-    if (!mongoose.isValidObjectId(req.params.podcastId)) {
-      res.status(400).json({ message: "Invalid podcast ID" });
-      return;
-    }
-
-    if (!mongoose.isValidObjectId(req.params.episodeId)) {
-      res.status(400).json({ message: "Invalid episode ID" });
-      return;
-    }
-
-    const podcast = await Podcast.findById(req.params.podcastId) as IPodcast | null;
-    if (!podcast) {
-      res.status(404).json({ message: "Podcast not found" });
-      return;
-    }
-
-    const episode = await Episode.findById(req.params.episodeId) as IEpisode | null;
-    if (!episode) {
-      res.status(404).json({ message: "Episode not found" });
-      return;
-    }
-
-    if (episode.createdBy.toString() !== user.id && user.role !== "admin") {
-      res.status(403).json({ message: "Unauthorized to update this episode" });
-      return;
-    }
-
+    const { podcastId, episodeId } = req.params;
     const validatedData = updateEpisodeSchema.parse(req.body);
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      res.status(400).json({ error: "Invalid podcast ID" });
+      return;
+    }
+
+    if (!mongoose.isValidObjectId(episodeId)) {
+      res.status(400).json({ error: "Invalid episode ID" });
+      return;
+    }
+
+    const podcast = await Podcast.findById(podcastId) as IPodcast | null;
+    if (!podcast) {
+      res.status(404).json({ error: "Podcast not found" });
+      return;
+    }
+
+    const episode = await Episode.findById(episodeId) as IEpisode | null;
+    if (!episode) {
+      res.status(404).json({ error: "Episode not found" });
+      return;
+    }
 
     let uploadedAudioUrl: string | undefined = validatedData.audioUrl;
     if (req.file) {
@@ -148,76 +116,55 @@ export const updateEpisode = async (
       message: "Episode updated",
       episodeId: episode._id,
       podcastId: podcast._id,
-      userId: user.id,
       title: validatedData.title || episode.title,
     });
-    res.status(200).json(episode);
+    res.status(200).json({ message: "Episode updated successfully", episode });
   } catch (error) {
-    logger.error({
-      message: `Error updating episode ${req.params.episodeId} in podcast ${req.params.podcastId}`,
-      error: error instanceof Error ? error.message : "Unknown error",
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    // next(error instanceof z.ZodError ? new Error("Invalid input data") : error);
+    console.error("Error updating episode:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
 // 🗑️ Delete an episode
-export const deleteEpisode = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const deleteEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { user } = req;
-    if (!user?.id) {
-      res.status(401).json({ message: "Unauthorized" });
+    const { podcastId, episodeId } = req.params;
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      res.status(400).json({ error: "Invalid podcast ID" });
       return;
     }
 
-    if (!mongoose.isValidObjectId(req.params.podcastId)) {
-      res.status(400).json({ message: "Invalid podcast ID" });
+    if (!mongoose.isValidObjectId(episodeId)) {
+      res.status(400).json({ error: "Invalid episode ID" });
       return;
     }
 
-    if (!mongoose.isValidObjectId(req.params.episodeId)) {
-      res.status(400).json({ message: "Invalid episode ID" });
-      return;
-    }
-
-    const podcast = await Podcast.findById(req.params.podcastId) as IPodcast | null;
+    const podcast = await Podcast.findById(podcastId) as IPodcast | null;
     if (!podcast) {
-      res.status(404).json({ message: "Podcast not found" });
+      res.status(404).json({ error: "Podcast not found" });
       return;
     }
 
-    const episode = await Episode.findById(req.params.episodeId) as IEpisode | null;
+    const episode = await Episode.findById(episodeId) as IEpisode | null;
     if (!episode) {
-      res.status(404).json({ message: "Episode not found" });
-      return;
-    }
-
-    if (episode.createdBy.toString() !== user.id && user.role !== "admin") {
-      res.status(403).json({ message: "Unauthorized to delete this episode" });
+      res.status(404).json({ error: "Episode not found" });
       return;
     }
 
     await episode.deleteOne();
-    podcast.episodes = podcast.episodes.filter((id: Types.ObjectId) => id.toString() !== req.params.episodeId);
+    podcast.episodes = podcast.episodes.filter((id: Types.ObjectId) => id.toString() !== episodeId);
     await podcast.save();
 
     logger.info({
       message: "Episode deleted",
-      episodeId: req.params.episodeId,
-      podcastId: req.params.podcastId,
-      userId: user.id,
+      episodeId,
+      podcastId,
     });
     res.status(200).json({ message: "Episode deleted successfully" });
   } catch (error) {
-    logger.error({
-      message: `Error deleting episode ${req.params.episodeId} from podcast ${req.params.podcastId}`,
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
-    // next(error);
+    console.error("Error deleting episode:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
