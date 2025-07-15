@@ -1,7 +1,9 @@
+// components/admin/podcasts/PodcastRowActions.tsx
+
 'use client';
 
-import { Edit, Trash2, Download, MoreHorizontal } from 'lucide-react';
-import { useState, useRef, useEffect } from 'react';
+import { Menu } from '@headlessui/react';
+import { Edit, Trash2, Download } from 'lucide-react';
 
 interface PodcastRowActionsProps {
   onEdit: () => void;
@@ -9,77 +11,51 @@ interface PodcastRowActionsProps {
   onExport: () => void;
 }
 
-export default function PodcastRowActions({
-  onEdit,
-  onDelete,
-  onExport,
-}: PodcastRowActionsProps) {
-  const [open, setOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
+export default function PodcastRowActions({ onEdit, onDelete, onExport }: PodcastRowActionsProps) {
   return (
-    <div className="relative inline-block text-left" ref={dropdownRef}>
-      <button
-        onClick={() => setOpen((prev) => !prev)}
-        className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition"
-      >
-        <MoreHorizontal size={18} />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-20 mt-2 w-40 origin-top-right rounded-md border border-gray-200 bg-white shadow-lg">
-          <ul className="py-1 text-sm text-gray-700">
-            <li>
+    <Menu as="div" className="relative inline-block text-left">
+      <Menu.Button className="rounded-full p-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+      </Menu.Button>
+      <Menu.Items className="absolute right-0 z-20 mt-2 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+        <div className="py-1">
+          <Menu.Item>
+            {({ active }) => (
               <button
-                onClick={() => {
-                  onEdit();
-                  setOpen(false);
-                }}
-                className="w-full flex items-center px-4 py-2 hover:bg-gray-100"
+                onClick={onEdit}
+                className={`flex w-full items-center px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
               >
                 <Edit size={16} className="mr-2" />
                 Edit
               </button>
-            </li>
-            <li>
+            )}
+          </Menu.Item>
+          <Menu.Item>
+            {({ active }) => (
               <button
-                onClick={() => {
-                  onDelete();
-                  setOpen(false);
-                }}
-                className="w-full flex items-center px-4 py-2 hover:bg-gray-100"
+                onClick={onDelete}
+                className={`flex w-full items-center px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
               >
                 <Trash2 size={16} className="mr-2" />
                 Delete
               </button>
-            </li>
-            <li>
+            )}
+          </Menu.Item>
+          <Menu.Item>
+            {({ active }) => (
               <button
-                onClick={() => {
-                  onExport();
-                  setOpen(false);
-                }}
-                className="w-full flex items-center px-4 py-2 hover:bg-gray-100"
+                onClick={onExport}
+                className={`flex w-full items-center px-4 py-2 text-sm text-gray-700 ${active ? 'bg-gray-100' : ''}`}
               >
                 <Download size={16} className="mr-2" />
                 Export
               </button>
-            </li>
-          </ul>
+            )}
+          </Menu.Item>
         </div>
-      )}
-    </div>
+      </Menu.Items>
+    </Menu>
   );
 }

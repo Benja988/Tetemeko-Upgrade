@@ -1,3 +1,5 @@
+// frontend/src/components/admin/podcasts/PodcastsTabs.tsx
+
 'use client';
 
 interface PodcastsTabsProps {
@@ -6,7 +8,7 @@ interface PodcastsTabsProps {
 }
 
 export default function PodcastsTabs({ currentFilter, onChangeFilter }: PodcastsTabsProps) {
-  const tabs = ['All', 'Published', 'Draft'];
+  const tabs = ['All', 'Active', 'Inactive'];
 
   return (
     <div className="flex gap-2">
@@ -14,10 +16,10 @@ export default function PodcastsTabs({ currentFilter, onChangeFilter }: Podcasts
         <button
           key={tab}
           onClick={() => onChangeFilter(tab)}
-          className={`px-4 py-1.5 rounded-full border text-sm font-medium ${
+          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             currentFilter === tab
-              ? 'bg-blue-600 text-white'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-100'
+              ? 'bg-indigo-600 text-white'
+              : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-100'
           }`}
         >
           {tab}

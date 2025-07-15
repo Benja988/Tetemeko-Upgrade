@@ -1,18 +1,62 @@
 // interfaces/Podcast.ts
 export interface Episode {
-  id: number;
-  title: string;
-  audioUrl: string;
-  duration: string;
-}
-
-export interface Podcast {
-  id: number;
+  _id: string;
   title: string;
   description: string;
-  host: string;
+  duration: number;
+  audioUrl: string;
+  tags?: string[];
+  episodeNumber?: number;
+  publishedDate?: string;
+  isActive?: boolean;
+  podcast: string;
+  createdBy?: {
+    name: string;
+  };
+}
+
+export interface EpisodeInput {
+  title: string;
+  description: string;
+  duration: number;
+  episodeNumber?: number;
+  tags?: string[];
+  audioUrl?: string | File;
+}
+
+
+// export interface Podcast {
+//   id: number;
+//   title: string;
+//   description: string;
+//   host: string;
+//   category: string;
+//   imageUrl: string;
+//   episodes: Episode[];
+//   status: "Published" | "Draft";
+// }
+
+
+export interface Podcast {
+  _id: string;
+  title: string;
+  description: string;
+  coverImage?: string;
+  station?: string;
   category: string;
-  imageUrl: string;
-  episodes: Episode[];
-  status: "Published" | "Draft";
+  createdBy?: {
+    name: string;
+  };
+  episodes?: any[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface PodcastInput {
+  title: string;
+  description: string;
+  category: string;
+  station?: string;
+  coverImage?: string | File;
 }

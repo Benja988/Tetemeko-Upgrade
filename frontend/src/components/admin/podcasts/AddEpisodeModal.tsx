@@ -1,66 +1,84 @@
-// components/admin/podcasts/AddPodcastModal.tsx
-
 'use client';
 
 import { useState } from 'react';
 import { z } from 'zod';
 import BaseModal from './BaseModal';
-import { createPodcast } from '@/lib/services/podcastServices';
-import { Podcast } from '@/interfaces/podcasts';
+import { createEpisode } from '@/lib/services/episodeServices';
+import { Episode } from '@/interfaces/podcasts';
 
-const createPodcastSchema = z.object({
+const createEpisodeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
   description: z.string().min(1, 'Description is required'),
-  category: z.string().min(1, 'Category is required'),
-  station: z.string().optional(),
-  coverImage: z.instanceof(File).optional().or(z.string().optional()),
+  duration: z.number().min(1, 'Duration must be positive'),
+  episodeNumber: z.number().min(1, 'Episode number must be positive').optional(),
+  tags: z.array(z.string()).optional(),
+  audioFile: z.instanceof(File, { message: 'Audio file is required' }),
 });
 
-interface AddPodcastModalProps {
+interface AddEpisodeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onPodcastAdded: (podcast: Podcast) => void;
+  onEpisodeAdded: (episode: Episode) => void;
+  podcastId: string;
 }
 
-export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: AddPodcastModalProps) {
+export default function AddEpisodeModal({ isOpen, onClose, onEpisodeAdded, podcastId }: AddEpisodeModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: '',
-    station: '',
-    coverImage: null as File | null,
+    duration: 0,
+    episodeNumber: undefined as number | undefined,
+    tags: [] as string[],
+    audioFile: null as File | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: name === 'duration' || name === 'episodeNumber' ? parseInt(value) || 0 : value,
+    }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
+  };
+
+  const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const tags = e.target.value.split(',').map((tag) => tag.trim()).filter((tag) => tag);
+    setFormData((prev) => ({ ...prev, tags }));
+    setErrors((prev) => ({ ...prev, tags: '' }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    setFormData((prev) => ({ ...prev, coverImage: file || null }));
-    setErrors((prev) => ({ ...prev, coverImage: '' }));
+    setFormData((prev) => ({ ...prev, audioFile: file || null }));
+    setErrors((prev) => ({ ...prev, audioFile: '' }));
   };
 
   const handleSubmit = async () => {
     try {
-      const data = createPodcastSchema.parse(formData);
+      const data = createEpisodeSchema.parse(formData);
       setIsSubmitting(true);
       const formDataToSend = new FormData();
       formDataToSend.append('title', data.title);
       formDataToSend.append('description', data.description);
-      formDataToSend.append('category', data.category);
-      if (data.station) formDataToSend.append('station', data.station);
-      if (data.coverImage instanceof File) formDataToSend.append('coverImage', data.coverImage);
+      formDataToSend.append('duration', data.duration.toString());
+      if (data.episodeNumber) formDataToSend.append('episodeNumber', data.episodeNumber.toString());
+      if (data.tags) formDataToSend.append('tags', JSON.stringify(data.tags));
+      if (data.audioFile) formDataToSend.append('audioFile', data.audioFile);
 
-      const podcast = await createPodcast(formDataToSend);
-      if (podcast) {
-        onPodcastAdded(podcast);
+      const episode = await createEpisode(podcastId, formDataToSend);
+      if (episode) {
+        onEpisodeAdded(episode);
         onClose();
-        setFormData({ title: '', description: '', category: '', station: '', coverImage: null });
+        setFormData({
+          title: '',
+          description: '',
+          duration: 0,
+          episodeNumber: undefined,
+          tags: [],
+          audioFile: null,
+        });
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -76,7 +94,7 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
   };
 
   return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Add New Podcast">
+    <BaseModal isOpen={isOpen} onClose={onClose} title="Add New Episode">
       <div className="space-y-4">
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
@@ -89,7 +107,7 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             value={formData.title}
             onChange={handleChange}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="Enter podcast title"
+            placeholder="Enter episode title"
           />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
         </div>
@@ -103,54 +121,68 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             value={formData.description}
             onChange={handleChange}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="Enter podcast description"
+            placeholder="Enter episode description"
             rows={4}
           />
           {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
         </div>
         <div>
-          <label htmlFor="category" className="block text-sm font-medium text-gray-700">
-            Category
+          <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+            Duration (minutes)
           </label>
           <input
-            id="category"
-            name="category"
-            type="text"
-            value={formData.category}
+            id="duration"
+            name="duration"
+            type="number"
+            value={formData.duration || ''}
             onChange={handleChange}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="Enter category ID"
+            placeholder="Enter duration in minutes"
           />
-          {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+          {errors.duration && <p className="mt-1 text-sm text-red-600">{errors.duration}</p>}
         </div>
         <div>
-          <label htmlFor="station" className="block text-sm font-medium text-gray-700">
-            Station (Optional)
+          <label htmlFor="episodeNumber" className="block text-sm font-medium text-gray-700">
+            Episode Number (Optional)
           </label>
           <input
-            id="station"
-            name="station"
-            type="text"
-            value={formData.station}
+            id="episodeNumber"
+            name="episodeNumber"
+            type="number"
+            value={formData.episodeNumber || ''}
             onChange={handleChange}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="Enter station ID"
+            placeholder="Enter episode number"
           />
-          {errors.station && <p className="mt-1 text-sm text-red-600">{errors.station}</p>}
+          {errors.episodeNumber && <p className="mt-1 text-sm text-red-600">{errors.episodeNumber}</p>}
         </div>
         <div>
-          <label htmlFor="coverImage" className="block text-sm font-medium text-gray-700">
-            Cover Image (Optional)
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+            Tags (Optional, comma-separated)
           </label>
           <input
-            id="coverImage"
-            name="coverImage"
+            id="tags"
+            name="tags"
+            type="text"
+            onChange={handleTagsChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Enter tags (e.g., tech, interview)"
+          />
+          {errors.tags && <p className="mt-1 text-sm text-red-600">{errors.tags}</p>}
+        </div>
+        <div>
+          <label htmlFor="audioFile" className="block text-sm font-medium text-gray-700">
+            Audio File
+          </label>
+          <input
+            id="audioFile"
+            name="audioFile"
             type="file"
-            accept="image/*"
+            accept="audio/*"
             onChange={handleFileChange}
             className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
           />
-          {errors.coverImage && <p className="mt-1 text-sm text-red-600">{errors.coverImage}</p>}
+          {errors.audioFile && <p className="mt-1 text-sm text-red-600">{errors.audioFile}</p>}
         </div>
         <div className="flex justify-end gap-2 pt-4">
           <button

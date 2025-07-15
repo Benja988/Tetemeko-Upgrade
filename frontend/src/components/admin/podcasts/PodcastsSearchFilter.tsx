@@ -1,29 +1,31 @@
+// frontend/src/components/admin/podcasts/PodcastsSearchFilter.tsx
+
 'use client';
 
-import { Search } from "lucide-react";
+import { Search } from 'lucide-react';
 
-interface Props {
+interface PodcastsSearchFilterProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
 }
 
-export default function PodcastsSearchFilter({ searchTerm, onSearchChange }: Props) {
+export default function PodcastsSearchFilter({ searchTerm, onSearchChange }: PodcastsSearchFilterProps) {
   return (
-    <div className="mb-6 w-full max-w-md">
+    <div className="w-full max-w-md">
       <label htmlFor="podcast-search" className="sr-only">
         Search Podcasts
       </label>
       <div className="relative">
-        <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
+        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
           <Search size={18} />
         </span>
         <input
           id="podcast-search"
           type="text"
-          placeholder="Search by title, category, or host..."
+          placeholder="Search by title, category, or station..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+          className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-4 text-sm focus:border-indigo-500 focus:ring-indigo-500"
         />
       </div>
     </div>
