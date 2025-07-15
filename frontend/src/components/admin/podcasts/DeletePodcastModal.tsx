@@ -2,8 +2,8 @@
 
 'use client';
 
+import { deletePodcastById } from '@/services/podcasts/podcastsService';
 import BaseModal from './BaseModal';
-import { deletePodcastById } from '@/lib/services/podcastServices';
 
 interface DeletePodcastModalProps {
   isOpen: boolean;

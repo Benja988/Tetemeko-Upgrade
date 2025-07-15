@@ -5,6 +5,7 @@ import mongoose, { Types } from "mongoose";
 import { uploadMedia, CloudinaryUploadResult } from "../utils/uploadMedia";
 import { z } from "zod";
 import logger from "../utils/logger";
+import { Category } from "../models/Category";
 
 // Podcast creation/update schemas
 const createPodcastSchema = z.object({
@@ -41,19 +42,18 @@ const updatePodcastSchema = z.object({
 });
 
 // 🎙️ Create a new podcast
-export const createPodcast = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const createPodcast = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { id } = req.params;
     const validatedData = createPodcastSchema.parse(req.body);
 
-    if (!mongoose.isValidObjectId(id)) {
-      res.status(400).json({ error: "Invalid podcast ID" });
+    // 🔍 Check if category exists and is of type 'podcast'
+    const category = await Category.findById(validatedData.category);
+    if (!category || category.categoryType !== 'podcast') {
+      res.status(400).json({ error: "Invalid or non-podcast category selected" });
       return;
     }
 
+    // 📤 Upload cover image if present
     let uploadedCoverImage: string | undefined = validatedData.coverImage;
     if (req.file) {
       const uploaded = await uploadMedia(req.file, "podcasts/covers") as CloudinaryUploadResult;
@@ -73,6 +73,7 @@ export const createPodcast = async (
       podcastId: podcast._id,
       title: validatedData.title,
     });
+
     res.status(201).json({ message: "Podcast created successfully", podcast });
   } catch (error) {
     console.error("Error creating podcast:", error);

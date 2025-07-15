@@ -5,8 +5,8 @@
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import BaseModal from './BaseModal';
-import { updatePodcastById } from '@/lib/services/podcastServices';
 import { Podcast } from '@/interfaces/podcasts';
+import { updatePodcastById } from '@/services/podcasts/podcastsService';
 
 const updatePodcastSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less').optional(),
@@ -39,8 +39,8 @@ export default function EditPodcastModal({ isOpen, onClose, onPodcastUpdated, po
       setFormData({
         title: podcast.title,
         description: podcast.description,
-        category: podcast.category?._id || '',
-        station: podcast.station?._id || '',
+        category: typeof podcast.category === 'string' ? podcast.category : podcast.category || '',
+        station: podcast.station || '',
         coverImage: null,
       });
     }
@@ -68,7 +68,7 @@ export default function EditPodcastModal({ isOpen, onClose, onPodcastUpdated, po
       if (data.description) formDataToSend.append('description', data.description);
       if (data.category) formDataToSend.append('category', data.category);
       if (data.station) formDataToSend.append('station', data.station);
-      if (data.coverImage instanceof File) formDataToSend{bp('coverImage', data.coverImage);
+      if (data.coverImage instanceof File) formDataToSend.append('coverImage', data.coverImage);
 
       const updatedPodcast = await updatePodcastById(podcast._id, formDataToSend);
       if (updatedPodcast) {
@@ -78,8 +78,8 @@ export default function EditPodcastModal({ isOpen, onClose, onPodcastUpdated, po
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) fieldErrors[err.path[0]] = err.message;
+        error.issues.forEach((err) => {
+          if (err.path[0]) fieldErrors[String(err.path[0])] = err.message;
         });
         setErrors(fieldErrors);
       }

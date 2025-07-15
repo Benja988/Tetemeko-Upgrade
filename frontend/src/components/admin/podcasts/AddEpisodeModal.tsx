@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import BaseModal from './BaseModal';
-import { createEpisode } from '@/lib/services/episodeServices';
 import { Episode } from '@/interfaces/podcasts';
+import { createEpisode } from '@/services/episodes/episodeServices';
 
 const createEpisodeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
@@ -83,8 +83,8 @@ export default function AddEpisodeModal({ isOpen, onClose, onEpisodeAdded, podca
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) fieldErrors[err.path[0]] = err.message;
+        error.issues.forEach((err) => {
+          if (typeof err.path[0] === 'string') fieldErrors[err.path[0]] = err.message;
         });
         setErrors(fieldErrors);
       }

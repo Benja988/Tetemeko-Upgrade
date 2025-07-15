@@ -9,11 +9,12 @@ import { Menu } from '@headlessui/react';
 import EditPodcastModal from './EditPodcastModal';
 import DeletePodcastModal from './DeletePodcastModal';
 import ExportPodcastModal from './ExportPodcastModal';
+import { togglePodcastStatus } from '@/services/podcasts/podcastsService';
+import { deleteEpisodeById } from '@/services/episodes/episodeServices';
+import PodcastRowActions from './PodcastRowActions';
 import AddEpisodeModal from './AddEpisodeModal';
 import EditEpisodeModal from './EditEpisodeModal';
 import DeleteEpisodeModal from './DeleteEpisodeModal';
-import { togglePodcastStatus } from '@/lib/services/podcastServices';
-import { deleteEpisodeById } from '@/lib/services/episodeServices';
 
 interface PodcastsTableProps {
   podcasts: Podcast[];
@@ -102,7 +103,8 @@ export default function PodcastsTable({
           <tbody className="divide-y divide-gray-100">
             {podcasts.map((podcast) => {
               const isExpanded = expandedPodcasts[podcast._id] || false;
-              const visibleEpisodes = isExpanded ? podcast.episodes : podcast.episodes.slice(0, 1);
+              const episodes = podcast.episodes ?? [];
+              const visibleEpisodes = isExpanded ? episodes : episodes.slice(0, 1);
 
               return (
                 <tr
@@ -126,10 +128,20 @@ export default function PodcastsTable({
                   <td className="px-5 py-4 align-top font-semibold text-gray-800">{podcast.title}</td>
                   <td className="px-5 py-4 align-top">
                     <span className="inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
-                      {podcast.category?.name || 'N/A'}
+                      {podcast.category && typeof podcast.category === 'object' && 'name' in podcast.category
+                        ? (podcast.category as { name: string }).name
+                        : typeof podcast.category === 'string'
+                        ? podcast.category
+                        : 'N/A'}
                     </span>
                   </td>
-                  <td className="px-5 py-4 align-top">{podcast.station?.name || 'N/A'}</td>
+                  <td className="px-5 py-4 align-top">
+                    {podcast.station && typeof podcast.station === 'object' && 'name' in podcast.station
+                      ? (podcast.station as { name: string }).name
+                      : typeof podcast.station === 'string'
+                      ? podcast.station
+                      : 'N/A'}
+                  </td>
                   <td className="px-5 py-4 align-top">
                     <div className="flex flex-col gap-3">
                       <button
@@ -200,12 +212,12 @@ export default function PodcastsTable({
                           </div>
                         </div>
                       ))}
-                      {podcast.episodes.length > 1 && (
+                      {(podcast.episodes ?? []).length > 1 && (
                         <button
                           onClick={() => toggleExpand(podcast._id)}
                           className="mt-1 text-sm text-indigo-600 hover:underline"
                         >
-                          {isExpanded ? 'Show Less' : `Show ${podcast.episodes.length - 1} More`}
+                          {isExpanded ? 'Show Less' : `Show ${(podcast.episodes ?? []).length - 1} More`}
                         </button>
                       )}
                     </div>
@@ -253,13 +265,13 @@ export default function PodcastsTable({
       <AddEpisodeModal
         isOpen={activeModal.type === 'addEpisode'}
         onClose={() => setActiveModal({ type: null, podcast: null, episode: null })}
-        onEpisodeAdded={(episode) => onEpisodeAdded(activeModal.podcast?._id || '', episode)}
+        onEpisodeAdded={(episode: Episode) => onEpisodeAdded(activeModal.podcast?._id || '', episode)}
         podcastId={activeModal.podcast?._id || ''}
       />
       <EditEpisodeModal
         isOpen={activeModal.type === 'editEpisode'}
         onClose={() => setActiveModal({ type: null, podcast: null, episode: null })}
-        onEpisodeUpdated={(episode) => onEpisodeUpdated(activeModal.podcast?._id || '', episode)}
+        onEpisodeUpdated={(episode: Episode) => onEpisodeUpdated(activeModal.podcast?._id || '', episode)}
         podcastId={activeModal.podcast?._id || ''}
         episode={activeModal.episode}
       />

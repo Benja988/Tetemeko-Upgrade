@@ -1,12 +1,12 @@
-// components/admin/podcasts/AddPodcastModal.tsx
-
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { z } from 'zod';
 import BaseModal from './BaseModal';
-import { createPodcast } from '@/lib/services/podcastServices';
 import { Podcast } from '@/interfaces/podcasts';
+import { createPodcast } from '@/services/podcasts/podcastsService';
+import { getCategories } from '@/services/categories/categoryService';
+import { Category } from '@/interfaces/Category';
 
 const createPodcastSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
@@ -30,10 +30,31 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
     station: '',
     coverImage: null as File | null,
   });
+  const [categories, setCategories] = useState<Category[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await getCategories();
+        if (response) {
+          const podcastCategories = response.filter((cat: Category) => cat.categoryType === 'podcast').filter(
+            (cat: Category) => cat.categoryType === 'podcast'
+          );
+          setCategories(podcastCategories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    if (isOpen) {
+      fetchCategories();
+    }
+  }, [isOpen]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => ({ ...prev, [name]: '' }));
@@ -65,8 +86,8 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) fieldErrors[err.path[0]] = err.message;
+        error.issues.forEach((err) => {
+          if (typeof err.path[0] === 'string') fieldErrors[err.path[0]] = err.message;
         });
         setErrors(fieldErrors);
       }
@@ -78,6 +99,7 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
   return (
     <BaseModal isOpen={isOpen} onClose={onClose} title="Add New Podcast">
       <div className="space-y-4">
+        {/* Title */}
         <div>
           <label htmlFor="title" className="block text-sm font-medium text-gray-700">
             Title
@@ -88,11 +110,13 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             type="text"
             value={formData.title}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 w-full rounded-md border px-3 py-2"
             placeholder="Enter podcast title"
           />
-          {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
+          {errors.title && <p className="text-sm text-red-600">{errors.title}</p>}
         </div>
+
+        {/* Description */}
         <div>
           <label htmlFor="description" className="block text-sm font-medium text-gray-700">
             Description
@@ -102,27 +126,36 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             name="description"
             value={formData.description}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 w-full rounded-md border px-3 py-2"
             placeholder="Enter podcast description"
             rows={4}
           />
-          {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+          {errors.description && <p className="text-sm text-red-600">{errors.description}</p>}
         </div>
+
+        {/* Category Dropdown */}
         <div>
           <label htmlFor="category" className="block text-sm font-medium text-gray-700">
             Category
           </label>
-          <input
+          <select
             id="category"
             name="category"
-            type="text"
             value={formData.category}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
-            placeholder="Enter category ID"
-          />
-          {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+            className="mt-1 w-full rounded-md border px-3 py-2"
+          >
+            <option value="">Select category</option>
+            {categories.map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+          {errors.category && <p className="text-sm text-red-600">{errors.category}</p>}
         </div>
+
+        {/* Station */}
         <div>
           <label htmlFor="station" className="block text-sm font-medium text-gray-700">
             Station (Optional)
@@ -133,11 +166,13 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             type="text"
             value={formData.station}
             onChange={handleChange}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            className="mt-1 w-full rounded-md border px-3 py-2"
             placeholder="Enter station ID"
           />
-          {errors.station && <p className="mt-1 text-sm text-red-600">{errors.station}</p>}
+          {errors.station && <p className="text-sm text-red-600">{errors.station}</p>}
         </div>
+
+        {/* Cover Image */}
         <div>
           <label htmlFor="coverImage" className="block text-sm font-medium text-gray-700">
             Cover Image (Optional)
@@ -148,21 +183,23 @@ export default function AddPodcastModal({ isOpen, onClose, onPodcastAdded }: Add
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+            className="mt-1 w-full rounded-md border px-3 py-2"
           />
-          {errors.coverImage && <p className="mt-1 text-sm text-red-600">{errors.coverImage}</p>}
+          {errors.coverImage && <p className="text-sm text-red-600">{errors.coverImage}</p>}
         </div>
+
+        {/* Action Buttons */}
         <div className="flex justify-end gap-2 pt-4">
           <button
             onClick={onClose}
-            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
             disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="rounded-md bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
             disabled={isSubmitting}
           >
             {isSubmitting ? 'Creating...' : 'Create'}

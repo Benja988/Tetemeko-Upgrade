@@ -4,11 +4,11 @@
 
 import { useState, useEffect } from 'react';
 import { Podcast, Episode } from '@/interfaces/podcasts';
-import { getAllPodcasts } from '@/lib/services/podcastServices';
 import PodcastsActions from './PodcastsActions';
 import PodcastsTabs from './PodcastsTabs';
 import PodcastsSearchFilter from './PodcastsSearchFilter';
 import PodcastsTable from './PodcastsTable';
+import { getAllPodcasts } from '@/services/podcasts/podcastsService';
 
 interface PodcastsPageLayoutProps {
   heading: string;
@@ -64,7 +64,7 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
   const handleEpisodeAdded = (podcastId: string, episode: Episode) => {
     setPodcasts((prev) =>
       prev.map((p) =>
-        p._id === podcastId ? { ...p, episodes: [...p.episodes, episode] } : p
+        p._id === podcastId ? { ...p, episodes: [...(p.episodes ?? []), episode] } : p
       )
     );
   };
@@ -75,7 +75,7 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
         p._id === podcastId
           ? {
               ...p,
-              episodes: p.episodes.map((e) =>
+              episodes: (p.episodes ?? []).map((e) =>
                 e._id === updatedEpisode._id ? updatedEpisode : e
               ),
             }
@@ -88,7 +88,7 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
     setPodcasts((prev) =>
       prev.map((p) =>
         p._id === podcastId
-          ? { ...p, episodes: p.episodes.filter((e) => e._id !== episodeId) }
+          ? { ...p, episodes: (p.episodes ?? []).filter((e) => e._id !== episodeId) }
           : p
       )
     );
@@ -122,7 +122,7 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
         <PodcastsTable
           podcasts={podcasts}
           onPodcastUpdated={handleEditPodcast}
-          onPodcastDeleted={handleDeleteSelected}
+          onPodcastDeleted={(id: string) => handleDeleteSelected([id])}
           onEpisodeAdded={handleEpisodeAdded}
           onEpisodeUpdated={handleEpisodeUpdated}
           onEpisodeDeleted={handleEpisodeDeleted}

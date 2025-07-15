@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { z } from 'zod';
 import BaseModal from './BaseModal';
-import { updateEpisodeById } from '@/lib/services/episodeServices';
 import { Episode } from '@/interfaces/podcasts';
+import { updateEpisodeById } from '@/services/episodes/episodeServices';
 
 const updateEpisodeSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less').optional(),
@@ -90,8 +90,8 @@ export default function EditEpisodeModal({ isOpen, onClose, onEpisodeUpdated, po
     } catch (error) {
       if (error instanceof z.ZodError) {
         const fieldErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
-          if (err.path[0]) fieldErrors[err.path[0]] = err.message;
+        error.issues.forEach((err) => {
+          if (typeof err.path[0] === 'string') fieldErrors[err.path[0]] = err.message;
         });
         setErrors(fieldErrors);
       }
@@ -126,57 +126,88 @@ export default function EditEpisodeModal({ isOpen, onClose, onEpisodeUpdated, po
             id="description"
             name="description"
             value={formData.description}
-           ought to be empty. Please check the provided code or specify additional details for the `deletePodcastById` function in the frontend service layer. Below, I'll provide the reengineered version of the `DeletePodcastModal.tsx` component, assuming the `deletePodcastById` function is correctly implemented as shown in the earlier frontend service code. I'll also include a new `DeleteEpisodeModal.tsx` component to complete the episode management functionality.
-
----
-
-### Reengineered Components (Continued)
-
-#### 14. `DeleteEpisodeModal.tsx` (New Component)
-New component for confirming episode deletion, integrated with the `deleteEpisodeById` API.
-
-<xaiArtifact artifact_id="7d948836-82ca-49d1-a76c-51efb4e20ff1" artifact_version_id="a24aa38f-8c9f-4a90-8aaf-e682bd15258d" title="DeleteEpisodeModal.tsx" contentType="text/typescript">
-'use client';
-
-import BaseModal from './BaseModal';
-import { deleteEpisodeById } from '@/lib/services/episodeServices';
-import { Episode } from '@/interfaces/podcasts';
-
-interface DeleteEpisodeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onEpisodeDeleted: () => void;
-  episode: Episode | null;
-}
-
-export default function DeleteEpisodeModal({ isOpen, onClose, onEpisodeDeleted, episode }: DeleteEpisodeModalProps) {
-  const handleConfirm = async () => {
-    if (!episode) return;
-    const success = await deleteEpisodeById(episode.podcast, episode._id);
-    if (success) {
-      onEpisodeDeleted();
-      onClose();
-    }
-  };
-
-  return (
-    <BaseModal isOpen={isOpen} onClose={onClose} title="Confirm Episode Deletion">
-      <p className="text-sm text-gray-700">
-        Are you sure you want to delete the episode <strong>{episode?.title || 'this episode'}</strong>? This action cannot be undone.
-      </p>
-      <div className="flex justify-end gap-2 pt-4">
-        <button
-          onClick={onClose}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handleConfirm}
-          className="rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
-        >
-          Delete
-        </button>
+            onChange={handleChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Enter episode description"
+            rows={4}
+          />
+          {errors.description && <p className="mt-1 text-sm text-red-600">{errors.description}</p>}
+        </div>
+        <div>
+          <label htmlFor="duration" className="block text-sm font-medium text-gray-700">
+            Duration (minutes)
+          </label>
+          <input
+            id="duration"
+            name="duration"
+            type="number"
+            value={formData.duration || ''}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Enter duration in minutes"
+          />
+          {errors.duration && <p className="mt-1 text-sm text-red-600">{errors.duration}</p>}
+        </div>
+        <div>
+          <label htmlFor="episodeNumber" className="block text-sm font-medium text-gray-700">
+            Episode Number (Optional)
+          </label>
+          <input
+            id="episodeNumber"
+            name="episodeNumber"
+            type="number"
+            value={formData.episodeNumber || ''}
+            onChange={handleChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Enter episode number"
+          />
+          {errors.episodeNumber && <p className="mt-1 text-sm text-red-600">{errors.episodeNumber}</p>}
+        </div>
+        <div>
+          <label htmlFor="tags" className="block text-sm font-medium text-gray-700">
+            Tags (Optional, comma-separated)
+          </label>
+          <input
+            id="tags"
+            name="tags"
+            type="text"
+            value={formData.tags.join(', ')}
+            onChange={handleTagsChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:ring-indigo-500"
+            placeholder="Enter tags (e.g., tech, interview)"
+          />
+          {errors.tags && <p className="mt-1 text-sm text-red-600">{errors.tags}</p>}
+        </div>
+        <div>
+          <label htmlFor="audioFile" className="block text-sm font-medium text-gray-700">
+            Audio File (Optional)
+          </label>
+          <input
+            id="audioFile"
+            name="audioFile"
+            type="file"
+            accept="audio/*"
+            onChange={handleFileChange}
+            className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2"
+          />
+          {errors.audioFile && <p className="mt-1 text-sm text-red-600">{errors.audioFile}</p>}
+        </div>
+        <div className="flex justify-end gap-2 pt-4">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Updating...' : 'Update'}
+          </button>
+        </div>
       </div>
     </BaseModal>
   );

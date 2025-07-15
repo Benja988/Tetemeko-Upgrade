@@ -1,5 +1,3 @@
-// components/admin/podcasts/BaseModal.tsx
-
 import { ReactNode } from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
