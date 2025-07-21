@@ -25,7 +25,6 @@ const updateEpisodeSchema = z.object({
   audioUrl: z.string().optional(),
 });
 
-// 🎧 Add an episode to a podcast
 export const addEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { podcastId } = req.params;
@@ -72,7 +71,6 @@ export const addEpisode = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
-// ✏️ Update an episode
 export const updateEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { podcastId, episodeId } = req.params;
@@ -125,7 +123,6 @@ export const updateEpisode = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// 🗑️ Delete an episode
 export const deleteEpisode = async (req: Request, res: Response): Promise<void> => {
   try {
     const { podcastId, episodeId } = req.params;
@@ -168,7 +165,6 @@ export const deleteEpisode = async (req: Request, res: Response): Promise<void> 
   }
 };
 
-// 📄 Get all episodes for a podcast
 export const getAllEpisodes = async (
   req: Request,
   res: Response,
@@ -215,7 +211,6 @@ export const getAllEpisodes = async (
   }
 };
 
-// 🔍 Get an episode by ID
 export const getEpisodeById = async (
   req: Request,
   res: Response,

@@ -34,11 +34,17 @@ router.get("/", getAllPodcasts); // List all podcasts with optional category, se
 router.get("/:id", getPodcastById); // Get a single podcast by ID
 
 // 🟡 Authenticated routes
-router.post(
+/*router.post(
   "/",
   authenticateJWT,
   authorize([UserRole.ADMIN]),
   upload.single("coverImage"),
+  createPodcast
+); // Create a new podcast */
+router.post(
+  "/",
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
   createPodcast
 ); // Create a new podcast
 router.put(
