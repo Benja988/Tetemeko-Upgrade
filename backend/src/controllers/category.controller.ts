@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Category } from "../models/Category";
 import slugify from "slugify";
-import { AuthenticatedRequest } from "../middlewares/auth.middleware";
+// import { AuthenticatedRequest } from "../middlewares/auth.middleware";
 
 // CREATE CATEGORY
 export const createCategory = async (
@@ -31,7 +31,7 @@ export const createCategory = async (
       description,
       seoTitle,
       seoDescription,
-      createdBy: (req as AuthenticatedRequest).user?.id,
+      createdBy: req.user?.id,
     });
 
     await category.save();

@@ -1,28 +1,23 @@
 import { Request, Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
-import User, { IUser, UserRole } from "../models/User";
+import User, { UserRole } from "../models/User";
 
-
-export interface UserPayload extends JwtPayload {
+interface UserPayload extends JwtPayload {
   id: string;
   role: UserRole;
 }
 
-export interface AuthenticatedRequest extends Request {
-  user?: UserPayload;
-}
-
-// ✅ JWT Authentication Middleware
+// JWT Authentication Middleware
 export const authenticateJWT = async (
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
-): Promise<void> => {  
+): Promise<void> => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     res.status(401).json({ message: "Unauthorized: No token provided" });
-    return; // ✅ Explicit return
+    return;
   }
 
   const token = authHeader.split(" ")[1];
@@ -30,67 +25,62 @@ export const authenticateJWT = async (
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as UserPayload;
 
-    (req as AuthenticatedRequest).user = {
+    req.user = {
       id: decoded.id,
-      role: decoded.role as UserRole, // ✅ Ensure role is cast correctly
+      role: decoded.role
     };
 
-    return next(); // ✅ Always call next()
+    return next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
       res.status(401).json({ message: "Unauthorized: Token expired" });
     } else {
       res.status(403).json({ message: "Forbidden: Invalid token" });
     }
-    return; // ✅ Explicit return
   }
 };
 
-// ✅ Role-Based Authorization Middleware
+// Role-Based Authorization Middleware
 export const authorize = (allowedRoles: UserRole[]) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    const authReq = req as AuthenticatedRequest;
-
-    if (!authReq.user) {
-      res.status(401).json({ message: "Unauthorized: No user found in request" });
-      return; // ✅ Explicit return
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized: No user in request" });
+      return;
     }
 
     try {
-      const user = await User.findById(authReq.user.id);
-      if (!user || !allowedRoles.includes(user.role as UserRole)) {
+      const user = await User.findById(req.user.id);
+      if (!user || !allowedRoles.includes(user.role)) {
         res.status(403).json({ message: "Access denied" });
-        return; // ✅ Explicit return
+        return;
       }
 
-      return next(); // ✅ Always call next()
+      return next();
     } catch (err) {
       return next(err);
     }
   };
 };
 
-// ✅ Super Admin Authorization Middleware
+// Super Admin Authorization Middleware
 export const authorizeSuperAdmin = async (
-  req: Request, 
-  res: Response, 
+  req: Request,
+  res: Response,
   next: NextFunction
-): Promise<void> => {  
-  const authReq = req as AuthenticatedRequest;
-
-  if (!authReq.user) {
-    res.status(401).json({ message: "Unauthorized: No user found in request" });
+): Promise<void> => {
+  if (!req.user) {
+    res.status(401).json({ message: "Unauthorized: No user in request" });
     return;
   }
 
   try {
-    const user = await User.findById(authReq.user.id);
+    const user = await User.findById(req.user.id);
     if (!user || user.role !== UserRole.ADMIN) {
-      res.status(403).json({ message: "Forbidden: Only admins can perform this action" });
+      res.status(403).json({ message: "Forbidden: Only admins allowed" });
       return;
     }
 
-    return next(); // ✅ Always call next()
+    return next();
   } catch (error) {
     return next(error);
   }

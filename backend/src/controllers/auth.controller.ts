@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { sendEmail } from '../utils/sendEmail'
-import { AuthenticatedRequest } from '../middlewares/auth.middleware'
+// import { AuthenticatedRequest } from '../middlewares/auth.middleware'
 import { generateVerificationEmail } from '../utils/emailTemplate'
 import { sendVerificationSuccessEmail } from '../utils/emailTemplate'
 import { generateResetPasswordEmail } from '../utils/emailTemplate'
@@ -506,46 +506,46 @@ export const getProfile = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const authReq = req as AuthenticatedRequest
-
   try {
-    if (!authReq.user) {
-      res
-        .status(401)
-        .json({ message: 'Unauthorized: No user found in request' })
-      return
-    }
-
-    const user = await User.findById(authReq.user.id).select('-password')
+    const user = req.user;
 
     if (!user) {
-      res.status(404).json({ message: 'User not found' })
-      return
+      res
+        .status(401)
+        .json({ message: "Unauthorized: No user found in request" });
+      return;
     }
 
-    res.status(200).json(user)
+    const foundUser = await User.findById(user.id).select("-password");
+
+    if (!foundUser) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    res.status(200).json(foundUser);
   } catch (err) {
-    console.error('Error fetching profile:', err)
-    res.status(500).json({ message: 'Server error' })
+    console.error("Error fetching profile:", err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 // ✅ Update Profile
 export const updateProfile = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const authReq = req as AuthenticatedRequest // Ensure req is treated as AuthenticatedRequest
-
   try {
-    if (!authReq.user) {
+    const userFromToken = req.user as IUser | undefined;
+
+    if (!userFromToken) {
       res
         .status(401)
         .json({ message: 'Unauthorized: No user found in request' })
       return
     }
 
-    const user = await User.findById(authReq.user.id)
+    const user = await User.findById(userFromToken._id)
     if (!user) {
       res.status(404).json({ message: 'User not found' })
       return
@@ -568,30 +568,29 @@ export const deactivateAccount = async (
   req: Request,
   res: Response
 ): Promise<void> => {
-  const authReq = req as AuthenticatedRequest // Ensure req is treated as AuthenticatedRequest
-
   try {
-    if (!authReq.user) {
-      res
-        .status(401)
-        .json({ message: 'Unauthorized: No user found in request' })
-      return
-    }
+    const user = req.user as IUser | undefined;
 
-    const user = await User.findById(authReq.user.id)
     if (!user) {
-      res.status(404).json({ message: 'User not found' })
-      return
+      res.status(401).json({ message: "Unauthorized: No user found in request" });
+      return;
     }
 
-    user.isActive = false // Assuming `isActive` exists in your User model
-    await user.save()
-    res.status(200).json({ message: 'Account deactivated' })
+    const existingUser = await User.findById(user._id);
+    if (!existingUser) {
+      res.status(404).json({ message: "User not found" });
+      return;
+    }
+
+    existingUser.isActive = false; // Ensure your User model has `isActive` field
+    await existingUser.save();
+
+    res.status(200).json({ message: "Account deactivated" });
   } catch (err) {
-    console.error('Error deactivating account:', err)
-    res.status(500).json({ message: 'Server error' })
+    console.error("Error deactivating account:", err);
+    res.status(500).json({ message: "Server error" });
   }
-}
+};
 
 // ✅ Refresh Token (Generate new JWT)
 export const refreshToken = async (

@@ -6,7 +6,7 @@ import { uploadMedia, CloudinaryUploadResult } from '../utils/uploadMedia'
 import { z } from 'zod'
 import logger from '../utils/logger'
 import { Category } from '../models/Category'
-import "../types/express";
+// import "../types/express";
 
 const createPodcastSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
