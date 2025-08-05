@@ -1,263 +1,363 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
+import mongoose from 'mongoose';
+import Episode from '../models/Episode.js';
+import Podcast from '../models/Podcast.js';
+import { User, UserRole } from '../models/User.js';
+import { uploadMedia } from '../utils/uploadMedia.js';
+import { sanitize } from 'sanitize-html';
+import logger from '../utils/logger.js';
+
+// Custom error class for better error handling
+class APIError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+const ITEMS_PER_PAGE = 20;
+
+// Check permissions for admin or manager actions
+const checkAdminPermissions = (user) => {
+  if (!user || ![UserRole.ADMIN, UserRole.MANAGER].includes(user.role)) {
+    throw new APIError('Unauthorized: Only admins or managers can perform this action', 403);
+  }
+};
+
+// Validate episode data
+const validateEpisodeData = ({ title, description, duration, episodeNumber, tags, audioUrl }) => {
+  if (!title || typeof title !== 'string' || title.length < 1 || title.length > 200) {
+    throw new APIError('Title is required and must be 1-200 characters', 400);
+  }
+  if (!description || typeof description !== 'string' || description.length < 1) {
+    throw new APIError('Description is required', 400);
+  }
+  if (typeof duration !== 'number' || duration <= 0) {
+    throw new APIError('Duration must be a positive number', 400);
+  }
+  if (episodeNumber !== undefined && (typeof episodeNumber !== 'number' || episodeNumber <= 0)) {
+    throw new APIError('Episode number must be a positive number', 400);
+  }
+  if (tags && (!Array.isArray(tags) || tags.some(t => typeof t !== 'string'))) {
+    throw new APIError('Tags must be an array of strings', 400);
+  }
+  if (audioUrl && !audioUrl.startsWith('data:audio/') && !audioUrl.startsWith('http')) {
+    throw new APIError('Invalid audio URL format', 400);
+  }
+};
+
+/**
+ * Add a new episode to a podcast
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const addEpisode = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+    if (!req.user?.id) {
+      throw new APIError('Unauthorized', 401);
     }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
+
+    const { podcastId } = req.params;
+    const { title, description, duration, episodeNumber, tags, audioUrl } = req.body;
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      throw new APIError('Invalid podcast ID', 400);
+    }
+
+    validateEpisodeData({ title, description, duration, episodeNumber, tags, audioUrl });
+
+    const sanitizedData = {
+      title: sanitize(title, { allowedTags: [] }),
+      description: sanitize(description, { allowedTags: ['p', 'strong', 'em'] }),
+      duration,
+      episodeNumber,
+      tags: tags ? tags.map(t => sanitize(t, { allowedTags: [] })) : undefined,
+      audioUrl
     };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
+
+    const podcast = await Podcast.findOne({ _id: podcastId, isActive: true });
+    if (!podcast) {
+      throw new APIError('Active podcast not found', 404);
+    }
+
+    let uploadedAudioUrl = sanitizedData.audioUrl;
+    if (req.file) {
+      try {
+        const uploaded = await uploadMedia(req.file, 'podcasts/episodes', 'raw');
+        uploadedAudioUrl = uploaded.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload audio file', 500);
+      }
+    } else if (sanitizedData.audioUrl?.startsWith('data:audio/')) {
+      try {
+        const uploaded = await uploadMedia(sanitizedData.audioUrl, 'podcasts/episodes', 'raw');
+        uploadedAudioUrl = uploaded.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload audio file', 500);
+      }
+    }
+
+    if (!uploadedAudioUrl) {
+      throw new APIError('Audio file is required', 400);
+    }
+
+    const episode = await Episode.create({
+      ...sanitizedData,
+      audioUrl: uploadedAudioUrl,
+      podcast: podcast._id,
+      createdBy: req.user.id,
+      isActive: true
     });
+
+    podcast.episodes.push(episode._id);
+    await podcast.save();
+
+    const populatedEpisode = await Episode.findById(episode._id)
+      .populate('createdBy', 'name')
+      .select('-__v')
+      .lean();
+
+    logger.info({
+      message: 'Episode created',
+      episodeId: episode._id,
+      podcastId: podcast._id,
+      title: sanitizedData.title,
+      userId: req.user.id
+    });
+
+    return res.status(201).json({ message: 'Episode created successfully', episode: populatedEpisode });
+  } catch (error) {
+    logger.error('Add episode error:', { error: error.message, body: req.body, podcastId: req.params.podcastId, userId: req.user?.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Internal Server Error' });
+  }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
+
+/**
+ * Update an episode
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const updateEpisode = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { podcastId, episodeId } = req.params;
+    const { title, description, duration, episodeNumber, tags, audioUrl } = req.body;
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      throw new APIError('Invalid podcast ID', 400);
+    }
+    if (!mongoose.isValidObjectId(episodeId)) {
+      throw new APIError('Invalid episode ID', 400);
+    }
+
+    if (title || description || duration || episodeNumber !== undefined || tags || audioUrl) {
+      validateEpisodeData({ title, description, duration, episodeNumber, tags, audioUrl });
+    }
+
+    const podcast = await Podcast.findOne({ _id: podcastId, isActive: true });
+    if (!podcast) {
+      throw new APIError('Active podcast not found', 404);
+    }
+
+    const episode = await Episode.findOne({ _id: episodeId, podcast: podcastId, isActive: true });
+    if (!episode) {
+      throw new APIError('Active episode not found', 404);
+    }
+
+    const sanitizedData = {
+      title: title ? sanitize(title, { allowedTags: [] }) : undefined,
+      description: description ? sanitize(description, { allowedTags: ['p', 'strong', 'em'] }) : undefined,
+      duration,
+      episodeNumber,
+      tags: tags ? tags.map(t => sanitize(t, { allowedTags: [] })) : undefined,
+      audioUrl
+    };
+
+    let uploadedAudioUrl = sanitizedData.audioUrl;
+    if (req.file) {
+      try {
+        const uploaded = await uploadMedia(req.file, 'podcasts/episodes', 'raw');
+        uploadedAudioUrl = uploaded.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload audio file', 500);
+      }
+    } else if (sanitizedData.audioUrl?.startsWith('data:audio/')) {
+      try {
+        const uploaded = await uploadMedia(sanitizedData.audioUrl, 'podcasts/episodes', 'raw');
+        uploadedAudioUrl = uploaded.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload audio file', 500);
+      }
+    }
+
+    const updates = Object.fromEntries(
+      Object.entries({
+        ...sanitizedData,
+        audioUrl: uploadedAudioUrl || episode.audioUrl
+      }).filter(([_, v]) => v !== undefined)
+    );
+
+    const updatedEpisode = await Episode.findOneAndUpdate(
+      { _id: episodeId, podcast: podcastId, isActive: true },
+      { ...updates, updatedBy: req.user?.id },
+      { new: true, runValidators: true }
+    )
+      .populate('createdBy', 'name')
+      .select('-__v');
+
+    if (!updatedEpisode) {
+      throw new APIError('Episode not found', 404);
+    }
+
+    logger.info({
+      message: 'Episode updated',
+      episodeId: updatedEpisode._id,
+      podcastId: podcast._id,
+      title: sanitizedData.title || updatedEpisode.title,
+      userId: req.user?.id
+    });
+
+    return res.status(200).json({ message: 'Episode updated successfully', episode: updatedEpisode });
+  } catch (error) {
+    logger.error('Update episode error:', { error: error.message, podcastId: req.params.podcastId, episodeId: req.params.episodeId, userId: req.user?.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Internal Server Error' });
+  }
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getEpisodeById = exports.getAllEpisodes = exports.deleteEpisode = exports.updateEpisode = exports.addEpisode = void 0;
-const Episode_1 = __importDefault(require("../models/Episode"));
-const Podcast_1 = __importDefault(require("../models/Podcast"));
-const mongoose_1 = __importStar(require("mongoose"));
-const uploadMedia_1 = require("../utils/uploadMedia");
-const zod_1 = require("zod");
-const logger_1 = __importDefault(require("../utils/logger"));
-// Episode creation/update schemas
-const createEpisodeSchema = zod_1.z.object({
-    title: zod_1.z.string().min(1, "Title is required").max(200),
-    description: zod_1.z.string().min(1, "Description is required"),
-    duration: zod_1.z.number().min(1, "Duration must be positive"),
-    episodeNumber: zod_1.z.number().min(1, "Episode number must be positive").optional(),
-    tags: zod_1.z.array(zod_1.z.string()).optional(),
-    audioUrl: zod_1.z.string().optional(),
-});
-const updateEpisodeSchema = zod_1.z.object({
-    title: zod_1.z.string().min(1).max(200).optional(),
-    description: zod_1.z.string().min(1).optional(),
-    duration: zod_1.z.number().min(1).optional(),
-    episodeNumber: zod_1.z.number().min(1).optional(),
-    tags: zod_1.z.array(zod_1.z.string()).optional(),
-    audioUrl: zod_1.z.string().optional(),
-});
-const addEpisode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    try {
-        const { podcastId } = req.params;
-        const validatedData = createEpisodeSchema.parse(req.body);
-        if (!mongoose_1.default.isValidObjectId(podcastId)) {
-            res.status(400).json({ error: "Invalid podcast ID" });
-            return;
-        }
-        const podcast = yield Podcast_1.default.findById(podcastId);
-        if (!podcast) {
-            res.status(404).json({ error: "Podcast not found" });
-            return;
-        }
-        let uploadedAudioUrl = validatedData.audioUrl;
-        if (req.file) {
-            const uploaded = (yield (0, uploadMedia_1.uploadMedia)(req.file, "podcasts/episodes", "raw"));
-            uploadedAudioUrl = uploaded.secure_url;
-        }
-        else if ((_a = validatedData.audioUrl) === null || _a === void 0 ? void 0 : _a.startsWith("data:")) {
-            const uploaded = (yield (0, uploadMedia_1.uploadMedia)(validatedData.audioUrl, "podcasts/episodes", "raw"));
-            uploadedAudioUrl = uploaded.secure_url;
-        }
-        if (!uploadedAudioUrl) {
-            res.status(400).json({ error: "Audio file is required" });
-            return;
-        }
-        const episode = yield Episode_1.default.create(Object.assign(Object.assign({}, validatedData), { audioUrl: uploadedAudioUrl, podcast: podcast._id }));
-        podcast.episodes.push(episode._id);
-        yield podcast.save();
-        res.status(201).json({ message: "Episode created successfully", episode });
+
+/**
+ * Delete an episode
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const deleteEpisode = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { podcastId, episodeId } = req.params;
+    if (!mongoose.isValidObjectId(podcastId)) {
+      throw new APIError('Invalid podcast ID', 400);
     }
-    catch (error) {
-        console.error("Error adding episode:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+    if (!mongoose.isValidObjectId(episodeId)) {
+      throw new APIError('Invalid episode ID', 400);
     }
-});
-exports.addEpisode = addEpisode;
-const updateEpisode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    try {
-        const { podcastId, episodeId } = req.params;
-        const validatedData = updateEpisodeSchema.parse(req.body);
-        if (!mongoose_1.default.isValidObjectId(podcastId)) {
-            res.status(400).json({ error: "Invalid podcast ID" });
-            return;
-        }
-        if (!mongoose_1.default.isValidObjectId(episodeId)) {
-            res.status(400).json({ error: "Invalid episode ID" });
-            return;
-        }
-        const podcast = yield Podcast_1.default.findById(podcastId);
-        if (!podcast) {
-            res.status(404).json({ error: "Podcast not found" });
-            return;
-        }
-        const episode = yield Episode_1.default.findById(episodeId);
-        if (!episode) {
-            res.status(404).json({ error: "Episode not found" });
-            return;
-        }
-        let uploadedAudioUrl = validatedData.audioUrl;
-        if (req.file) {
-            const uploaded = (yield (0, uploadMedia_1.uploadMedia)(req.file, "podcasts/episodes", "raw"));
-            uploadedAudioUrl = uploaded.secure_url;
-        }
-        else if ((_a = validatedData.audioUrl) === null || _a === void 0 ? void 0 : _a.startsWith("data:")) {
-            const uploaded = (yield (0, uploadMedia_1.uploadMedia)(validatedData.audioUrl, "podcasts/episodes", "raw"));
-            uploadedAudioUrl = uploaded.secure_url;
-        }
-        Object.assign(episode, Object.assign(Object.assign({}, validatedData), { audioUrl: uploadedAudioUrl || episode.audioUrl }));
-        yield episode.save();
-        logger_1.default.info({
-            message: "Episode updated",
-            episodeId: episode._id,
-            podcastId: podcast._id,
-            title: validatedData.title || episode.title,
-        });
-        res.status(200).json({ message: "Episode updated successfully", episode });
+
+    const podcast = await Podcast.findOne({ _id: podcastId, isActive: true });
+    if (!podcast) {
+      throw new APIError('Active podcast not found', 404);
     }
-    catch (error) {
-        console.error("Error updating episode:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+
+    const episode = await Episode.findOne({ _id: episodeId, podcast: podcastId, isActive: true });
+    if (!episode) {
+      throw new APIError('Active episode not found', 404);
     }
-});
-exports.updateEpisode = updateEpisode;
-const deleteEpisode = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { podcastId, episodeId } = req.params;
-        if (!mongoose_1.default.isValidObjectId(podcastId)) {
-            res.status(400).json({ error: "Invalid podcast ID" });
-            return;
-        }
-        if (!mongoose_1.default.isValidObjectId(episodeId)) {
-            res.status(400).json({ error: "Invalid episode ID" });
-            return;
-        }
-        const podcast = yield Podcast_1.default.findById(podcastId);
-        if (!podcast) {
-            res.status(404).json({ error: "Podcast not found" });
-            return;
-        }
-        const episode = yield Episode_1.default.findById(episodeId);
-        if (!episode) {
-            res.status(404).json({ error: "Episode not found" });
-            return;
-        }
-        yield episode.deleteOne();
-        podcast.episodes = podcast.episodes.filter((id) => id.toString() !== episodeId);
-        yield podcast.save();
-        logger_1.default.info({
-            message: "Episode deleted",
-            episodeId,
-            podcastId,
-        });
-        res.status(200).json({ message: "Episode deleted successfully" });
+
+    await Episode.findByIdAndUpdate(episodeId, { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() });
+
+    podcast.episodes = podcast.episodes.filter(id => id.toString() !== episodeId);
+    await podcast.save();
+
+    logger.info({
+      message: 'Episode deleted',
+      episodeId,
+      podcastId,
+      userId: req.user?.id
+    });
+
+    return res.status(200).json({ message: 'Episode deleted successfully' });
+  } catch (error) {
+    logger.error('Delete episode error:', { error: error.message, podcastId: req.params.podcastId, episodeId: req.params.episodeId, userId: req.user?.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Internal Server Error' });
+  }
+};
+
+/**
+ * Get all episodes for a podcast
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getAllEpisodes = async (req, res) => {
+  try {
+    const { podcastId } = req.params;
+    const { page = 1, limit = ITEMS_PER_PAGE, search, sortBy = 'publishedDate', sortOrder = 'desc' } = req.query;
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      throw new APIError('Invalid podcast ID', 400);
     }
-    catch (error) {
-        console.error("Error deleting episode:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+
+    const query = { podcast: podcastId, isActive: true };
+    if (search) {
+      query.title = { $regex: sanitize(search, { allowedTags: [] }), $options: 'i' };
     }
-});
-exports.deleteEpisode = deleteEpisode;
-const getAllEpisodes = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        if (!mongoose_1.default.isValidObjectId(req.params.podcastId)) {
-            res.status(400).json({ message: "Invalid podcast ID" });
-            return;
-        }
-        const { page = "1", limit = "10", search } = req.query;
-        const query = { podcast: new mongoose_1.Types.ObjectId(req.params.podcastId) };
-        if (search) {
-            query.title = { $regex: search, $options: "i" };
-        }
-        const pageNum = parseInt(page, 10);
-        const limitNum = parseInt(limit, 10);
-        const episodes = yield Episode_1.default.find(query)
-            .select("title description audioUrl duration publishedDate isActive episodeNumber tags")
-            .populate("createdBy", "name")
-            .skip((pageNum - 1) * limitNum)
-            .limit(limitNum)
-            .lean();
-        const total = yield Episode_1.default.countDocuments(query);
-        res.status(200).json({
-            episodes,
-            total,
-            page: pageNum,
-            limit: limitNum,
-            totalPages: Math.ceil(total / limitNum),
-        });
+
+    const pageNum = Number(page);
+    const limitNum = Number(limit);
+    const skip = (pageNum - 1) * limitNum;
+    const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+    const [episodes, total] = await Promise.all([
+      Episode.find(query)
+        .select('title description audioUrl duration publishedDate isActive episodeNumber tags')
+        .populate('createdBy', 'name')
+        .skip(skip)
+        .limit(limitNum)
+        .sort(sort)
+        .lean(),
+      Episode.countDocuments(query)
+    ]);
+
+    return res.status(200).json({
+      episodes,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum)
+      }
+    });
+  } catch (error) {
+    logger.error('Get all episodes error:', { error: error.message, podcastId: req.params.podcastId, query: req.query });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Internal Server Error' });
+  }
+};
+
+/**
+ * Get a single episode by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getEpisodeById = async (req, res) => {
+  try {
+    const { podcastId, episodeId } = req.params;
+
+    if (!mongoose.isValidObjectId(podcastId)) {
+      throw new APIError('Invalid podcast ID', 400);
     }
-    catch (error) {
-        logger_1.default.error({
-            message: `Error fetching episodes for podcast ${req.params.podcastId}`,
-            error: error instanceof Error ? error.message : "Unknown error",
-        });
-        next(error);
+    if (!mongoose.isValidObjectId(episodeId)) {
+      throw new APIError('Invalid episode ID', 400);
     }
-});
-exports.getAllEpisodes = getAllEpisodes;
-const getEpisodeById = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        if (!mongoose_1.default.isValidObjectId(req.params.podcastId)) {
-            res.status(400).json({ message: "Invalid podcast ID" });
-            return;
-        }
-        if (!mongoose_1.default.isValidObjectId(req.params.episodeId)) {
-            res.status(400).json({ message: "Invalid episode ID" });
-            return;
-        }
-        const episode = yield Episode_1.default.findOne({
-            _id: req.params.episodeId,
-            podcast: req.params.podcastId,
-        })
-            .select("title description audioUrl duration publishedDate isActive episodeNumber tags")
-            .populate("createdBy", "name")
-            .lean();
-        if (!episode) {
-            res.status(404).json({ message: "Episode not found" });
-            return;
-        }
-        res.status(200).json(episode);
+
+    const episode = await Episode.findOne({
+      _id: episodeId,
+      podcast: podcastId,
+      isActive: true
+    })
+      .select('title description audioUrl duration publishedDate isActive episodeNumber tags')
+      .populate('createdBy', 'name')
+      .lean();
+
+    if (!episode) {
+      throw new APIError('Episode not found', 404);
     }
-    catch (error) {
-        logger_1.default.error({
-            message: `Error fetching episode ${req.params.episodeId} for podcast ${req.params.podcastId}`,
-            error: error instanceof Error ? error.message : "Unknown error",
-        });
-        next(error);
-    }
-});
-exports.getEpisodeById = getEpisodeById;
+
+    return res.status(200).json({ episode });
+  } catch (error) {
+    logger.error('Get episode error:', { error: error.message, podcastId: req.params.podcastId, episodeId: req.params.episodeId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Internal Server Error' });
+  }
+};

@@ -1,169 +1,309 @@
-"use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+import mongoose from 'mongoose';
+import Station from '../models/Station.js';
+import { uploadMedia } from '../utils/uploadMedia.js';
+import { sanitize } from 'sanitize-html';
+import { UserRole } from '../models/User.js';
+
+// Custom error class for better error handling
+class APIError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+// Predefined valid station types and genres
+const VALID_STATION_TYPES = ['radio', 'podcast', 'tv'];
+const VALID_GENRES = ['pop', 'rock', 'jazz', 'classical', 'news', 'sports', 'talk', 'hip-hop', 'country'];
+const ITEMS_PER_PAGE = 20;
+
+// Check permissions for admin-only actions
+const checkAdminPermissions = (user) => {
+  if (!user || user.role !== UserRole.ADMIN) {
+    throw new APIError('Unauthorized: Only admins can perform this action', 403);
+  }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.toggleStationStatus = exports.deleteStation = exports.updateStation = exports.createStation = exports.getStationById = exports.getAllStations = void 0;
-const Station_1 = __importDefault(require("../models/Station"));
-const uploadMedia_1 = require("../utils/uploadMedia");
-const mongoose_1 = __importDefault(require("mongoose"));
+
 /**
- * Get all stations (publicly accessible)
+ * Get all stations with pagination and filtering
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const getAllStations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const stations = yield Station_1.default.find();
-        res.status(200).json(stations);
+export const getAllStations = async (req, res) => {
+  try {
+    const { page = 1, type, genre, isActive } = req.query;
+    const filter = {};
+
+    if (type) {
+      const sanitizedType = sanitize(type, { allowedTags: [] });
+      if (!VALID_STATION_TYPES.includes(sanitizedType)) {
+        throw new APIError(`Invalid station type. Must be one of: ${VALID_STATION_TYPES.join(', ')}`, 400);
+      }
+      filter.type = sanitizedType;
     }
-    catch (error) {
-        console.error("Error retrieving stations:", error);
-        res.status(500).json({ error: "Failed to retrieve stations" });
+
+    if (genre) {
+      const sanitizedGenre = sanitize(genre, { allowedTags: [] });
+      if (!VALID_GENRES.includes(sanitizedGenre)) {
+        throw new APIError(`Invalid genre. Must be one of: ${VALID_GENRES.join(', ')}`, 400);
+      }
+      filter.genre = sanitizedGenre;
     }
-});
-exports.getAllStations = getAllStations;
+
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    }
+
+    const skip = (Number(page) - 1) * ITEMS_PER_PAGE;
+    const [stations, total] = await Promise.all([
+      Station.find(filter)
+        .select('-__v')
+        .skip(skip)
+        .limit(ITEMS_PER_PAGE)
+        .sort({ createdAt: -1 })
+        .lean(),
+      Station.countDocuments(filter)
+    ]);
+
+    return res.status(200).json({
+      stations,
+      pagination: {
+        page: Number(page),
+        limit: ITEMS_PER_PAGE,
+        total,
+        pages: Math.ceil(total / ITEMS_PER_PAGE)
+      }
+    });
+  } catch (error) {
+    console.error('Get stations error:', { error: error.message, query: req.query });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to retrieve stations' });
+  }
+};
+
 /**
  * Get a single station by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const getStationById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ error: "Invalid station ID" });
-            return;
-        }
-        const station = yield Station_1.default.findById(id);
-        if (!station) {
-            res.status(404).json({ error: "Station not found" });
-            return;
-        }
-        res.status(200).json(station);
+export const getStationById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new APIError('Invalid station ID', 400);
     }
-    catch (error) {
-        console.error("Error fetching station:", error);
-        res.status(500).json({ error: "Failed to fetch station" });
+
+    const station = await Station.findById(id).select('-__v').lean();
+    if (!station) {
+      throw new APIError('Station not found', 404);
     }
-});
-exports.getStationById = getStationById;
+
+    return res.status(200).json(station);
+  } catch (error) {
+    console.error('Get station error:', { error: error.message, stationId: req.params.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to fetch station' });
+  }
+};
+
 /**
  * Create a new station
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const createStation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { name, description, streamUrl, imageUrl, location, genre, isActive, type, liveShow, listenerz } = req.body;
-        if (!name || !location || !type) {
-            res.status(400).json({ error: "Missing required fields: name, location, type" });
-            return;
-        }
-        let uploadedImageUrl = imageUrl || "";
-        if (typeof imageUrl === "string" && imageUrl.startsWith("data:image/")) {
-            const result = yield (0, uploadMedia_1.uploadMedia)(imageUrl, "stations", "image");
-            uploadedImageUrl = result.secure_url;
-        }
-        const newStation = yield Station_1.default.create({
-            name,
-            description: description || "",
-            streamUrl: streamUrl || "",
-            imageUrl: uploadedImageUrl,
-            location,
-            genre: Array.isArray(genre) ? genre : genre ? genre.split(",").map((g) => g.trim()) : [],
-            isActive: isActive !== undefined ? isActive : true,
-            type,
-            liveShow: liveShow || null,
-            listenerz: listenerz || 0,
-        });
-        res.status(201).json({ message: "Station created successfully", station: newStation });
+export const createStation = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { name, description, streamUrl, imageUrl, location, genre, isActive, type, liveShow, listenerz } = req.body;
+
+    if (!name || !location || !type) {
+      throw new APIError('Missing required fields: name, location, type', 400);
     }
-    catch (error) {
-        console.error("Error creating station:", error);
-        res.status(500).json({ error: "Failed to create station" });
+
+    if (!VALID_STATION_TYPES.includes(type)) {
+      throw new APIError(`Invalid station type. Must be one of: ${VALID_STATION_TYPES.join(', ')}`, 400);
     }
-});
-exports.createStation = createStation;
+
+    if (genre && !Array.isArray(genre)) {
+      throw new APIError('Genre must be an array', 400);
+    }
+
+    if (genre && !genre.every(g => VALID_GENRES.includes(g))) {
+      throw new APIError(`Invalid genres. Must be one of: ${VALID_GENRES.join(', ')}`, 400);
+    }
+
+    const sanitizedData = {
+      name: sanitize(name, { allowedTags: [] }),
+      description: description ? sanitize(description, { allowedTags: ['p', 'strong', 'em'] }) : '',
+      streamUrl: streamUrl ? sanitize(streamUrl, { allowedTags: [] }) : '',
+      location: sanitize(location, { allowedTags: [] }),
+      genre: genre || [],
+      isActive: isActive !== undefined ? isActive : true,
+      type: sanitize(type, { allowedTags: [] }),
+      liveShow: liveShow ? sanitize(liveShow, { allowedTags: [] }) : null,
+      listenerz: Number(listenerz) || 0
+    };
+
+    let uploadedImageUrl = imageUrl || '';
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
+      try {
+        const result = await uploadMedia(imageUrl, 'stations', 'image');
+        uploadedImageUrl = result.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload image', 500);
+      }
+    }
+
+    const newStation = await Station.create({
+      ...sanitizedData,
+      imageUrl: uploadedImageUrl,
+      createdBy: req.user?.id
+    });
+
+    return res.status(201).json({ message: 'Station created successfully', station: newStation });
+  } catch (error) {
+    console.error('Create station error:', { error: error.message, name: req.body.name });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to create station' });
+  }
+};
+
 /**
  * Update a station
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const updateStation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        const updates = req.body;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ error: "Invalid station ID" });
-            return;
-        }
-        if (updates.imageUrl && typeof updates.imageUrl === "string" && updates.imageUrl.startsWith("data:image/")) {
-            const result = yield (0, uploadMedia_1.uploadMedia)(updates.imageUrl, "stations", "image");
-            updates.imageUrl = result.secure_url;
-        }
-        const updatedStation = yield Station_1.default.findByIdAndUpdate(id, Object.assign(Object.assign({}, updates), { genre: updates.genre ? (Array.isArray(updates.genre) ? updates.genre : updates.genre.split(",").map((g) => g.trim())) : undefined }), { new: true, runValidators: true });
-        if (!updatedStation) {
-            res.status(404).json({ error: "Station not found" });
-            return;
-        }
-        res.status(200).json({ message: "Station updated successfully", station: updatedStation });
+export const updateStation = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { id } = req.params;
+    const { name, description, streamUrl, imageUrl, location, genre, isActive, type, liveShow, listenerz } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new APIError('Invalid station ID', 400);
     }
-    catch (error) {
-        console.error("Error updating station:", error);
-        res.status(500).json({ error: "Failed to update station" });
+
+    if (type && !VALID_STATION_TYPES.includes(type)) {
+      throw new APIError(`Invalid station type. Must be one of: ${VALID_STATION_TYPES.join(', ')}`, 400);
     }
-});
-exports.updateStation = updateStation;
+
+    if (genre && !Array.isArray(genre)) {
+      throw new APIError('Genre must be an array', 400);
+    }
+
+    if (genre && !genre.every(g => VALID_GENRES.includes(g))) {
+      throw new APIError(`Invalid genres. Must be one of: ${VALID_GENRES.join(', ')}`, 400);
+    }
+
+    const sanitizedData = {
+      name: name ? sanitize(name, { allowedTags: [] }) : undefined,
+      description: description ? sanitize(description, { allowedTags: ['p', 'strong', 'em'] }) : undefined,
+      streamUrl: streamUrl ? sanitize(streamUrl, { allowedTags: [] }) : undefined,
+      location: location ? sanitize(location, { allowedTags: [] }) : undefined,
+      genre: genre || undefined,
+      isActive: isActive !== undefined ? isActive : undefined,
+      type: type ? sanitize(type, { allowedTags: [] }) : undefined,
+      liveShow: liveShow ? sanitize(liveShow, { allowedTags: [] }) : undefined,
+      listenerz: listenerz !== undefined ? Number(listenerz) : undefined
+    };
+
+    let uploadedImageUrl = imageUrl;
+    if (imageUrl && typeof imageUrl === 'string' && imageUrl.startsWith('data:image/')) {
+      try {
+        const result = await uploadMedia(imageUrl, 'stations', 'image');
+        uploadedImageUrl = result.secure_url;
+      } catch (uploadError) {
+        throw new APIError('Failed to upload image', 500);
+      }
+    }
+
+    const updates = Object.fromEntries(
+      Object.entries({ ...sanitizedData, imageUrl: uploadedImageUrl })
+        .filter(([_, v]) => v !== undefined)
+    );
+
+    const updatedStation = await Station.findByIdAndUpdate(
+      id,
+      { ...updates, updatedBy: req.user?.id },
+      { new: true, runValidators: true }
+    ).select('-__v');
+
+    if (!updatedStation) {
+      throw new APIError('Station not found', 404);
+    }
+
+    return res.status(200).json({ message: 'Station updated successfully', station: updatedStation });
+  } catch (error) {
+    console.error('Update station error:', { error: error.message, stationId: req.params.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to update station' });
+  }
+};
+
 /**
- * Delete a station
+ * Delete a station (soft delete)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const deleteStation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ error: "Invalid station ID" });
-            return;
-        }
-        const station = yield Station_1.default.findByIdAndDelete(id);
-        if (!station) {
-            res.status(404).json({ error: "Station not found" });
-            return;
-        }
-        res.status(200).json({ message: "Station deleted successfully" });
+export const deleteStation = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new APIError('Invalid station ID', 400);
     }
-    catch (error) {
-        console.error("Error deleting station:", error);
-        res.status(500).json({ error: "Failed to delete station" });
+
+    const deletedStation = await Station.findByIdAndUpdate(
+      id,
+      { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!deletedStation) {
+      throw new APIError('Station not found', 404);
     }
-});
-exports.deleteStation = deleteStation;
+
+    return res.status(200).json({ message: 'Station deleted successfully' });
+  } catch (error) {
+    console.error('Delete station error:', { error: error.message, stationId: req.params.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to delete station' });
+  }
+};
+
 /**
  * Toggle station active status
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
  */
-const toggleStationStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            res.status(400).json({ error: "Invalid station ID" });
-            return;
-        }
-        const station = yield Station_1.default.findById(id);
-        if (!station) {
-            res.status(404).json({ error: "Station not found" });
-            return;
-        }
-        station.isActive = !station.isActive;
-        yield station.save();
-        res.status(200).json({
-            message: `Station is now ${station.isActive ? "active" : "inactive"}`,
-            station,
-        });
+export const toggleStationStatus = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new APIError('Invalid station ID', 400);
     }
-    catch (error) {
-        console.error("Error toggling station status:", error);
-        res.status(500).json({ error: "Failed to toggle station status" });
+
+    const station = await Station.findById(id);
+    if (!station) {
+      throw new APIError('Station not found', 404);
     }
-});
-exports.toggleStationStatus = toggleStationStatus;
+
+    station.isActive = !station.isActive;
+    station.updatedBy = req.user?.id;
+    await station.save();
+
+    return res.status(200).json({
+      message: `Station is now ${station.isActive ? 'active' : 'inactive'}`,
+      station
+    });
+  } catch (error) {
+    console.error('Toggle station status error:', { error: error.message, stationId: req.params.id });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to toggle station status' });
+  }
+};

@@ -1,58 +1,200 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
+import mongoose from 'mongoose';
+import { sanitize } from 'sanitize-html';
+
+// Enum for news status
+export const NewsStatus = {
+  DRAFT: 'draft',
+  PUBLISHED: 'published',
+  ARCHIVED: 'archived'
+};
+
+const NewsSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: [true, 'Title is required'],
+    trim: true,
+    minlength: [1, 'Title must be at least 1 character'],
+    maxlength: [200, 'Title cannot exceed 200 characters'],
+    set: v => sanitize(v, { allowedTags: [] })
+  },
+  slug: {
+    type: String,
+    unique: true,
+    trim: true,
+    lowercase: true,
+    set: v => sanitize(v, { allowedTags: [] })
+  },
+  content: {
+    type: String,
+    required: [true, 'Content is required'],
+    trim: true,
+    minlength: [1, 'Content must be at least 1 character'],
+    set: v => sanitize(v, { allowedTags: ['p', 'strong', 'em', 'a', 'img', 'ul', 'ol', 'li'] })
+  },
+  summary: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Summary cannot exceed 500 characters'],
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  author: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Author',
+    required: [true, 'Author is required']
+  },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: [true, 'Category is required']
+  },
+  tags: [{
+    type: String,
+    trim: true,
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  }],
+  status: {
+    type: String,
+    enum: Object.values(NewsStatus),
+    default: NewsStatus.DRAFT
+  },
+  publishedAt: {
+    type: Date,
+    default: null
+  },
+  thumbnail: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^(https?:\/\/)/i.test(v);
+      },
+      message: 'Thumbnail must be a valid URL'
+    },
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  featuredImage: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^(https?:\/\/)/i.test(v);
+      },
+      message: 'Featured image must be a valid URL'
+    },
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  videoUrl: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true;
+        return /^(https?:\/\/)/i.test(v);
+      },
+      message: 'Video URL must be a valid URL'
+    },
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  seoTitle: {
+    type: String,
+    trim: true,
+    maxlength: [200, 'SEO title cannot exceed 200 characters'],
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  seoDescription: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'SEO description cannot exceed 500 characters'],
+    set: v => v ? sanitize(v, { allowedTags: [] }) : v
+  },
+  readingTime: {
+    type: Number,
+    min: [0, 'Reading time cannot be negative'],
+    default: 0
+  },
+  viewsCount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Views count cannot be negative']
+  },
+  isFeatured: {
+    type: Boolean,
+    default: false
+  },
+  isBreaking: {
+    type: Boolean,
+    default: false
+  },
+  comments: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Comment'
+  }],
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deletedAt: {
+    type: Date
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.News = void 0;
-const mongoose_1 = __importStar(require("mongoose"));
-const NewsSchema = new mongoose_1.Schema({
-    title: { type: String, required: true },
-    content: { type: String, required: true },
-    summary: { type: String },
-    author: { type: mongoose_1.Schema.Types.ObjectId, ref: "Author" },
-    category: { type: mongoose_1.Schema.Types.ObjectId, ref: "Category" },
-    tags: [{ type: String }],
-    publishedAt: { type: Date },
-    isPublished: { type: Boolean, default: true },
-    thumbnail: { type: String },
-    featuredImage: { type: String },
-    videoUrl: { type: String },
-    seoTitle: { type: String },
-    seoDescription: { type: String },
-    readingTime: { type: Number },
-    viewsCount: { type: Number, default: 0 },
-    isFeatured: { type: Boolean, default: false },
-    isBreaking: { type: Boolean, default: false },
-    comments: [{ type: mongoose_1.Schema.Types.ObjectId, ref: "Comment" }],
-}, { timestamps: true });
-exports.News = mongoose_1.default.model("News", NewsSchema);
+
+// Indexes for better query performance
+NewsSchema.index({ slug: 1 }, { unique: true });
+NewsSchema.index({ title: 'text', content: 'text', tags: 'text' });
+NewsSchema.index({ isActive: 1, status: 1, isPublished: 1 });
+NewsSchema.index({ author: 1 });
+NewsSchema.index({ category: 1 });
+NewsSchema.index({ publishedAt: -1 });
+
+// Pre-save hook for slug generation and uniqueness
+NewsSchema.pre('save', async function(next) {
+  if (this.isModified('title') || !this.slug) {
+    // Generate slug from title
+    const baseSlug = this.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+    
+    let slug = baseSlug;
+    let counter = 1;
+    
+    // Ensure slug uniqueness
+    while (await mongoose.model('News').findOne({ slug, _id: { $ne: this._id }, isActive: true })) {
+      slug = `${baseSlug}-${counter++}`;
+    }
+    
+    this.slug = slug;
+  }
+
+  // Update publishedAt when status changes to published
+  if (this.isModified('status') && this.status === NewsStatus.PUBLISHED && !this.publishedAt) {
+    this.publishedAt = new Date();
+  }
+
+  next();
+});
+
+// Virtual for word count
+NewsSchema.virtual('wordCount').get(function() {
+  return this.content ? this.content.split(/\s+/).length : 0;
+});
+
+export const News = mongoose.model('News', NewsSchema);

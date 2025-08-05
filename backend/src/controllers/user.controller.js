@@ -1,331 +1,533 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+import mongoose from 'mongoose';
+import { User, UserRole } from '../models/User.js';
+import crypto from 'crypto';
+import { sanitize } from 'sanitize-html';
+import { sendEmail } from '../utils/sendEmail.js';
+
+// Custom error class for better error handling
+class APIError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+// Check permissions for admin-only actions
+const checkAdminPermissions = (user) => {
+  if (!user || user.role !== UserRole.ADMIN) {
+    throw new APIError('Unauthorized: Only admins can perform this action', 403);
+  }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.promoteToManager = exports.reactivateUser = exports.searchUsers = exports.adminResetPassword = exports.unlockUser = exports.lockUser = exports.deleteUsers = exports.deleteUser = exports.updateUser = exports.getUserById = exports.getUsers = void 0;
-const User_1 = __importStar(require("../models/User"));
-const mongoose_1 = __importDefault(require("mongoose"));
-const crypto_1 = __importDefault(require("crypto"));
+
 const ITEMS_PER_PAGE = 20;
-// Get paginated list of users (admin only)
-const getUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const roleFilter = req.query.role;
-        const query = {};
-        if (roleFilter)
-            query.role = roleFilter;
-        const totalUsers = yield User_1.default.countDocuments(query);
-        const users = yield User_1.default.find(query)
-            .skip((page - 1) * ITEMS_PER_PAGE)
-            .limit(ITEMS_PER_PAGE)
-            .select('-password -refreshToken -resetPasswordToken -verificationToken') // don't send sensitive info
-            .sort({ createdAt: -1 });
-        res.status(200).json({
-            data: users,
-            page,
-            totalPages: Math.ceil(totalUsers / ITEMS_PER_PAGE),
-            totalUsers,
-        });
+
+/**
+ * Get paginated list of users (admin only)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getUsers = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { page = 1, role, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const query = role ? { role: sanitize(role, { allowedTags: [] }) } : {};
+    
+    const skip = (Number(page) - 1) * ITEMS_PER_PAGE;
+    const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+    const [users, totalUsers] = await Promise.all([
+      User.find(query)
+        .select('-password -refreshToken -resetPasswordToken -verificationToken')
+        .skip(skip)
+        .limit(ITEMS_PER_PAGE)
+        .sort(sort)
+        .lean(),
+      User.countDocuments(query)
+    ]);
+
+    return res.status(200).json({
+      data: users,
+      page: Number(page),
+      totalPages: Math.ceil(totalUsers / ITEMS_PER_PAGE),
+      totalUsers
+    });
+  } catch (error) {
+    console.error('Get users error:', { error: error.message, query: req.query });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to fetch users' });
+  }
+};
+
+/**
+ * Get single user by ID
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getUserById = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to fetch users.' });
+
+    const user = await User.findById(userId)
+      .select('-password -refreshToken -resetPasswordToken -verificationToken')
+      .lean();
+
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-});
-exports.getUsers = getUsers;
-// Get single user by ID
-const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const user = yield User_1.default.findById(userId).select('-password -refreshToken -resetPasswordToken -verificationToken');
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        res.status(200).json(user);
+
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error('Get user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to fetch user' });
+  }
+};
+
+/**
+ * Update user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const updateUser = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    const { name, email, role, isActive } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to fetch user.' });
+
+    if (!name && !email && !role && isActive === undefined) {
+      throw new APIError('At least one field is required for update', 400);
     }
-});
-exports.getUserById = getUserById;
-// Update user (role, isActive, name, email etc.)
-const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        const { name, email, role, isActive } = req.body;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        // Validate role if provided
-        if (role && !Object.values(User_1.UserRole).includes(role)) {
-            res.status(400).json({ message: 'Invalid user role.' });
-            return;
-        }
-        const updateData = {};
-        if (name)
-            updateData.name = name;
-        if (email)
-            updateData.email = email.toLowerCase();
-        if (role)
-            updateData.role = role;
-        if (typeof isActive === 'boolean')
-            updateData.isActive = isActive;
-        const updatedUser = yield User_1.default.findByIdAndUpdate(userId, updateData, {
-            new: true,
-        }).select('-password -refreshToken -resetPasswordToken -verificationToken');
-        if (!updatedUser) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        res.status(200).json(updatedUser);
+
+    if (role && !Object.values(UserRole).includes(role)) {
+      throw new APIError('Invalid user role', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to update user.' });
+
+    const sanitizedData = {
+      name: name ? sanitize(name, { allowedTags: [] }) : undefined,
+      email: email ? sanitize(email, { allowedTags: [] }).toLowerCase() : undefined,
+      role,
+      isActive
+    };
+
+    const updateData = Object.fromEntries(
+      Object.entries(sanitizedData).filter(([_, v]) => v !== undefined)
+    );
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { ...updateData, updatedBy: req.user?.id },
+      { new: true, runValidators: true }
+    ).select('-password -refreshToken -resetPasswordToken -verificationToken');
+
+    if (!updatedUser) {
+      throw new APIError('User not found', 404);
     }
-});
-exports.updateUser = updateUser;
-// Delete user (or soft delete by setting isActive = false)
-const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        // Option 1: Hard delete
-        // const deletedUser = await User.findByIdAndDelete(userId);
-        // Option 2: Soft delete by deactivating account
-        const deletedUser = yield User_1.default.findByIdAndUpdate(userId, { isActive: false }, { new: true });
-        if (!deletedUser) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        res.status(200).json({ message: 'User deactivated successfully.' });
+
+    // Send notification email for significant changes
+    if (role || isActive !== undefined) {
+      await sendEmail(
+        updatedUser.email,
+        'Account Updated',
+        `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+            <h2>Account Update Notification</h2>
+            <p>Hello ${updatedUser.name},</p>
+            <p>Your account has been updated by an administrator.</p>
+            ${role ? `<p>New role: ${role}</p>` : ''}
+            ${isActive !== undefined ? `<p>Account status: ${isActive ? 'Active' : 'Deactivated'}</p>` : ''}
+          </div>
+        `
+      );
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to deactivate user.' });
+
+    return res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+  } catch (error) {
+    console.error('Update user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to update user' });
+  }
+};
+
+/**
+ * Delete user (soft delete)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const deleteUser = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-});
-exports.deleteUser = deleteUser;
-const deleteUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userIds } = req.body; // expect array of IDs in body
-        if (!Array.isArray(userIds) || userIds.length === 0) {
-            res.status(400).json({ message: 'No user IDs provided.' });
-            return;
-        }
-        // Validate all IDs
-        const invalidIds = userIds.filter(id => !mongoose_1.default.Types.ObjectId.isValid(id));
-        if (invalidIds.length > 0) {
-            res.status(400).json({ message: 'Some user IDs are invalid.', invalidIds });
-            return;
-        }
-        // Soft delete all users by setting isActive to false
-        const result = yield User_1.default.updateMany({ _id: { $in: userIds } }, { $set: { isActive: false } });
-        // result.nModified or result.modifiedCount depending on Mongoose version
-        res.status(200).json({
-            message: `${result.modifiedCount || result.modifiedCount} user(s) deactivated successfully.`,
-        });
+
+    const deletedUser = await User.findByIdAndUpdate(
+      userId,
+      { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() },
+      { new: true }
+    );
+
+    if (!deletedUser) {
+      throw new APIError('User not found', 404);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to deactivate users.' });
+
+    await sendEmail(
+      deletedUser.email,
+      'Account Deactivated',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Account Deactivation Notification</h2>
+          <p>Hello ${deletedUser.name},</p>
+          <p>Your account has been deactivated by an administrator.</p>
+          <p>If you believe this is an error, please contact our support team.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'User deactivated successfully' });
+  } catch (error) {
+    console.error('Delete user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to deactivate user' });
+  }
+};
+
+/**
+ * Delete multiple users (soft delete)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const deleteUsers = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userIds } = req.body;
+    if (!Array.isArray(userIds) || userIds.length === 0) {
+      throw new APIError('No user IDs provided', 400);
     }
-});
-exports.deleteUsers = deleteUsers;
-// Lock user account manually (admin can lock user)
-const lockUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const lockUntil = new Date(Date.now() + 15 * 60 * 1000); // Lock for 15 minutes
-        const user = yield User_1.default.findByIdAndUpdate(userId, { lockUntil, failedLoginAttempts: 5 }, { new: true });
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        res.status(200).json({ message: 'User account locked.' });
+
+    const invalidIds = userIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      throw new APIError('Some user IDs are invalid', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to lock user.' });
+
+    const result = await User.updateMany(
+      { _id: { $in: userIds }, isActive: true },
+      { $set: { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() } }
+    );
+
+    // Notify affected users
+    const users = await User.find({ _id: { $in: userIds } });
+    await Promise.all(users.map(user =>
+      sendEmail(
+        user.email,
+        'Account Deactivated',
+        `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+            <h2>Account Deactivation Notification</h2>
+            <p>Hello ${user.name},</p>
+            <p>Your account has been deactivated by an administrator.</p>
+            <p>If you believe this is an error, please contact our support team.</p>
+          </div>
+        `
+      )
+    ));
+
+    return res.status(200).json({
+      message: `${result.modifiedCount} user(s) deactivated successfully`
+    });
+  } catch (error) {
+    console.error('Delete users error:', { error: error.message, userIds: req.body.userIds });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to deactivate users' });
+  }
+};
+
+/**
+ * Lock user account
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const lockUser = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-});
-exports.lockUser = lockUser;
-// Unlock user account manually (admin can unlock user)
-const unlockUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const user = yield User_1.default.findById(userId);
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        // Use your model method or reset here
-        yield user.resetFailedLogins();
-        res.status(200).json({ message: 'User account unlocked.' });
+
+    const lockUntil = new Date(Date.now() + 15 * 60 * 1000);
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { lockUntil, failedLoginAttempts: 5, updatedBy: req.user?.id },
+      { new: true }
+    );
+
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to unlock user.' });
+
+    await sendEmail(
+      user.email,
+      'Account Locked',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Account Lock Notification</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your account has been temporarily locked by an administrator.</p>
+          <p>The lock will expire on ${lockUntil.toLocaleString()}.</p>
+          <p>If you believe this is an error, please contact our support team.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'User account locked' });
+  } catch (error) {
+    console.error('Lock user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to lock user' });
+  }
+};
+
+/**
+ * Unlock user account
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const unlockUser = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-});
-exports.unlockUser = unlockUser;
-// Admin initiated password reset (generate reset token and send email)
-const adminResetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const user = yield User_1.default.findById(userId);
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        // Generate a reset token (random string)
-        const resetToken = crypto_1.default.randomBytes(32).toString('hex');
-        // Set reset token and expiry (e.g. 1 hour)
-        user.resetPasswordToken = resetToken;
-        user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
-        yield user.save();
-        // TODO: Send email with resetToken link to user.email
-        res.status(200).json({
-            message: 'Password reset token generated and email sent (simulate).',
-            resetToken, // for testing purposes; remove in production
-        });
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to generate reset token.' });
+
+    await user.resetFailedLogins();
+
+    await sendEmail(
+      user.email,
+      'Account Unlocked',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Account Unlock Notification</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your account has been unlocked by an administrator.</p>
+          <p>You can now log in to your account.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'User account unlocked' });
+  } catch (error) {
+    console.error('Unlock user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to unlock user' });
+  }
+};
+
+/**
+ * Admin-initiated password reset
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const adminResetPassword = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-});
-exports.adminResetPassword = adminResetPassword;
-// Search users by email or name
-const searchUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { query } = req.query;
-        if (!query || typeof query !== 'string') {
-            res.status(400).json({ message: 'Query parameter required.' });
-            return;
-        }
-        // Simple case-insensitive search for email or name
-        const regex = new RegExp(query, 'i');
-        const users = yield User_1.default.find({
-            $or: [{ email: regex }, { name: regex }],
-        })
-            .limit(50)
-            .select('-password -refreshToken -resetPasswordToken -verificationToken');
-        res.status(200).json({ results: users });
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Search failed.' });
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000);
+    await user.save();
+
+    const resetLink = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    await sendEmail(
+      user.email,
+      'Password Reset Request',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Password Reset Request</h2>
+          <p>Hello ${user.name},</p>
+          <p>An administrator has initiated a password reset for your account.</p>
+          <p>Please click the button below to reset your password:</p>
+          <a href="${resetLink}" style="display: inline-block; padding: 12px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Reset Password</a>
+          <p>Or copy and paste this link: ${resetLink}</p>
+          <p>This link will expire in 1 hour.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'Password reset email sent successfully' });
+  } catch (error) {
+    console.error('Admin reset password error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to generate reset token' });
+  }
+};
+
+/**
+ * Search users by email or name
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const searchUsers = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { query, page = 1, limit = 50 } = req.query;
+    if (!query || typeof query !== 'string' || !query.trim()) {
+      throw new APIError('Valid query parameter required', 400);
     }
-});
-exports.searchUsers = searchUsers;
-// Reactivate a deactivated user account
-const reactivateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const user = yield User_1.default.findByIdAndUpdate(userId, { isActive: true }, { new: true });
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        res.status(200).json({ message: 'User account reactivated.', user });
+
+    const sanitizedQuery = sanitize(query.trim(), { allowedTags: [] });
+    const regex = new RegExp(sanitizedQuery, 'i');
+    const skip = (Number(page) - 1) * Number(limit);
+
+    const [users, total] = await Promise.all([
+      User.find({
+        $or: [{ email: regex }, { name: regex }],
+        isActive: true
+      })
+        .select('-password -refreshToken -resetPasswordToken -verificationToken')
+        .skip(skip)
+        .limit(Number(limit))
+        .lean(),
+      User.countDocuments({
+        $or: [{ email: regex }, { name: regex }],
+        isActive: true
+      })
+    ]);
+
+    return res.status(200).json({
+      results: users,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total,
+        pages: Math.ceil(total / Number(limit))
+      }
+    });
+  } catch (error) {
+    console.error('Search users error:', { error: error.message, query: req.query.query });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Search failed' });
+  }
+};
+
+/**
+ * Reactivate a deactivated user account
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const reactivateUser = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to reactivate user.' });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isActive: true, updatedBy: req.user?.id },
+      { new: true }
+    ).select('-password -refreshToken -resetPasswordToken -verificationToken');
+
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-});
-exports.reactivateUser = reactivateUser;
-// Promote a user to Manager role
-const promoteToManager = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { userId } = req.params;
-        if (!mongoose_1.default.Types.ObjectId.isValid(userId)) {
-            res.status(400).json({ message: 'Invalid user ID.' });
-            return;
-        }
-        const user = yield User_1.default.findById(userId);
-        if (!user) {
-            res.status(404).json({ message: 'User not found.' });
-            return;
-        }
-        user.role = User_1.UserRole.MANAGER;
-        yield user.save();
-        res.status(200).json({ message: 'User promoted to Manager.', user });
+
+    await sendEmail(
+      user.email,
+      'Account Reactivated',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Account Reactivation Notification</h2>
+          <p>Hello ${user.name},</p>
+          <p>Your account has been reactivated by an administrator.</p>
+          <p>You can now log in to your account.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'User account reactivated', user });
+  } catch (error) {
+    console.error('Reactivate user error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to reactivate user' });
+  }
+};
+
+/**
+ * Promote a user to Manager role
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const promoteToManager = async (req, res) => {
+  try {
+    checkAdminPermissions(req.user);
+
+    const { userId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      throw new APIError('Invalid user ID', 400);
     }
-    catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Failed to promote user.' });
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { role: UserRole.MANAGER, updatedBy: req.user?.id },
+      { new: true }
+    ).select('-password -refreshToken -resetPasswordToken -verificationToken');
+
+    if (!user) {
+      throw new APIError('User not found', 404);
     }
-});
-exports.promoteToManager = promoteToManager;
+
+    await sendEmail(
+      user.email,
+      'Role Updated',
+      `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>Role Update Notification</h2>
+          <p>Hello ${user.name},</p>
+          <p>You have been promoted to Manager role by an administrator.</p>
+          <p>You now have additional permissions in the system.</p>
+        </div>
+      `
+    );
+
+    return res.status(200).json({ message: 'User promoted to Manager', user });
+  } catch (error) {
+    console.error('Promote to manager error:', { error: error.message, userId: req.params.userId });
+    const status = error.statusCode || 500;
+    return res.status(status).json({ message: error.message || 'Failed to promote user' });
+  }
+};

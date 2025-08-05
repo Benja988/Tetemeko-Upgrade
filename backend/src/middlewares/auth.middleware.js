@@ -1,116 +1,237 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
+import jwt from 'jsonwebtoken';
+import sanitize from 'sanitize-html';
+import logger from '../utils/logger.js';
+import User, { UserRole } from '../models/User.js';
+import { config } from 'dotenv';
+
+// Load environment variables
+config();
+
+// Configuration
+const AUTH_CONFIG = {
+  jwtSecret: process.env.JWT_SECRET || 'default-secret',
+  refreshSecret: process.env.REFRESH_SECRET || 'default-refresh-secret',
+  tokenIssuer: process.env.JWT_ISSUER || 'tetemeko-media',
+  allowedAlgorithms: ['HS256', 'HS384', 'HS512']
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
+
+// Custom error classes
+class AuthError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'AuthError';
+    this.status = status;
+  }
+}
+
+class TokenBlacklistedError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'TokenBlacklistedError';
+    this.status = 401;
+  }
+}
+
+// In-memory token blacklist (replace with Redis in production)
+const tokenBlacklist = new Set();
+
+/**
+ * Validate and sanitize authorization header
+ * @param {string} authHeader - Authorization header
+ * @returns {string} Sanitized token
+ */
+const validateAuthHeader = (authHeader) => {
+  if (!authHeader || typeof authHeader !== 'string') {
+    throw new AuthError('No token provided', 401);
+  }
+  const sanitizedHeader = sanitize(authHeader, { allowedTags: [] });
+  if (!sanitizedHeader.startsWith('Bearer ')) {
+    throw new AuthError('Invalid token format', 401);
+  }
+  return sanitizedHeader.split(' ')[1];
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.authorizeSuperAdmin = exports.authorize = exports.authenticateJWT = void 0;
-const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const User_1 = __importStar(require("../models/User"));
-// JWT Authentication Middleware
-const authenticateJWT = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+
+/**
+ * JWT Authentication Middleware
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+export const authenticateJWT = async (req, res, next) => {
+  try {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-        res.status(401).json({ message: "Unauthorized: No token provided" });
-        return;
+    const token = validateAuthHeader(authHeader);
+
+    // Check token blacklist
+    if (tokenBlacklist.has(token)) {
+      throw new TokenBlacklistedError('Token has been blacklisted');
     }
-    const token = authHeader.split(" ")[1];
-    try {
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
-        req.user = {
-            id: decoded.id,
-            role: decoded.role
-        };
-        return next();
-    }
-    catch (error) {
-        if (error instanceof jsonwebtoken_1.default.TokenExpiredError) {
-            res.status(401).json({ message: "Unauthorized: Token expired" });
-        }
-        else {
-            res.status(403).json({ message: "Forbidden: Invalid token" });
-        }
-    }
-});
-exports.authenticateJWT = authenticateJWT;
-// Role-Based Authorization Middleware
-const authorize = (allowedRoles) => {
-    return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-        if (!req.user) {
-            res.status(401).json({ message: "Unauthorized: No user in request" });
-            return;
-        }
-        try {
-            const user = yield User_1.default.findById(req.user.id);
-            if (!user || !allowedRoles.includes(user.role)) {
-                res.status(403).json({ message: "Access denied" });
-                return;
-            }
-            return next();
-        }
-        catch (err) {
-            return next(err);
-        }
+
+    // Verify token
+    const decoded = jwt.verify(token, AUTH_CONFIG.jwtSecret, {
+      algorithms: AUTH_CONFIG.allowedAlgorithms,
+      issuer: AUTH_CONFIG.tokenIssuer
     });
+
+    // Fetch user and verify status
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      throw new AuthError('User not found', 401);
+    }
+    if (!user.isActive) {
+      throw new AuthError('Account is inactive or suspended', 403);
+    }
+
+    // Attach user to request
+    req.user = {
+      id: decoded.id,
+      role: decoded.role,
+      correlationId: req.correlationId
+    };
+
+    logger.info('User authenticated', {
+      userId: decoded.id,
+      role: decoded.role,
+      correlationId: req.correlationId
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Authentication error', {
+      error: error.message,
+      stack: error.stack,
+      correlationId: req.correlationId
+    });
+
+    if (error instanceof jwt.TokenExpiredError) {
+      return res.status(401).json({ message: 'Unauthorized: Token expired', correlationId: req.correlationId });
+    }
+    if (error instanceof jwt.JsonWebTokenError) {
+      return res.status(403).json({ message: 'Forbidden: Invalid token', correlationId: req.correlationId });
+    }
+    return res.status(error.status || 401).json({ message: error.message, correlationId: req.correlationId });
+  }
 };
-exports.authorize = authorize;
-// Super Admin Authorization Middleware
-const authorizeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    if (!req.user) {
-        res.status(401).json({ message: "Unauthorized: No user in request" });
-        return;
-    }
+
+/**
+ * Role-Based Authorization Middleware
+ * @param {string[]} allowedRoles - Array of allowed roles
+ * @returns {Function} Express middleware
+ */
+export const authorize = (allowedRoles) => {
+  return async (req, res, next) => {
     try {
-        const user = yield User_1.default.findById(req.user.id);
-        if (!user || user.role !== User_1.UserRole.ADMIN) {
-            res.status(403).json({ message: "Forbidden: Only admins allowed" });
-            return;
-        }
-        return next();
+      if (!req.user) {
+        throw new AuthError('No user in request', 401);
+      }
+
+      const user = await User.findById(req.user.id);
+      if (!user) {
+        throw new AuthError('User not found', 401);
+      }
+      if (!allowedRoles.includes(user.role)) {
+        throw new AuthError('Access denied: Insufficient role permissions', 403);
+      }
+
+      logger.info('User authorized', {
+        userId: req.user.id,
+        role: user.role,
+        allowedRoles,
+        correlationId: req.correlationId
+      });
+
+      next();
+    } catch (error) {
+      logger.error('Authorization error', {
+        error: error.message,
+        stack: error.stack,
+        userId: req.user?.id,
+        allowedRoles,
+        correlationId: req.correlationId
+      });
+      return res.status(error.status || 403).json({ message: error.message, correlationId: req.correlationId });
     }
-    catch (error) {
-        return next(error);
+  };
+};
+
+/**
+ * Super Admin Authorization Middleware
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next function
+ */
+export const authorizeSuperAdmin = async (req, res, next) => {
+  try {
+    if (!req.user) {
+      throw new AuthError('No user in request', 401);
     }
+
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== UserRole.ADMIN) {
+      throw new AuthError('Forbidden: Only admins allowed', 403);
+    }
+
+    logger.info('Super admin authorized', {
+      userId: req.user.id,
+      role: user.role,
+      correlationId: req.correlationId
+    });
+
+    next();
+  } catch (error) {
+    logger.error('Super admin authorization error', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      correlationId: req.correlationId
+    });
+    return res.status(error.status || 403).json({ message: error.message, correlationId: req.correlationId });
+  }
+};
+
+/**
+ * Add token to blacklist (e.g., for logout)
+ * @param {string} token - JWT token to blacklist
+ */
+export const blacklistToken = (token) => {
+  tokenBlacklist.add(sanitize(token, { allowedTags: [] }));
+  logger.info('Token blacklisted', { token: '[sanitized]' });
+};
+
+/**
+ * Validate refresh token
+ * @param {string} token - Refresh token
+ * @returns {Object} Decoded token payload
+ */
+export const validateRefreshToken = (token) => {
+  try {
+    const sanitizedToken = sanitize(token, { allowedTags: [] });
+    if (tokenBlacklist.has(sanitizedToken)) {
+      throw new TokenBlacklistedError('Refresh token has been blacklisted');
+    }
+
+    const decoded = jwt.verify(sanitizedToken, AUTH_CONFIG.refreshSecret, {
+      algorithms: AUTH_CONFIG.allowedAlgorithms,
+      issuer: AUTH_CONFIG.tokenIssuer
+    });
+
+    logger.info('Refresh token validated', {
+      userId: decoded.id,
+      correlationId: decoded.correlationId
+    });
+
+    return decoded;
+  } catch (error) {
+    logger.error('Refresh token validation error', {
+      error: error.message,
+      stack: error.stack
+    });
+    throw error;
+  }
+};
+
+// Initialize middleware logging
+logger.info('Authentication middleware initialized', {
+  jwtIssuer: AUTH_CONFIG.tokenIssuer,
+  allowedAlgorithms: AUTH_CONFIG.allowedAlgorithms
 });
-exports.authorizeSuperAdmin = authorizeSuperAdmin;

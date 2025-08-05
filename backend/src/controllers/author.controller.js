@@ -1,5 +1,5 @@
 import { Author } from '../models/Author.js';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 
 // Custom error class for better error handling
 class APIError extends Error {

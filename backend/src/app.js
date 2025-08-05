@@ -1,67 +1,159 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import { config } from 'dotenv';
+import logger from './utils/logger.js';
+import { v4 as uuidv4 } from 'uuid';
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+import productRoutes from './routes/product.routes.js';
+import categoryRoutes from './routes/category.routes.js';
+import episodeRoutes from './routes/episode.routes.js';
+import scheduleRoutes from './routes/schedule.routes.js';
+import stationRoutes from './routes/station.routes.js';
+import podcastRoutes from './routes/podcast.routes.js';
+import authorRoutes from './routes/author.routes.js';
+import newsRoutes from './routes/news.routes.js';
+
+// Load environment variables
+config();
+
+// Configuration object
+const APP_CONFIG = {
+  frontendUrls: process.env.FRONTEND_URLS?.split(',') || ['http://localhost:3000'],
+  apiVersion: process.env.API_VERSION || 'v1',
+  rateLimit: {
+    windowMs: Number(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+    max: Number(process.env.RATE_LIMIT_MAX) || 100
+  },
+  maxBodySize: process.env.MAX_BODY_SIZE || '10mb',
+  nodeEnv: process.env.NODE_ENV || 'development'
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const cors_1 = __importDefault(require("cors"));
-const helmet_1 = __importDefault(require("helmet"));
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
-const dotenv_1 = __importDefault(require("dotenv"));
-const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
-const user_routes_1 = __importDefault(require("./routes/user.routes"));
-const product_routes_1 = __importDefault(require("./routes/product.routes"));
-// import storeRoutes from "./routes/store.routes";
-// import couponRoutes from "./routes/coupon.routes";
-// import reviewRoutes from "./routes/review.routes";
-// import orderRoutes from "./routes/order.routes";
-// import paymentsRoutes from "./routes/payments.routes";
-const category_routes_1 = __importDefault(require("./routes/category.routes"));
-const episode_routes_1 = __importDefault(require("./routes/episode.routes"));
-const schedule_routes_1 = __importDefault(require("./routes/schedule.routes"));
-const station_routes_1 = __importDefault(require("./routes/station.routes"));
-const podcast_routes_1 = __importDefault(require("./routes/podcast.routes"));
-const author_routes_1 = __importDefault(require("./routes/author.routes")); // ✅ Author routes
-const news_routes_1 = __importDefault(require("./routes/news.routes"));
-const cookie_parser_1 = __importDefault(require("cookie-parser"));
-// Load env
-dotenv_1.default.config();
-const app = (0, express_1.default)();
-// ✅ Middleware
-app.use((0, cors_1.default)({
-    origin: "http://localhost:3000", // ✅ Frontend URL
-    credentials: true, // ✅ Allow cookies and credentials
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"], // ✅ Explicit methods
-    allowedHeaders: ["Content-Type", "Authorization"], // ✅ Headers allowed
+
+// Initialize Express app
+const app = express();
+
+// Request ID middleware
+app.use((req, res, next) => {
+  const correlationId = uuidv4();
+  req.correlationId = correlationId;
+  res.setHeader('X-Correlation-ID', correlationId);
+  logger.info('Request started', {
+    method: req.method,
+    url: req.url,
+    correlationId,
+    ip: req.ip
+  });
+  next();
+});
+
+// CORS configuration
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || APP_CONFIG.frontendUrls.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
+  exposedHeaders: ['X-Correlation-ID']
 }));
-app.use((0, helmet_1.default)());
-app.use(express_1.default.json({ limit: "10mb" }));
-app.use(express_1.default.urlencoded({ extended: true, limit: "10mb" }));
-app.use((0, cookie_parser_1.default)());
-// ✅ Rate Limiting
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: 15 * 60 * 1000,
-    max: 100,
+
+// Security headers with Helmet
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", ...APP_CONFIG.frontendUrls]
+    }
+  },
+  xssFilter: true,
+  noSniff: true,
+  hidePoweredBy: true
+}));
+
+// Compression for better performance
+app.use(compression());
+
+// Body parsers
+app.use(express.json({ limit: APP_CONFIG.maxBodySize }));
+app.use(express.urlencoded({ extended: true, limit: APP_CONFIG.maxBodySize }));
+app.use(cookieParser());
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: APP_CONFIG.rateLimit.windowMs,
+  max: APP_CONFIG.rateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Too many requests from this IP, please try again later.'
 });
 app.use(limiter);
-// ✅ Routes
-app.use("/api/auth", auth_routes_1.default);
-// app.use("/api/payments", paymentsRoutes); // ✅ Payment routes
-app.use("/api/products", product_routes_1.default); // ✅ Product routes
-// app.use("/api/stores", storeRoutes); // ✅ Store routes
-app.use("/api/categories", category_routes_1.default); // ✅ Category routes
-app.use("/api/authors", author_routes_1.default); // ✅ Author routes
-app.use("/api/news", news_routes_1.default); // ✅ News routes
-// app.use("/api/orders", orderRoutes); // ✅ Order routes
-// app.use("/api/coupons", couponRoutes); // ✅ Coupon routes
-// app.use("/api/reviews", reviewRoutes); // ✅ Review routes
-app.use("/api/users", user_routes_1.default); // ✅ User routes (for admin)
-app.use("/api/stations", station_routes_1.default);
-app.use("/api/schedules", schedule_routes_1.default);
-app.use("/api/podcasts", podcast_routes_1.default);
-app.use("/api/episodes", episode_routes_1.default);
-// ✅ Default Route
-app.get("/", (req, res) => {
-    res.send("Tetemeko media group is running... ✅");
+
+// API routes with versioning
+const apiBase = `/api/${APP_CONFIG.apiVersion}`;
+app.use(`${apiBase}/auth`, authRoutes);
+app.use(`${apiBase}/users`, userRoutes);
+app.use(`${apiBase}/products`, productRoutes);
+app.use(`${apiBase}/categories`, categoryRoutes);
+app.use(`${apiBase}/episodes`, episodeRoutes);
+app.use(`${apiBase}/schedules`, scheduleRoutes);
+app.use(`${apiBase}/stations`, stationRoutes);
+app.use(`${apiBase}/podcasts`, podcastRoutes);
+app.use(`${apiBase}/authors`, authorRoutes);
+app.use(`${apiBase}/news`, newsRoutes);
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  const status = {
+    status: 'healthy',
+    environment: APP_CONFIG.nodeEnv,
+    apiVersion: APP_CONFIG.apiVersion,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  };
+  logger.info('Health check requested', { correlationId: req.correlationId, status });
+  res.status(200).json(status);
 });
-exports.default = app;
+
+// Default route
+app.get('/', (req, res) => {
+  logger.info('Default route accessed', { correlationId: req.correlationId });
+  res.status(200).send('Tetemeko Media Group API is running...');
+});
+
+// Global error handling
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error', {
+    error: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    correlationId: req.correlationId
+  });
+
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    message: APP_CONFIG.nodeEnv === 'production' ? 'Internal Server Error' : err.message,
+    correlationId: req.correlationId,
+    ...(APP_CONFIG.nodeEnv !== 'production' && { stack: err.stack })
+  });
+});
+
+// Initialize app logging
+logger.info('Application initialized', {
+  environment: APP_CONFIG.nodeEnv,
+  apiVersion: APP_CONFIG.apiVersion,
+  frontendUrls: APP_CONFIG.frontendUrls
+});
+
+export default app;
