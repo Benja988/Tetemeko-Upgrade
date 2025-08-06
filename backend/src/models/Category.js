@@ -1,52 +1,136 @@
-"use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.Category = void 0;
-// src/models/category.model.ts
-const mongoose_1 = __importStar(require("mongoose"));
-const CategorySchema = new mongoose_1.Schema({
-    name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
-    categoryType: {
-        type: String,
-        enum: ["news", "marketplace", "podcast"],
-        required: true,
+import mongoose from 'mongoose';
+import sanitize from 'sanitize-html';
+
+// Enum for category types
+export const CategoryType = {
+  NEWS: 'news',
+  MARKETPLACE: 'marketplace',
+  PODCAST: 'podcast'
+};
+
+// Category schema definition
+const CategorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Category name is required'],
+    trim: true,
+    minlength: [1, 'Name must be at least 1 character'],
+    maxlength: [100, 'Name cannot exceed 100 characters'],
+    set: (value) => sanitize(value, { allowedTags: [] })
+  },
+  slug: {
+    type: String,
+    required: [true, 'Slug is required'],
+    unique: true,
+    trim: true,
+    minlength: [1, 'Slug must be at least 1 character'],
+    maxlength: [100, 'Slug cannot exceed 100 characters'],
+    match: [/^[a-z0-9-]+$/, 'Slug must contain only lowercase letters, numbers, and hyphens'],
+    set: (value) => sanitize(value.toLowerCase(), { allowedTags: [] })
+  },
+  categoryType: {
+    type: String,
+    enum: {
+      values: Object.values(CategoryType),
+      message: 'Invalid category type. Must be one of: {VALUE}'
     },
-    description: { type: String },
-    seoTitle: { type: String },
-    seoDescription: { type: String },
-    createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "Admin" },
-}, { timestamps: true });
-exports.Category = mongoose_1.default.model("Category", CategorySchema);
+    required: [true, 'Category type is required']
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters'],
+    set: (value) => value ? sanitize(value, { allowedTags: ['p', 'strong', 'em'] }) : undefined
+  },
+  seoTitle: {
+    type: String,
+    trim: true,
+    maxlength: [60, 'SEO title cannot exceed 60 characters'],
+    set: (value) => value ? sanitize(value, { allowedTags: [] }) : undefined
+  },
+  seoDescription: {
+    type: String,
+    trim: true,
+    maxlength: [160, 'SEO description cannot exceed 160 characters'],
+    set: (value) => value ? sanitize(value, { allowedTags: [] }) : undefined
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Created by user is required']
+  },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  deletedAt: {
+    type: Date
+  }
+}, {
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
+});
+
+// Indexes for better query performance
+CategorySchema.index({ slug: 1 }, { unique: true });
+CategorySchema.index({ categoryType: 1 });
+CategorySchema.index({ isActive: 1, createdAt: -1 });
+
+// Pre-save middleware to validate and handle slug uniqueness
+CategorySchema.pre('save', async function(next) {
+  if (!this.isModified('slug')) return next();
+
+  let slug = this.slug;
+  let counter = 1;
+  while (await this.constructor.findOne({ slug, _id: { $ne: this._id }, isActive: true })) {
+    slug = `${this.slug}-${counter}`;
+    counter++;
+  }
+  this.slug = slug;
+  next();
+});
+
+// Pre-validate middleware to ensure referenced user exists
+CategorySchema.pre('save', async function(next) {
+  if (this.isModified('createdBy') || this.isModified('updatedBy')) {
+    const User = mongoose.model('User');
+    const userIds = [this.createdBy, this.updatedBy].filter(id => id);
+    if (userIds.length) {
+      const users = await User.find({ _id: { $in: userIds }, isActive: true });
+      if (users.length !== userIds.length) {
+        return next(new Error('One or more referenced users not found or inactive'));
+      }
+    }
+  }
+  next();
+});
+
+// Static method to check if a slug is available
+CategorySchema.statics.isSlugAvailable = async function(slug, excludeId) {
+  const query = { slug, isActive: true };
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+  return !(await this.findOne(query));
+};
+
+// Virtual for related items count (e.g., products or podcasts)
+CategorySchema.virtual('itemsCount', {
+  ref: (doc) => doc.categoryType === CategoryType.PODCAST ? 'Podcast' : 'Product',
+  localField: '_id',
+  foreignField: 'category',
+  count: true,
+  match: { isActive: true }
+});
+
+// Category model
+export const Category = mongoose.model('Category', CategorySchema);

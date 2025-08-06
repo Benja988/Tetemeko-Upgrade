@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import { User, UserRole } from '../models/User.js';
+import User, { UserRole } from '../models/User.js';
 import crypto from 'crypto';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 import { sendEmail } from '../utils/sendEmail.js';
 
 // Custom error class for better error handling

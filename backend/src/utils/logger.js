@@ -1,6 +1,7 @@
 import { createLogger, format, transports } from 'winston';
 import sanitize from 'sanitize-html';
 import { v4 as uuidv4 } from 'uuid';
+import DailyRotateFile from 'winston-daily-rotate-file'; 
 
 // Custom log levels
 const customLevels = {
@@ -63,7 +64,7 @@ const devConsoleFormat = format.combine(
 );
 
 // File rotation configuration
-const fileRotateTransport = (filename, level) => new transports.DailyRotateFile({
+const fileRotateTransport = (filename, level) => new DailyRotateFile({
   filename: `logs/${filename}-%DATE%.log`,
   datePattern: 'YYYY-MM-DD',
   zippedArchive: true,

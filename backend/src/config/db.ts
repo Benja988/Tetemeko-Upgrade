@@ -1,4 +1,4 @@
-import mongoose, { mongo } from "mongoose";
+/*import mongoose, { mongo } from "mongoose";
 
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -19,4 +19,4 @@ const connectDB = async (): Promise<void> => {
     }
 };
 
-export default connectDB;
+export default connectDB;*/

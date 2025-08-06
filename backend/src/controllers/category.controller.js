@@ -1,6 +1,6 @@
-import Category from '../models/Category.js';
+import { Category } from '../models/Category.js';
 import slugify from 'slugify';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 import { UserRole } from '../models/User.js';
 
 // Custom error class for better error handling
