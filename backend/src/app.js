@@ -8,14 +8,14 @@ import { config } from 'dotenv';
 import logger from './utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 import authRoutes from './routes/auth.routes.js';
-/*import userRoutes from './routes/user.routes.js';
-import productRoutes from './routes/product.routes.js';
+import userRoutes from './routes/user.routes.js';
+import authorRoutes from './routes/author.routes.js';
+/*import productRoutes from './routes/product.routes.js';
 import categoryRoutes from './routes/category.routes.js';
 import episodeRoutes from './routes/episode.routes.js';
 import scheduleRoutes from './routes/schedule.routes.js';
 import stationRoutes from './routes/station.routes.js';
 import podcastRoutes from './routes/podcast.routes.js';
-import authorRoutes from './routes/author.routes.js';
 import newsRoutes from './routes/news.routes.js';*/
 
 // Load environment variables
@@ -102,14 +102,14 @@ app.use(limiter);
 // API routes with versioning
 const apiBase = `/api/${APP_CONFIG.apiVersion}`;
 app.use(`${apiBase}/auth`, authRoutes);
-/*app.use(`${apiBase}/users`, userRoutes);
-app.use(`${apiBase}/products`, productRoutes);
+app.use(`${apiBase}/users`, userRoutes);
+app.use(`${apiBase}/authors`, authorRoutes);
+/*app.use(`${apiBase}/products`, productRoutes);
 app.use(`${apiBase}/categories`, categoryRoutes);
 app.use(`${apiBase}/episodes`, episodeRoutes);
 app.use(`${apiBase}/schedules`, scheduleRoutes);
 app.use(`${apiBase}/stations`, stationRoutes);
 app.use(`${apiBase}/podcasts`, podcastRoutes);
-app.use(`${apiBase}/authors`, authorRoutes);
 app.use(`${apiBase}/news`, newsRoutes);*/
 
 // Health check endpoint
