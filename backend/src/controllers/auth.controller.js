@@ -11,6 +11,12 @@ import {
   generateAdminRegistrationSuccessEmail 
 } from '../utils/emailTemplate.js';
 import sanitize from 'sanitize-html';
+import { config } from 'dotenv';
+import logger from '../utils/logger.js';
+import { AUTH_CONFIG } from '../middlewares/auth.middleware.js';
+
+// Load environment variables
+config();
 
 // Custom error class for better error handling
 class APIError extends Error {
@@ -20,9 +26,30 @@ class APIError extends Error {
   }
 }
 
+// Validate environment variables
+const requiredEnvVars = ['JWT_SECRET', 'JWT_ISSUER', 'REFRESH_SECRET', 'FRONTEND_URL', 'EMAIL_USER', 'EMAIL_PASS'];
+requiredEnvVars.forEach((varName) => {
+  if (!process.env[varName]) {
+    logger.error(`${varName} is not defined in environment variables`);
+    throw new Error(`${varName} is not defined`);
+  }
+});
+
 // Helper to generate JWT token
 const generateToken = (user) => {
-  return jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  logger.info('Generating token', {
+    userId: user._id,
+    role: user.role
+  });
+  const token = jwt.sign({ id: user._id, role: user.role }, AUTH_CONFIG.jwtSecret, {
+    expiresIn: '7d',
+    issuer: AUTH_CONFIG.tokenIssuer,
+    algorithm: 'HS256'
+  });
+  // Decode and log token payload for debugging
+  const decoded = jwt.decode(token, { complete: true });
+  logger.info('Generated token payload', { payload: decoded?.payload });
+  return token;
 };
 
 /**
@@ -67,11 +94,12 @@ export const registerUser = async (req, res) => {
 
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
     const emailContent = generateVerificationEmail(sanitizedData.name, verificationLink);
+    logger.info('Verification email content', { html: emailContent.html, text: emailContent.text });
     await sendEmail(sanitizedData.email, 'Welcome to Tetemeko Media! Please Verify Your Email', emailContent);
 
     return res.status(201).json({ message: 'User registered. Please verify your email.' });
   } catch (error) {
-    console.error('Registration error:', { error: error.message, email: req.body.email });
+    logger.error('Registration error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -96,14 +124,16 @@ export const verifyEmail = async (req, res) => {
 
     user.isVerified = true;
     user.verificationToken = undefined;
+    user.verificationTokenExpires = undefined;
     await user.save();
 
     const emailContent = sendVerificationSuccessEmail(user.name, user.email);
+    logger.info('Verification success email content', { html: emailContent.html, text: emailContent.text });
     await sendEmail(user.email, "You're Verified! 🎉", emailContent);
 
     return res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
   } catch (error) {
-    console.error('Error verifying email:', { error: error.message });
+    logger.error('Error verifying email:', { error: error.message });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
@@ -117,32 +147,41 @@ export const verifyEmail = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    logger.info('Login attempt', { email });
     if (!email || !password) {
       throw new APIError('Email and password are required', 400);
     }
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) {
+      logger.warn('User not found', { email });
       throw new APIError('Invalid credentials', 401);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       await user.incrementFailedLogins();
+      logger.warn('Invalid password', { email, failedAttempts: user.failedLoginAttempts });
       throw new APIError('Invalid credentials', 401);
     }
 
     if (!user.isVerified) {
+      logger.warn('Email not verified', { email });
       throw new APIError('Please verify your email first', 403);
     }
 
     if (user.lockUntil && user.lockUntil > new Date()) {
+      logger.warn('Account locked', { email, lockUntil: user.lockUntil });
       throw new APIError('Account is temporarily locked', 403);
     }
 
     await user.resetFailedLogins();
     const token = generateToken(user);
-    const refreshToken = jwt.sign({ id: user._id, role: user.role }, process.env.REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id, role: user.role }, AUTH_CONFIG.refreshSecret, { 
+      expiresIn: '7d',
+      issuer: AUTH_CONFIG.tokenIssuer,
+      algorithm: 'HS256'
+    });
 
     user.refreshToken = refreshToken;
     await user.save();
@@ -154,6 +193,7 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000
     });
 
+    logger.info('Login successful', { userId: user._id, role: user.role });
     return res.status(200).json({
       message: 'Login successful',
       token,
@@ -166,7 +206,7 @@ export const login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', { error: error.message, email: req.body.email });
+    logger.error('Login error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
@@ -196,10 +236,8 @@ export const inviteManager = async (req, res) => {
     });
     await newUser.save();
 
-    await sendEmail(
-      sanitizedEmail,
-      "You're Invited to Join as a Manager!",
-      `
+    const emailContent = {
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px; border: 1px solid #ddd; border-radius: 10px; background-color: #f9f9f9;">
           <h2 style="color: #333; text-align: center;">🎉 Manager Invitation</h2>
           <p>Hello,</p>
@@ -215,12 +253,31 @@ export const inviteManager = async (req, res) => {
           <hr>
           <p style="font-size: 12px; color: #555;">Best Regards, <br> Tetemeko Media Team</p>
         </div>
+      `,
+      text: `
+Manager Invitation
+
+Hello,
+
+You have been invited to join Tetemeko Media as a Manager. Use the following invitation code to register:
+${invitationCode}
+
+This code will expire on ${expiresAt.toLocaleDateString()}.
+
+Register at: ${process.env.FRONTEND_URL}/register?invitation=${invitationCode}
+
+If you did not request this invitation, please ignore this email.
+
+Best Regards,
+Tetemeko Media Team
       `
-    );
+    };
+    logger.info('Invite manager email content', { html: emailContent.html, text: emailContent.text });
+    await sendEmail(sanitizedEmail, "You're Invited to Join as a Manager!", emailContent);
 
     return res.json({ message: 'Invitation sent successfully.' });
   } catch (error) {
-    console.error('Invite manager error:', { error: error.message, email: req.body.email });
+    logger.error('Invite manager error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -264,11 +321,12 @@ export const registerAdmin = async (req, res) => {
     await newAdmin.save();
 
     const emailContent = generateAdminRegistrationSuccessEmail(sanitizedData.name);
+    logger.info('Admin registration success email content', { html: emailContent.html, text: emailContent.text });
     await sendEmail(sanitizedData.email, 'Welcome to Tetemeko Admin Panel', emailContent);
 
     return res.status(201).json({ message: 'Admin registered successfully' });
   } catch (error) {
-    console.error('Admin registration error:', { error: error.message, email: req.body.email });
+    logger.error('Admin registration error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
@@ -320,10 +378,8 @@ export const registerManager = async (req, res) => {
     await user.save();
 
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    await sendEmail(
-      sanitizedData.email,
-      'Verify Your Email',
-      `
+    const emailContent = {
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
           <h2>Verify Your Email</h2>
           <p>Hello ${sanitizedData.name},</p>
@@ -331,12 +387,22 @@ export const registerManager = async (req, res) => {
           <a href="${verificationLink}" style="display: inline-block; padding: 12px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
           <p>Or copy and paste this link: ${verificationLink}</p>
         </div>
+      `,
+      text: `
+Verify Your Email
+
+Hello ${sanitizedData.name},
+
+Please verify your email address by visiting:
+${verificationLink}
       `
-    );
+    };
+    logger.info('Manager verification email content', { html: emailContent.html, text: emailContent.text });
+    await sendEmail(sanitizedData.email, 'Verify Your Email', emailContent);
 
     return res.status(201).json({ message: 'Manager registered. Check email to verify your account.' });
   } catch (error) {
-    console.error('Manager registration error:', { error: error.message, email: req.body.email });
+    logger.error('Manager registration error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -363,9 +429,10 @@ export const promoteToAdmin = async (req, res) => {
     user.role = UserRole.ADMIN;
     await user.save();
 
+    logger.info('User promoted to admin', { userId, promotedBy: req.user.id });
     return res.status(200).json({ message: 'User promoted to Admin' });
   } catch (error) {
-    console.error('Promote to admin error:', { error: error.message, userId: req.params.userId });
+    logger.error('Promote to admin error:', { error: error.message, userId: req.params.userId });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -396,11 +463,12 @@ export const forgotPassword = async (req, res) => {
     await user.save();
 
     const emailContent = generateResetPasswordEmail(user.name, resetToken);
+    logger.info('Reset password email content', { html: emailContent.html, text: emailContent.text });
     await sendEmail(sanitizedEmail, 'Reset Your Password', emailContent);
 
     return res.status(200).json({ message: 'Password reset email sent successfully' });
   } catch (error) {
-    console.error('Forgot password error:', { error: error.message, email: req.body.email });
+    logger.error('Forgot password error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
@@ -439,11 +507,12 @@ export const resetPassword = async (req, res) => {
     await user.save();
 
     const emailContent = generatePasswordResetSuccessEmail(user.name || 'User');
+    logger.info('Password reset success email content', { html: emailContent.html, text: emailContent.text });
     await sendEmail(user.email, 'Password Reset Successful', emailContent);
 
     return res.status(200).json({ message: 'Password reset successful' });
   } catch (error) {
-    console.error('Reset password error:', { error: error.message });
+    logger.error('Reset password error:', { error: error.message });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -460,12 +529,13 @@ export const logout = async (req, res) => {
     if (user) {
       user.refreshToken = undefined;
       await user.save();
+      logger.info('User logged out', { userId: req.user.id });
     }
 
     res.cookie('refreshToken', '', { httpOnly: true, expires: new Date(0) });
     return res.json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', { error: error.message });
+    logger.error('Logout error:', { error: error.message, userId: req.user?.id });
     return res.status(500).json({ message: 'Server error' });
   }
 };
@@ -498,10 +568,8 @@ export const resendVerification = async (req, res) => {
     await user.save();
 
     const verificationLink = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
-    await sendEmail(
-      sanitizedEmail,
-      'Verify Your Email',
-      `
+    const emailContent = {
+      html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
           <h2>Verify Your Email</h2>
           <p>Hello ${user.name},</p>
@@ -509,12 +577,22 @@ export const resendVerification = async (req, res) => {
           <a href="${verificationLink}" style="display: inline-block; padding: 12px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px;">Verify Email</a>
           <p>Or copy and paste this link: ${verificationLink}</p>
         </div>
+      `,
+      text: `
+Verify Your Email
+
+Hello ${user.name},
+
+Please verify your email address by visiting:
+${verificationLink}
       `
-    );
+    };
+    logger.info('Resend verification email content', { html: emailContent.html, text: emailContent.text });
+    await sendEmail(sanitizedEmail, 'Verify Your Email', emailContent);
 
     return res.status(200).json({ message: 'Verification email resent successfully' });
   } catch (error) {
-    console.error('Resend verification error:', { error: error.message, email: req.body.email });
+    logger.error('Resend verification error:', { error: error.message, email: req.body.email });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
@@ -527,18 +605,20 @@ export const resendVerification = async (req, res) => {
  */
 export const getProfile = async (req, res) => {
   try {
+    logger.info('Fetching profile', { userId: req.user?.id });
     if (!req.user) {
       throw new APIError('Unauthorized: No user found in request', 401);
     }
 
     const user = await User.findById(req.user.id).select('-password -refreshToken -verificationToken -resetPasswordToken');
     if (!user) {
+      logger.warn('User not found in database', { userId: req.user.id });
       throw new APIError('User not found', 404);
     }
 
     return res.status(200).json(user);
   } catch (error) {
-    console.error('Get profile error:', { error: error.message, userId: req.user?.id });
+    logger.error('Get profile error:', { error: error.message, userId: req.user?.id });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -551,6 +631,7 @@ export const getProfile = async (req, res) => {
  */
 export const updateProfile = async (req, res) => {
   try {
+    logger.info('Updating profile', { userId: req.user?.id });
     if (!req.user) {
       throw new APIError('Unauthorized: No user found in request', 401);
     }
@@ -576,9 +657,10 @@ export const updateProfile = async (req, res) => {
 
     await user.save();
 
+    logger.info('Profile updated successfully', { userId: req.user.id });
     return res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
-    console.error('Update profile error:', { error: error.message, userId: req.user?.id });
+    logger.error('Update profile error:', { error: error.message, userId: req.user?.id });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -591,6 +673,7 @@ export const updateProfile = async (req, res) => {
  */
 export const deactivateAccount = async (req, res) => {
   try {
+    logger.info('Deactivating account', { userId: req.user?.id });
     if (!req.user) {
       throw new APIError('Unauthorized: No user found in request', 401);
     }
@@ -605,9 +688,10 @@ export const deactivateAccount = async (req, res) => {
     await user.save();
 
     res.cookie('refreshToken', '', { httpOnly: true, expires: new Date(0) });
+    logger.info('Account deactivated', { userId: req.user.id });
     return res.status(200).json({ message: 'Account deactivated' });
   } catch (error) {
-    console.error('Deactivate account error:', { error: error.message, userId: req.user?.id });
+    logger.error('Deactivate account error:', { error: error.message, userId: req.user?.id });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }
@@ -626,7 +710,10 @@ export const refreshToken = async (req, res) => {
     }
 
     const decoded = await new Promise((resolve, reject) => {
-      jwt.verify(refreshToken, process.env.REFRESH_SECRET, (err, decoded) => {
+      jwt.verify(refreshToken, AUTH_CONFIG.refreshSecret, {
+        algorithms: AUTH_CONFIG.allowedAlgorithms,
+        issuer: AUTH_CONFIG.tokenIssuer
+      }, (err, decoded) => {
         if (err || !decoded) {
           reject(new APIError('Invalid refresh token', 403));
         } else {
@@ -640,10 +727,11 @@ export const refreshToken = async (req, res) => {
       throw new APIError('Invalid refresh token', 403);
     }
 
-    const newToken = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const newToken = generateToken(user);
+    logger.info('Token refreshed', { userId: user._id });
     return res.status(200).json({ token: newToken });
   } catch (error) {
-    console.error('Refresh token error:', { error: error.message });
+    logger.error('Refresh token error:', { error: error.message });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Server error' });
   }

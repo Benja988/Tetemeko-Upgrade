@@ -2,48 +2,41 @@ import nodemailer from 'nodemailer';
 import sanitize from 'sanitize-html';
 import logger from './logger.js';
 import { config } from 'dotenv';
+import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables
 config();
 
 // Email configuration with defaults
 const EMAIL_CONFIG = {
-  host: process.env.EMAIL_HOST || 'smtp.example.com',
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: process.env.EMAIL_PORT === '465',
-  user: process.env.EMAIL_USER || 'no-reply@tetemeko.com',
+  service: process.env.EMAIL_SERVICE || 'gmail',
+  user: process.env.EMAIL_USER || '',
   pass: process.env.EMAIL_PASS || '',
   from: process.env.EMAIL_FROM || '"Tetemeko Media Group" <no-reply@tetemeko.com>',
   maxRetries: Number(process.env.EMAIL_MAX_RETRIES) || 3,
   retryDelay: Number(process.env.EMAIL_RETRY_DELAY) || 1000, // ms
-  maxEmailsPerMinute: Number(process.env.EMAIL_RATE_LIMIT) || 100
+  maxEmailsPerMinute: Number(process.env.EMAIL_RATE_LIMIT) || 100,
 };
 
 // Validate required environment variables
-if (!process.env.EMAIL_HOST || !process.env.EMAIL_PORT || !process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.EMAIL_FROM) {
-  logger.error('Missing required email environment variables', {
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    user: process.env.EMAIL_USER
-  });
-  throw new Error('Missing required email environment variables');
-}
+const requiredEnvVars = ['EMAIL_USER', 'EMAIL_PASS', 'EMAIL_FROM'];
+requiredEnvVars.forEach((varName) => {
+  if (!process.env[varName]) {
+    logger.error(`${varName} is not defined in environment variables`);
+    throw new Error(`${varName} is not defined`);
+  }
+});
 
 // Create email transporter
 const transporter = nodemailer.createTransport({
-  host: EMAIL_CONFIG.host,
-  port: EMAIL_CONFIG.port,
-  secure: EMAIL_CONFIG.secure,
+  service: EMAIL_CONFIG.service,
   auth: {
     user: EMAIL_CONFIG.user,
-    pass: EMAIL_CONFIG.pass
+    pass: EMAIL_CONFIG.pass,
   },
   tls: {
-    rejectUnauthorized: false // Handle self-signed certificates
+    rejectUnauthorized: false, // Handle self-signed certificates
   },
-  pool: true, // Enable connection pooling for high volume
-  maxMessages: 100, // Limit messages per connection
-  rateLimit: EMAIL_CONFIG.maxEmailsPerMinute
 });
 
 // Simple in-memory queue for email sending
@@ -54,15 +47,15 @@ let isProcessingQueue = false;
  * Validate email content and recipients
  * @param {string|string[]} to - Recipient email(s)
  * @param {string} subject - Email subject
- * @param {string} html - HTML content
- * @param {string} [text] - Plain text content
+ * @param {{ html: string, text: string }} content - Email content (HTML and plain text)
+ * @returns {Object} Validated and sanitized email data
  */
-const validateEmail = (to, subject, html, text) => {
+const validateEmail = (to, subject, content) => {
   const emailRegex = /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/;
-  
+
   // Validate recipients
   const recipients = Array.isArray(to) ? to : [to];
-  if (!recipients.every(email => emailRegex.test(email))) {
+  if (!recipients.every((email) => emailRegex.test(email))) {
     throw new Error('Invalid recipient email address');
   }
 
@@ -72,16 +65,27 @@ const validateEmail = (to, subject, html, text) => {
   }
 
   // Validate content
-  if (!html && !text) {
+  if (!content || (!content.html && !content.text)) {
     throw new Error('Email content (HTML or text) is required');
   }
 
   // Sanitize inputs
   return {
-    to: recipients.map(email => sanitize(email, { allowedTags: [] })),
+    to: recipients.map((email) => sanitize(email, { allowedTags: [] })),
     subject: sanitize(subject, { allowedTags: [] }),
-    html: html ? sanitize(html, { allowedTags: ['div', 'p', 'a', 'h2', 'strong', 'em', 'hr'] }) : undefined,
-    text: text ? sanitize(text, { allowedTags: [] }) : html ? html.replace(/<[^>]+>/g, '') : undefined
+    html: content.html
+      ? sanitize(content.html, {
+          allowedTags: [
+            'div', 'p', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'em', 'hr', 'br',
+            'span', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'tfoot',
+          ],
+          allowedAttributes: {
+            '*': ['style', 'role', 'aria-label', 'aria-level'],
+            'a': ['href'],
+          },
+        })
+      : undefined,
+    text: content.text ? sanitize(content.text, { allowedTags: [] }) : undefined,
   };
 };
 
@@ -100,15 +104,15 @@ const processQueue = async () => {
         ...mailOptions,
         headers: {
           'X-Correlation-ID': mailOptions.correlationId || uuidv4(),
-          'X-Priority': mailOptions.priority || '3' // Normal priority
-        }
+          'X-Priority': mailOptions.priority || '3', // Normal priority
+        },
       });
 
       logger.info('Email sent successfully', {
         messageId: info.messageId,
         to: mailOptions.to,
         subject: mailOptions.subject,
-        correlationId: mailOptions.correlationId
+        correlationId: mailOptions.correlationId,
       });
 
       resolve(info);
@@ -118,20 +122,25 @@ const processQueue = async () => {
           to: mailOptions.to,
           subject: mailOptions.subject,
           retryCount: retries + 1,
-          error: error.message
+          error: error.message,
         });
 
         setTimeout(() => {
-          emailQueue.push({ mailOptions, resolve, reject, retries: retries + 1 });
+          emailQueue.push({
+            mailOptions,
+            resolve,
+            reject,
+            retries: retries + 1,
+          });
         }, EMAIL_CONFIG.retryDelay);
       } else {
         logger.error('Failed to send email after retries', {
           to: mailOptions.to,
           subject: mailOptions.subject,
           error: error.message,
-          correlationId: mailOptions.correlationId
+          correlationId: mailOptions.correlationId,
         });
-        reject(error);
+        reject(new Error(`Failed to send email: ${error.message}`));
       }
     }
   }
@@ -143,21 +152,13 @@ const processQueue = async () => {
  * Send email with retry and queueing
  * @param {string|string[]} to - Recipient email(s)
  * @param {string} subject - Email subject
- * @param {string} html - HTML content
- * @param {Object} [options] - Additional options
- * @param {string} [options.text] - Plain text content
- * @param {string|string[]} [options.cc] - CC recipient(s)
- * @param {string|string[]} [options.bcc] - BCC recipient(s)
- * @param {string} [options.correlationId] - Correlation ID for tracking
- * @param {string} [options.priority] - Email priority (1-5)
+ * @param {{ html: string, text: string }} content - Email content (HTML and plain text)
  * @returns {Promise} Resolves with email info or rejects with error
  */
-export const sendEmail = async (to, subject, html, options = {}) => {
-  const { text, cc, bcc, correlationId, priority } = options;
-
+export const sendEmail = async (to, subject, content) => {
   try {
     // Validate and sanitize inputs
-    const validated = validateEmail(to, subject, html, text);
+    const validated = validateEmail(to, subject, content);
 
     // Prepare mail options
     const mailOptions = {
@@ -166,10 +167,7 @@ export const sendEmail = async (to, subject, html, options = {}) => {
       subject: validated.subject,
       html: validated.html,
       text: validated.text,
-      cc: cc ? (Array.isArray(cc) ? cc.map(email => sanitize(email, { allowedTags: [] })) : sanitize(cc, { allowedTags: [] })) : undefined,
-      bcc: bcc ? (Array.isArray(bcc) ? bcc.map(email => sanitize(email, { allowedTags: [] })) : sanitize(bcc, { allowedTags: [] })) : undefined,
-      correlationId,
-      priority
+      correlationId: uuidv4(),
     };
 
     // Return promise for queue processing
@@ -182,7 +180,7 @@ export const sendEmail = async (to, subject, html, options = {}) => {
       to,
       subject,
       error: error.message,
-      correlationId
+      correlationId: mailOptions?.correlationId,
     });
     throw error;
   }
@@ -190,7 +188,6 @@ export const sendEmail = async (to, subject, html, options = {}) => {
 
 // Initialize logger with email service info
 logger.info('Email service initialized', {
-  host: EMAIL_CONFIG.host,
-  port: EMAIL_CONFIG.port,
-  from: EMAIL_CONFIG.from
+  service: EMAIL_CONFIG.service,
+  from: EMAIL_CONFIG.from,
 });

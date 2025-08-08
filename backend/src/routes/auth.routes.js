@@ -1,5 +1,21 @@
 import express from 'express';
-import { registerUser, registerManager, registerAdmin, verifyEmail, resendVerification, login, logout, refreshToken, forgotPassword, resetPassword, inviteManager, promoteToAdmin, getProfile, updateProfile, deactivateAccount } from '../controllers/auth.controller.js';
+import { 
+  registerUser, 
+  registerManager, 
+  registerAdmin, 
+  verifyEmail, 
+  resendVerification, 
+  login, 
+  logout, 
+  refreshToken, 
+  forgotPassword, 
+  resetPassword, 
+  inviteManager, 
+  promoteToAdmin, 
+  getProfile, 
+  updateProfile, 
+  deactivateAccount 
+} from '../controllers/auth.controller.js';
 import { authenticateJWT, authorize } from '../middlewares/auth.middleware.js';
 import { UserRole } from '../models/User.js';
 import sanitize from 'sanitize-html';
@@ -12,7 +28,7 @@ const router = express.Router();
 // Rate limiting configurations
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // Limit to 10 requests per window
+  max: 10,
   message: 'Too many requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false
@@ -20,7 +36,7 @@ const authRateLimiter = rateLimit({
 
 const passwordRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // Limit to 5 requests per window
+  max: 5,
   message: 'Too many password-related requests, please try again later.',
   standardHeaders: true,
   legacyHeaders: false
@@ -30,16 +46,17 @@ const passwordRateLimiter = rateLimit({
 const validateRequestBody = (schema) => {
   return (req, res, next) => {
     try {
+      logger.info('Validating request body', { body: req.body });
       schema(req.body);
       next();
     } catch (error) {
       logger.error('Validation error:', { error: error.message, body: req.body });
-      return res.status(400).json({ message: 'Invalid request data', errors: error.errors });
+      return res.status(400).json({ message: 'Invalid request data', errors: error.message });
     }
   };
 };
 
-// Validation schemas (replacing Zod or similar)
+// Validation schemas
 const registerSchema = (body) => {
   const { email, password, name } = body;
   if (!email || typeof email !== 'string' || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
@@ -54,25 +71,19 @@ const registerSchema = (body) => {
 };
 
 const loginSchema = (body) => {
-  const { email, password, twoFactorCode } = body;
+  const { email, password } = body;
   if (!email || typeof email !== 'string' || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
     throw new Error('Valid email is required');
   }
   if (!password || typeof password !== 'string') {
     throw new Error('Password is required');
   }
-  if (twoFactorCode && typeof twoFactorCode !== 'string') {
-    throw new Error('Two-factor code must be a string');
-  }
 };
 
 const passwordSchema = (body) => {
-  const { email, token, newPassword } = body;
+  const { email, newPassword } = body;
   if (email && !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(email)) {
     throw new Error('Valid email is required');
-  }
-  if (token && typeof token !== 'string') {
-    throw new Error('Valid reset token is required');
   }
   if (newPassword && (typeof newPassword !== 'string' || newPassword.length < 8)) {
     throw new Error('New password must be at least 8 characters');
@@ -130,8 +141,6 @@ router.post(
 router.post(
   '/register-admin',
   authRateLimiter,
-  authenticateJWT,
-  authorize([UserRole.ADMIN]),
   validateRequestBody(registerSchema),
   async (req, res, next) => {
     try {
@@ -196,7 +205,6 @@ router.post(
   async (req, res, next) => {
     try {
       req.body.email = sanitize(req.body.email, { allowedTags: [] });
-      req.body.twoFactorCode = req.body.twoFactorCode ? sanitize(req.body.twoFactorCode, { allowedTags: [] }) : undefined;
       await login(req, res);
     } catch (error) {
       logger.error('Login error:', { error: error.message, body: req.body });
@@ -266,7 +274,7 @@ router.post(
   validateRequestBody(passwordSchema),
   async (req, res, next) => {
     try {
-      req.body.token = sanitize(req.body.token, { allowedTags: [] });
+      req.query.token = sanitize(req.query.token, { allowedTags: [] });
       req.body.newPassword = sanitize(req.body.newPassword, { allowedTags: [] });
       await resetPassword(req, res);
     } catch (error) {

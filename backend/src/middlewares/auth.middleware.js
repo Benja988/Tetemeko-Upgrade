@@ -8,11 +8,11 @@ import { config } from 'dotenv';
 config();
 
 // Configuration
-const AUTH_CONFIG = {
+export const AUTH_CONFIG = {
   jwtSecret: process.env.JWT_SECRET || 'default-secret',
   refreshSecret: process.env.REFRESH_SECRET || 'default-refresh-secret',
   tokenIssuer: process.env.JWT_ISSUER || 'tetemeko-media',
-  allowedAlgorithms: ['HS256', 'HS384', 'HS512']
+  allowedAlgorithms: ['HS256']
 };
 
 // Custom error classes
@@ -61,6 +61,13 @@ export const authenticateJWT = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const token = validateAuthHeader(authHeader);
+
+    // Log token payload for debugging
+    const decodedPayload = jwt.decode(token, { complete: true });
+    logger.info('Token payload', {
+      payload: decodedPayload?.payload,
+      correlationId: req.correlationId
+    });
 
     // Check token blacklist
     if (tokenBlacklist.has(token)) {
