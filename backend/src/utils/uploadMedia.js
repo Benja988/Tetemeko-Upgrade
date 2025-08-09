@@ -1,7 +1,7 @@
 import { v2 as cloudinary } from 'cloudinary';
 import logger from './logger.js';
 import { config } from 'dotenv';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 import { v4 as uuidv4 } from 'uuid';
 
 // Load environment variables

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 
 // Enum for news status
 export const NewsStatus = {
@@ -19,7 +19,6 @@ const NewsSchema = new mongoose.Schema({
   },
   slug: {
     type: String,
-    unique: true,
     trim: true,
     lowercase: true,
     set: v => sanitize(v, { allowedTags: [] })

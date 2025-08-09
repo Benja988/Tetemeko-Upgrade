@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
 import { News } from '../models/News.js';
+import { Author } from '../models/Author.js';
 import { Category } from '../models/Category.js';
-import { User, UserRole } from '../models/User.js';
+import User, { UserRole } from '../models/User.js';
 import { uploadMedia } from '../utils/uploadMedia.js';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 import logger from '../utils/logger.js';
 
 // Custom error class for better error handling
@@ -112,7 +113,7 @@ export const createNews = async (req, res) => {
 
     // Verify author and category exist
     const [authorDoc, categoryDoc] = await Promise.all([
-      User.findOne({ _id: sanitizedData.author, isActive: true }),
+      Author.findOne({ _id: sanitizedData.author, isActive: true }),
       Category.findOne({ _id: sanitizedData.category, isActive: true })
     ]);
 
@@ -709,7 +710,7 @@ export const getRecentNews = async (req, res) => {
  */
 export const getNewsStats = async (req, res) => {
   try {
-    checkAdminPermissions(req.user);
+    checkAdminPermissions(req.user.UserRole);
 
     const [totalNews, publishedNews] = await Promise.all([
       News.countDocuments({ isActive: true }),

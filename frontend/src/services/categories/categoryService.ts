@@ -22,16 +22,16 @@ const withToast = async <T>(
 /* ---------------------- Category Services ---------------------- */
 
 // ✅ Get all categories
-export const getCategories = async (
-  type?: string
-): Promise<Category[]> => {
+export const getCategories = async (type?: string): Promise<Category[]> => {
   try {
     const query = type ? `?type=${type}` : "";
-    return await apiRequest<Category[]>(`/categories${query}`);
+    const res = await apiRequest<{ categories: Category[], pagination: any }>(`/categories${query}`);
+    return res.categories; 
   } catch (e: any) {
     return [];
   }
 };
+
 
 // ✅ Get category by slug
 export const getCategoryBySlug = async (slug: string): Promise<Category | null> => {
