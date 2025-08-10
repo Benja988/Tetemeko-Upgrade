@@ -38,7 +38,7 @@ const withToast = async <T>(
 // ✅ Create a news article
 export const createNews = async (data: NewsInput): Promise<News | null> =>
   withToast(
-    () => apiRequest<News>('/news', 'POST', data),
+    () => apiRequest<News>('/news/admin', 'POST', data),
     'News created successfully.',
     'Failed to create news.'
   );
@@ -78,7 +78,7 @@ export const updateNewsById = async (
   data: Partial<NewsInput>
 ): Promise<News | null> =>
   withToast(
-    () => apiRequest<News>(`/news/${id}`, 'PUT', data),
+    () => apiRequest<News>(`/news/admin/${id}`, 'PUT', data),
     'News updated successfully.',
     'Failed to update news.'
   );
@@ -86,7 +86,7 @@ export const updateNewsById = async (
 // ✅ Delete news
 export const deleteNewsById = async (id: string): Promise<boolean | null> =>
   withToast(
-    () => apiRequest(`/news/${id}`, 'DELETE'),
+    () => apiRequest(`/news/admin/${id}`, 'DELETE'),
     'News deleted successfully.',
     'Failed to delete news.'
   );

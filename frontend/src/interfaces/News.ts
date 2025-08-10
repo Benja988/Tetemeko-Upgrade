@@ -1,5 +1,6 @@
 // @/interfaces/News.ts
 
+import { Author } from "@/types/author";
 import { Category } from "./Category";
 
 export interface News {
@@ -7,7 +8,7 @@ export interface News {
   title: string;
   content: string;
   summary?: string;
-  author?: string; // or Author object if populated
+  author?: string | Author;
   category?: string | Category;
   tags?: string[];
   publishedAt?: string;

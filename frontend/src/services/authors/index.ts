@@ -47,12 +47,14 @@ const withToast = async <T>(
 // Get all authors
 export const getAuthors = async (): Promise<Author[]> => {
   try {
-    return await apiRequest<Author[]>('/authors')
+    const res = await apiRequest<{ authors: Author[], pagination: any }>('/authors');
+    return res.authors;
   } catch (e: any) {
     toast.error(e.message || 'Failed to fetch authors.')
     return []
   }
 }
+
 
 // Get single author
 export const getAuthorById = async (id: string): Promise<Author | null> => {

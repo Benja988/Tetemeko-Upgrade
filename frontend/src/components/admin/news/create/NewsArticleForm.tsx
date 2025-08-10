@@ -18,12 +18,14 @@ import TextStyle from '@tiptap/extension-text-style';
 import CharacterCount from '@tiptap/extension-character-count';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import EditorToolbar from './EditorToolbar';
-import { getCategories } from '@/services/categories/categoryService';
-import { Category } from '@/interfaces/Category';
+import { getCategories } from '@/services/categories/categoryService'; // New service for fetching authors
+import { Category } from '@/interfaces/Category'; // New interface for Author
 import { createNews, updateNewsById } from '@/services/news/newsService';
 import { toBase64 } from '@/utils/toBase64';
 import { News } from '@/interfaces/News';
 import { Loader2 } from 'lucide-react';
+import { Author } from '@/types/author';
+import { getAuthors } from '@/services/authors';
 
 interface NewsArticleFormProps {
   onSuccess?: () => void;
@@ -39,6 +41,12 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
   const [category, setCategory] = useState(
     typeof existingNews?.category === 'string' ? existingNews.category : existingNews?.category?._id || ''
   );
+  const [author, setAuthor] = useState(
+    typeof existingNews?.author === 'string' ? existingNews.author : existingNews?.author?._id || ''
+  );
+  const [publishedAt, setPublishedAt] = useState(existingNews?.publishedAt ? new Date(existingNews.publishedAt).toISOString().slice(0, 16) : '');
+  const [videoUrl, setVideoUrl] = useState(existingNews?.videoUrl || '');
+  const [readingTime, setReadingTime] = useState(existingNews?.readingTime || 0);
   const [isPublished, setIsPublished] = useState(existingNews?.isPublished || false);
   const [isFeatured, setIsFeatured] = useState(existingNews?.isFeatured || false);
   const [isBreaking, setIsBreaking] = useState(existingNews?.isBreaking || false);
@@ -50,6 +58,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
   const [showToolbar, setShowToolbar] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -106,20 +115,26 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
   const handleAutoSave = useCallback(() => {
     const now = new Date().toLocaleTimeString();
     setLastSaved(now);
-    // Optionally, save to localStorage or make an API call to save draft
-    localStorage.setItem('newsDraft', JSON.stringify({ title, content, summary, category }));
-  }, [title, content, summary, category]);
+    localStorage.setItem(
+      'newsDraft',
+      JSON.stringify({ title, content, summary, category, author, publishedAt, videoUrl, readingTime })
+    );
+  }, [title, content, summary, category, author, publishedAt, videoUrl, readingTime]);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchData = async () => {
       try {
-        const newsCategories = await getCategories('news');
+        const [newsCategories, activeAuthors] = await Promise.all([
+          getCategories('news'),
+          getAuthors(),
+        ]);
         setCategories(newsCategories);
+        setAuthors(activeAuthors);
       } catch (err) {
-        setErrors((prev) => ({ ...prev, categories: 'Failed to load categories' }));
+        setErrors((prev) => ({ ...prev, fetch: 'Failed to load categories or authors' }));
       }
     };
-    fetchCategories();
+    fetchData();
   }, []);
 
   useEffect(() => {
@@ -142,16 +157,23 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
       if (e.key === 'Escape') {
         setCollapsed(!collapsed);
       }
+      if (e.ctrlKey && e.key === 'a') {
+        e.preventDefault();
+        document.getElementById('author-select')?.focus();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [collapsed, title, content]);
+  }, [collapsed, title, content, author]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     if (!title.trim()) newErrors.title = 'Title is required';
     if (!content.trim() || content.trim() === '<p></p>') newErrors.content = 'Content is required';
     if (!category) newErrors.category = 'Category is required';
+    if (!author) newErrors.author = 'Author is required';
+    // if (!publishedAt) newErrors.publishedAt = 'Publication date is required';
+    if (readingTime < 0) newErrors.readingTime = 'Reading time cannot be negative';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -207,6 +229,21 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
     }
   };
 
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploading(true);
+      try {
+        const base64 = await toBase64(file);
+        setVideoUrl(base64);
+      } catch (err) {
+        setErrors((prev) => ({ ...prev, videoUrl: 'Failed to upload video' }));
+      } finally {
+        setUploading(false);
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateForm()) return;
 
@@ -215,15 +252,19 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
       title,
       summary,
       content,
-      seoTitle,
-      seoDescription,
-      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      author,
       category,
+      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
       isPublished,
-      isFeatured,
-      isBreaking,
       thumbnail,
       featuredImage,
+      videoUrl,
+      seoTitle,
+      seoDescription,
+      readingTime: Number(readingTime),
+      isFeatured,
+      isBreaking,
     };
 
     try {
@@ -238,6 +279,10 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         setSeoDescription('');
         setTags('');
         setCategory('');
+        setAuthor('');
+        setPublishedAt('');
+        setVideoUrl('');
+        setReadingTime(0);
         setIsPublished(false);
         setIsFeatured(false);
         setIsBreaking(false);
@@ -249,7 +294,13 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         onSuccess?.();
       }
     } catch (err) {
-      setErrors((prev) => ({ ...prev, submit: 'Failed to save article' }));
+      setErrors((prev) => ({
+        ...prev,
+        submit:
+          err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
+            ? (err as any).message
+            : 'Failed to save article',
+      }));
     } finally {
       setUploading(false);
     }
@@ -261,9 +312,10 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Title *</label>
           <input
             type="text"
-            placeholder="Title *"
+            placeholder="Enter article title"
             className={`w-full p-3 rounded-lg border ${errors.title ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900`}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -272,12 +324,31 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         </div>
 
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Author * (Ctrl+A)</label>
+          <select
+            id="author-select"
+            className={`w-full p-3 rounded-lg border ${errors.author ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900`}
+            value={author}
+            onChange={(e) => setAuthor(e.target.value)}
+          >
+            <option value="">Select an author</option>
+            {authors.map((auth) => (
+              <option key={auth._id} value={auth._id}>
+                {auth.name}
+              </option>
+            ))}
+          </select>
+          {errors.author && <p className="text-red-500 text-sm">{errors.author}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Category *</label>
           <select
             className={`w-full p-3 rounded-lg border ${errors.category ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900`}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            <option value="">Select a category *</option>
+            <option value="">Select a category</option>
             {categories.map((cat) => (
               <option key={cat._id} value={cat._id}>
                 {cat.name}
@@ -287,9 +358,31 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
           {errors.category && <p className="text-red-500 text-sm">{errors.category}</p>}
         </div>
 
+        <div className="space-y-2">
+          <label
+            htmlFor="publishedAt"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Publication Date <span className="text-red-500">*</span>
+          </label> 
+          <input
+            id="publishedAt"
+            type="datetime-local"
+            className={`w-full p-3 rounded-lg border ${errors.publishedAt ? 'border-red-500' : 'border-gray-300'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900`}
+            value={publishedAt}
+            onChange={(e) => setPublishedAt(e.target.value)}
+          />
+          {errors.publishedAt && (
+            <p className="text-red-500 text-sm">{errors.publishedAt}</p>
+          )}
+        </div>
+
+
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Summary</label>
           <textarea
-            placeholder="Short summary"
+            placeholder="Enter a short summary"
             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             rows={3}
             value={summary}
@@ -298,9 +391,10 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         </div>
 
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Tags (comma-separated)</label>
           <input
             type="text"
-            placeholder="Tags (comma-separated)"
+            placeholder="e.g., news, politics, tech"
             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
@@ -308,9 +402,10 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         </div>
 
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">SEO Title</label>
           <input
             type="text"
-            placeholder="SEO Title"
+            placeholder="Enter SEO title"
             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             value={seoTitle}
             onChange={(e) => setSeoTitle(e.target.value)}
@@ -318,13 +413,58 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         </div>
 
         <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">SEO Description</label>
           <textarea
-            placeholder="SEO Description"
+            placeholder="Enter SEO description"
             className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
             rows={2}
             value={seoDescription}
             onChange={(e) => setSeoDescription(e.target.value)}
           />
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Reading Time (minutes)</label>
+          <input
+            type="number"
+            min="0"
+            placeholder="e.g., 5"
+            className={`w-full p-3 rounded-lg border ${errors.readingTime ? 'border-red-500' : 'border-gray-300'} focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900`}
+            value={readingTime}
+            onChange={(e) => setReadingTime(Number(e.target.value))}
+          />
+          {errors.readingTime && <p className="text-red-500 text-sm">{errors.readingTime}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <label className="block text-sm font-medium text-gray-700">Video URL or Upload</label>
+          <input
+            type="text"
+            placeholder="Enter YouTube URL or upload video"
+            className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+            value={videoUrl}
+            onChange={(e) => setVideoUrl(e.target.value)}
+          />
+          <input
+            type="file"
+            accept="video/*"
+            onChange={handleVideoUpload}
+            className="w-full p-3 rounded-lg border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+          />
+          {videoUrl && !videoUrl.startsWith('data:video/') && (
+            <div className="mt-2">
+              <iframe
+                src={videoUrl}
+                title="Video preview"
+                className="w-full h-40 rounded-lg"
+                allowFullScreen
+              />
+            </div>
+          )}
+          {videoUrl.startsWith('data:video/') && (
+            <p className="text-sm text-gray-600 mt-2">Video uploaded (base64)</p>
+          )}
+          {errors.videoUrl && <p className="text-red-500 text-sm">{errors.videoUrl}</p>}
         </div>
 
         <div className="space-y-1">
