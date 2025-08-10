@@ -63,7 +63,7 @@ router.get('/search', logRouteAccess, (req, res, next) => {
 }); // Search news by query
 router.get('/category/:category', logRouteAccess, validateCategory, getNewsByCategory); // Get news by category
 router.get('/recent', logRouteAccess, getRecentNews); // Get recent news
-router.get('/stats', logRouteAccess, getNewsStats); // Get news statistics
+router.get('/stats', authenticateJWT, logRouteAccess, getNewsStats); // Get news statistics
 router.get('/:id', logRouteAccess, validateNewsId, getNewsById); // Get news by ID
 router.post('/:id/views', logRouteAccess, validateNewsId, sensitiveRouteLimiter, incrementViews); // Increment views for a news article
 

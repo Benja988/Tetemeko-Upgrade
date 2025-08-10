@@ -9,7 +9,7 @@ export default function DashboardHeader() {
   return (
     <header className="bg-white shadow px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
       <div className="text-lg sm:text-2xl font-bold text-[var(--color-primary)] truncate max-w-[70%]">
-        {page}
+        {/* {page} */}
       </div>
 
       <div className="flex items-center gap-4">

@@ -356,12 +356,12 @@ export const updateNewsById = async (req, res) => {
       isBreaking
     };
 
-    if (sanitizedData.author) {
+    /*if (sanitizedData.author) {
       const authorDoc = await User.findOne({ _id: sanitizedData.author, isActive: true });
       if (!authorDoc) {
         throw new APIError('Active author not found', 404);
       }
-    }
+    }*/
 
     if (sanitizedData.category) {
       const categoryDoc = await Category.findOne({ _id: sanitizedData.category, isActive: true });
@@ -710,7 +710,9 @@ export const getRecentNews = async (req, res) => {
  */
 export const getNewsStats = async (req, res) => {
   try {
-    checkAdminPermissions(req.user.UserRole);
+    console.log('User object in stats route:', req.user); // debug line
+
+    checkAdminPermissions(req.user);
 
     const [totalNews, publishedNews] = await Promise.all([
       News.countDocuments({ isActive: true }),
@@ -728,6 +730,7 @@ export const getNewsStats = async (req, res) => {
     return res.status(status).json({ message: error.message || 'Internal Server Error' });
   }
 };
+
 
 /**
  * Toggle breaking news status

@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 import Podcast from '../models/Podcast.js';
 import Episode from '../models/Episode.js';
 import { Category } from '../models/Category.js';
-import { User, UserRole } from '../models/User.js';
+import User, { UserRole } from '../models/User.js';
 import Station from '../models/Station.js';
 import { uploadMedia } from '../utils/uploadMedia.js';
-import { sanitize } from 'sanitize-html';
+import sanitize from 'sanitize-html';
 import logger from '../utils/logger.js';
 
 // Custom error class for better error handling
