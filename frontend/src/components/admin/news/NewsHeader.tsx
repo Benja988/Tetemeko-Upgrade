@@ -1,24 +1,21 @@
-'use client';
+import React from 'react';
 
-interface Props {
+interface NewsHeaderProps {
   heading: string;
-  onCreate: () => void;
   showForm: boolean;
+  onCreate: () => void;
 }
 
-export default function NewsHeader({ heading, onCreate, showForm }: Props) {
-  return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold text-primary">{heading}</h1>
-        <p className="text-gray-600">Manage all your news content</p>
-      </div>
-      <button
-        onClick={onCreate}
-        className="bg-primary hover:bg-primary-dark transition px-5 py-2 rounded-md text-white font-medium"
-      >
-        {showForm ? 'Cancel' : 'Create News'}
-      </button>
-    </div>
-  );
-}
+const NewsHeader: React.FC<NewsHeaderProps> = ({ heading, showForm, onCreate }) => (
+  <div className="flex justify-between items-center">
+    <h1 className="text-3xl font-bold text-gray-800">{heading}</h1>
+    <button
+      onClick={onCreate}
+      className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+    >
+      {showForm ? 'Close Form' : 'Create New Article'}
+    </button>
+  </div>
+);
+
+export default NewsHeader;
