@@ -21,10 +21,10 @@ export default function PodcastPage() {
       <div className="max-w-7xl mx-auto px-4 md:px-8 mt-6">
         <Breadcrumbs items={breadcrumbItems} />
       </div>
-      <PodCastSection1 />
+      {/* <PodCastSection1 />
       <PodCastSection2 />
       <PodCastSection3 />
-      <PodCastSection4 />
+      <PodCastSection4 /> */}
       {/* <PodCastSection5 /> */}
       {/* <PodCastSection6 /> */}
       {/* <PodCastSection7 /> */}
