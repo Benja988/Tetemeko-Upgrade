@@ -24,13 +24,14 @@ const withToast = async <T>(
 // ✅ Get all stations
 export const getStations = async (): Promise<Station[]> => {
   try {
-    const stations = await apiRequest<Station[]>('/stations')
-    return stations
+    const response = await apiRequest<{ stations: Station[] }>('/stations');
+    return Array.isArray(response.stations) ? response.stations : [];
   } catch (e: any) {
-    toast.error(e?.message || 'Failed to fetch stations.')
-    return []
+    toast.error(e?.message || 'Failed to fetch stations.');
+    return [];
   }
-}
+};
+
 
 // ✅ Get a single station by ID
 export const getStationById = async (id: string): Promise<Station | null> => {
