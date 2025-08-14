@@ -5,7 +5,7 @@ export const HERO_MEDIA = [
   { type: 'video', src: '/hero-images/globe.mp4' },
   { type: 'image', src: '/hero-images/antenna.jpg' },
   { type: 'video', src: '/hero-images/GlobeEarth.mp4' },
-  { type: 'image', src: '/hero-images/antenna1.jpg' },
+  { type: 'image', src: '/hero-images/antenna1.jpg', alt: 'Antenna on a rooftop'},
   { type: 'video', src: '/hero-images/mars.mp4' },
   { type: 'image', src: '/hero-images/mic.jpg' },
   { type: 'image', src: '/hero-images/musical.jpg' },

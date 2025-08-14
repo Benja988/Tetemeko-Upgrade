@@ -1,112 +1,141 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { StepProps } from "@/types/step-props";
-import DatePicker from "react-datepicker";
-import { toast, ToastContainer } from "react-toastify";
-import "react-datepicker/dist/react-datepicker.css";
+import { motion } from 'framer-motion';
+import { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import { FiArrowLeft, FiCheck } from 'react-icons/fi';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-datepicker/dist/react-datepicker.css';
+import { StepProps } from '@/types/step-props';
 
 export default function StepThree({ onBack, onSubmit, formData, setFormData }: StepProps) {
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    formData.date ? new Date(formData.date) : null
-  );
-  const [selectedTime, setSelectedTime] = useState<Date | null>(
+  const [date, setDate] = useState<Date | null>(formData.date ? new Date(formData.date) : null);
+  const [time, setTime] = useState<Date | null>(
     formData.time ? new Date(`1970-01-01T${formData.time}`) : null
   );
 
   const handleSubmit = async () => {
-    if (!selectedDate || !selectedTime) {
-      toast.error("Please select both date and time.");
+    if (!date || !time) {
+      toast.error('Please select both date and time');
       return;
     }
 
-    const combinedDateTime = new Date(
-      `${selectedDate.toISOString().split("T")[0]}T${selectedTime.toTimeString().slice(0, 5)}`
-    );
-
     setLoading(true);
-    await new Promise((res) => setTimeout(res, 1500));
-    setLoading(false);
-
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
     setFormData({
       ...formData,
-      date: combinedDateTime.toISOString().split("T")[0],
-      time: combinedDateTime.toTimeString().slice(0, 5),
+      date: date.toISOString().split('T')[0],
+      time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     });
 
-    toast.success("Service scheduled successfully!");
-    setTimeout(() => onSubmit?.(), 1000);
+    toast.success('Appointment scheduled successfully!');
+    onSubmit?.();
   };
 
   const today = new Date();
-  const isToday = selectedDate?.toDateString() === today.toDateString();
+  const isToday = date?.toDateString() === today.toDateString();
 
   const getMinTime = () => {
     const now = new Date();
-    now.setSeconds(0);
-    return isToday ? now : new Date("1970-01-01T00:00:00");
+    now.setMinutes(now.getMinutes() + 30); // Buffer of 30 minutes
+    return isToday ? now : new Date('1970-01-01T00:00:00');
   };
 
-  const getMaxTime = () => new Date("1970-01-01T23:45:00");
+  const getMaxTime = () => new Date('1970-01-01T23:45:00');
 
   return (
-    <div className="space-y-6">
-      <ToastContainer position="top-right" autoClose={3000} />
-      <h2 className="text-xl font-semibold text-gray-800">Step 3: Schedule a Time</h2>
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="max-w-2xl mx-auto px-4 py-6"
+    >
+      <ToastContainer position="top-center" autoClose={3000} />
+      
+      <motion.h2 
+        className="text-2xl font-bold text-gray-800 mb-2 text-center"
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.1 }}
+      >
+        Schedule Your Appointment
+      </motion.h2>
+      <motion.p 
+        className="text-gray-600 mb-8 text-center"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+      >
+        Select a convenient date and time for your service
+      </motion.p>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Date Picker Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow p-5 space-y-3">
-          <h3 className="text-md font-medium text-gray-700">Choose a Date</h3>
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm"
+        >
+          <h3 className="font-medium text-gray-800 mb-3">Select Date</h3>
           <DatePicker
-            selected={selectedDate}
-            onChange={(date) => setSelectedDate(date)}
-            dateFormat="yyyy-MM-dd"
+            selected={date}
+            onChange={setDate}
             minDate={today}
-            placeholderText="Select a date"
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            showMonthDropdown
-            showYearDropdown
-            dropdownMode="select"
+            inline
+            className="border-none"
           />
-        </div>
+        </motion.div>
 
-        {/* Time Picker Card */}
-        <div className="bg-white border border-gray-200 rounded-xl shadow p-5 space-y-3">
-          <h3 className="text-md font-medium text-gray-700">Choose a Time</h3>
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm"
+        >
+          <h3 className="font-medium text-gray-800 mb-3">Select Time</h3>
           <DatePicker
-            selected={selectedTime}
-            onChange={(time) => setSelectedTime(time)}
+            selected={time}
+            onChange={setTime}
             showTimeSelect
             showTimeSelectOnly
             timeIntervals={15}
             timeCaption="Time"
             dateFormat="h:mm aa"
-            placeholderText="Select a time"
             minTime={getMinTime()}
             maxTime={getMaxTime()}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            inline
+            className="border-none"
           />
-        </div>
+        </motion.div>
       </div>
 
-      {/* Actions */}
       <div className="flex justify-between pt-4">
-        <button
+        <motion.button
           onClick={onBack}
-          className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg transition"
+          whileHover={{ x: -2 }}
+          whileTap={{ scale: 0.98 }}
+          className="px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg 
+            transition flex items-center gap-2"
         >
-          Back
-        </button>
-        <button
+          <FiArrowLeft /> Back
+        </motion.button>
+        <motion.button
           onClick={handleSubmit}
-          disabled={loading}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-60"
+          disabled={loading || !date || !time}
+          whileHover={{ x: 2 }}
+          whileTap={{ scale: 0.98 }}
+          className={`px-6 py-2.5 rounded-lg transition flex items-center gap-2
+            ${(!date || !time) ? 
+              'bg-gray-300 text-gray-500 cursor-not-allowed' : 
+              'bg-green-600 hover:bg-green-700 text-white'}`}
         >
-          {loading ? "Submitting..." : "Submit"}
-        </button>
+          {loading ? 'Scheduling...' : 'Confirm'} {!loading && <FiCheck />}
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }

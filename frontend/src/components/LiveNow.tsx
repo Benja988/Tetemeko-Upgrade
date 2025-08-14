@@ -1,23 +1,25 @@
+// LiveNow Component
 'use client'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState }  from 'react'
 import { motion } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getStations } from '@/services/stations'
 import { Station } from '@/interfaces/Station'
+import React from 'react'
 
 const RadioWaveVisualization = ({ isPlaying }: { isPlaying: boolean }) => {
   return (
     <div className="relative w-16 h-16 flex items-center justify-center">
-      {[1, 2, 3].map((i) => (
+      {[1, 2].map((i) => (
         <motion.div
           key={i}
           animate={{
-            scale: isPlaying ? [1, 1.5, 1] : 1,
-            opacity: isPlaying ? [0.8, 0] : 0.3
+            scale: isPlaying ? [1, 1.4, 1] : 1,
+            opacity: isPlaying ? [0.7, 0] : 0.3
           }}
           transition={{
-            duration: 2,
+            duration: 1.5,
             repeat: Infinity,
             repeatDelay: i * 0.3,
             ease: 'easeOut'
@@ -35,6 +37,85 @@ const RadioWaveVisualization = ({ isPlaying }: { isPlaying: boolean }) => {
   )
 }
 
+interface StationCardProps {
+  station: Station;
+  togglePlay: (stationId: string) => void;
+  isPlaying: boolean;
+  setHoveredStation: React.Dispatch<React.SetStateAction<string | null>>;
+  hoveredStation: string | null;
+}
+
+const StationCard = React.memo(({ station, togglePlay, isPlaying, setHoveredStation, hoveredStation }: StationCardProps) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    viewport={{ once: true }}
+    onMouseEnter={() => setHoveredStation(station._id)}
+    onMouseLeave={() => setHoveredStation(null)}
+    className="relative bg-white/5 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
+  >
+    <div className="flex items-center gap-4">
+      {/* Station Logo */}
+      <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-white/20 flex-shrink-0">
+        <Image
+          src={station.imageUrl || '/default-logo.jpg'}
+          alt={station.name}
+          fill
+          className="object-cover"
+        />
+      </div>
+
+      {/* Station Info */}
+      <div className="flex-1 min-w-0">
+        <h3 className="text-xl font-bold text-white truncate">{station.name}</h3>
+        <p className="text-blue-300 text-sm mb-2">{station.type}</p>
+        <div className="flex flex-wrap gap-2">
+          {station.genre.slice(0, 3).map((tag, idx) => (
+            <span
+              key={idx}
+              className="bg-blue-600/20 border border-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full text-xs"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Play Button with Visualizer */}
+      <button
+        onClick={() => togglePlay(station._id)}
+        className="flex-shrink-0"
+      >
+        <RadioWaveVisualization isPlaying={isPlaying} />
+      </button>
+    </div>
+
+    {/* Expanded Info on Hover */}
+    {hoveredStation === station._id && (
+      <motion.div
+        initial={{ opacity: 0, height: 0 }}
+        animate={{ opacity: 1, height: 'auto' }}
+        exit={{ opacity: 0, height: 0 }}
+        className="mt-4 overflow-hidden"
+      >
+        <p className="text-gray-300 text-sm">{station.description}</p>
+        <div className="flex justify-between items-center mt-4">
+          <div className="flex items-center gap-2 text-sm text-blue-300">
+            <span>Currently playing:</span>
+            <span className="font-medium">Latest Hits Mix</span>
+          </div>
+          <Link href={`/stations/${station._id}`} passHref>
+            <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-medium rounded-lg transition">
+              Visit Station
+            </button>
+          </Link>
+        </div>
+      </motion.div>
+    )}
+  </motion.div>
+));
+
 export default function LiveNow() {
   const [stations, setStations] = useState<Station[]>([])
   const [loading, setLoading] = useState(true)
@@ -43,9 +124,11 @@ export default function LiveNow() {
 
   useEffect(() => {
     const fetchStations = async () => {
-      const data = await getStations()
-      const liveStations = (data || []).filter((station: Station) => station.isActive)
-      setStations(liveStations)
+      const data = await getStations({
+        fields: ['_id', 'name', 'imageUrl', 'type', 'genre', 'description'],
+        limit: 0
+      });
+      setStations(data)
       setLoading(false)
     }
     fetchStations()
@@ -98,79 +181,16 @@ export default function LiveNow() {
         ) : stations.length === 0 ? (
           <p className="text-center text-blue-400">No stations are live at the moment.</p>
         ) : (
-          <div className="space-y-6 max-w-4xl mx-auto">
-            {stations.map((station) => (
-              <motion.div
-                key={station._id}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
-                onMouseEnter={() => setHoveredStation(station._id)}
-                onMouseLeave={() => setHoveredStation(null)}
-                className="relative bg-white/5 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Station Logo */}
-                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-white/20 flex-shrink-0">
-                    <Image
-                      src={station.imageUrl || '/default-logo.jpg'}
-                      alt={station.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-
-                  {/* Station Info */}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-white truncate">{station.name}</h3>
-                    <p className="text-blue-300 text-sm mb-2">{station.type}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {station.genre.slice(0, 3).map((tag, idx) => (
-                        <span
-                          key={idx}
-                          className="bg-blue-600/20 border border-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full text-xs"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Play Button with Visualizer */}
-                  <button
-                    onClick={() => togglePlay(station._id)}
-                    className="flex-shrink-0"
-                  >
-                    <RadioWaveVisualization isPlaying={currentlyPlaying === station._id} />
-                  </button>
-                </div>
-
-                {/* Expanded Info on Hover */}
-                {hoveredStation === station._id && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="mt-4 overflow-hidden"
-                  >
-                    <p className="text-gray-300 text-sm">{station.description}</p>
-                    <div className="flex justify-between items-center mt-4">
-                      <div className="flex items-center gap-2 text-sm text-blue-300">
-                        <span>Currently playing:</span>
-                        <span className="font-medium">Latest Hits Mix</span>
-                      </div>
-                      <Link href={`/stations/${station._id}`} passHref>
-                        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-medium rounded-lg transition">
-                          Visit Station
-                        </button>
-                      </Link>
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-            ))}
-          </div>
+          stations.map((station) => (
+            <StationCard
+              key={station._id}
+              station={station}
+              togglePlay={togglePlay}
+              isPlaying={currentlyPlaying === station._id}
+              setHoveredStation={setHoveredStation}
+              hoveredStation={hoveredStation}
+            />
+          ))
         )}
 
         {/* All Stations Link */}

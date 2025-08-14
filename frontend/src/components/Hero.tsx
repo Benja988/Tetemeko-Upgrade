@@ -1,66 +1,102 @@
-'use client'
-import { HERO_MEDIA } from '@/constants/heroMedia'
-import { useEffect, useState, useCallback } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import HeroMedia from './Hero/HeroMedia'
-import HeroNavbar from './Hero/HeroNavbar'
-import HeroContent from './Hero/HeroContent'
-import HeroControls from './Hero/HeroControls'
+// Hero.tsx
+'use client';
+import { HERO_MEDIA } from '@/constants/heroMedia';
+import { useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import HeroNavbar from './Hero/HeroNavbar';
+import HeroContent from './Hero/HeroContent';
+import HeroControls from './Hero/HeroControls';
+import Image from 'next/image';
+import { throttle } from 'lodash';
 
-const transition = { duration: 1.2, ease: [0.76, 0, 0.24, 1] }
+const transition = { duration: 1.2, ease: [0.76, 0, 0.24, 1] };
+
+type HeroMediaType =
+  | { type: 'image'; src: string; alt?: string }
+  | { type: 'video'; src: string; alt?: string };
+
+const HeroMedia = ({ media, index }: { media: HeroMediaType; index: number }) => {
+  if (media.type === 'image') {
+    return (
+      <Image
+        src={media.src}
+        alt={media.alt || 'Hero image'}
+        fill
+        className="object-cover"
+        priority={index === 0}
+        loading={index !== 0 ? 'lazy' : undefined}
+      />
+    );
+  }
+  return (
+    <video
+      src={media.src}
+      className="object-cover w-full h-full"
+      autoPlay
+      loop
+      muted
+      playsInline
+      preload="metadata" // ✅ load metadata only for better performance
+      aria-label={media.alt || 'Hero video'}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+    />
+  );
+};
 
 export default function Hero() {
-  const [current, setCurrent] = useState(0)
-  const [paused, setPaused] = useState(false)
-  const [direction, setDirection] = useState(0) // 0: next, 1: prev
-
-  const total = HERO_MEDIA.length
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [direction, setDirection] = useState(0);
+  const total = HERO_MEDIA.length;
 
   const nextSlide = useCallback(() => {
-    setDirection(0)
-    setCurrent(c => (c + 1) % total)
-  }, [total])
+    setDirection(0);
+    setCurrent(c => (c + 1) % total);
+  }, [total]);
 
   const prevSlide = useCallback(() => {
-    setDirection(1)
-    setCurrent(c => (c - 1 + total) % total)
-  }, [total])
+    setDirection(1);
+    setCurrent(c => (c - 1 + total) % total);
+  }, [total]);
 
   useEffect(() => {
     const id = setInterval(() => {
-      if (!paused) nextSlide()
-    }, 8000)
-    return () => clearInterval(id)
-  }, [paused, nextSlide])
+      if (!paused) nextSlide();
+    }, 12000);
+    return () => clearInterval(id);
+  }, [paused, nextSlide]);
 
-  // 3D tilt effect
-  const [tilt, setTilt] = useState({ x: 0, y: 0 })
-  const handleMouseMove = (e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect()
-    const x = e.clientX - rect.left
-    const y = e.clientY - rect.top
-    const centerX = rect.width / 2
-    const centerY = rect.height / 2
-    setTilt({
-      x: (x - centerX) / 20,
-      y: (y - centerY) / 20
-    })
-  }
+  // Optimized tilt
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const handleMouseMove = throttle((e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const newX = (x - centerX) / 20;
+    const newY = (y - centerY) / 20;
+
+    // ✅ Only update if difference is significant
+    if (Math.abs(newX - tilt.x) > 0.2 || Math.abs(newY - tilt.y) > 0.2) {
+      setTilt({ x: newX, y: newY });
+    }
+  }, 32); // ✅ Reduced update rate
 
   return (
     <section
       className="relative min-h-screen w-full bg-primary text-white overflow-hidden flex flex-col"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => {
-        setPaused(false)
-        setTilt({ x: 0, y: 0 })
+        setPaused(false);
+        setTilt({ x: 0, y: 0 });
       }}
       onMouseMove={handleMouseMove}
     >
-      {/* Animated background elements */}
+      {/* Background effects */}
       <div className="absolute inset-0 overflow-hidden z-0">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-900/20 rounded-full filter blur-[100px]"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-900/20 rounded-full filter blur-[100px]"></div>
+        <div className="absolute top-0 left-0 w-64 h-64 bg-blue-900/10 rounded-full filter blur-[80px]"></div>
       </div>
 
       <AnimatePresence custom={direction} mode="wait">
@@ -77,7 +113,7 @@ export default function Hero() {
           }}
           className="absolute inset-0 z-10"
         >
-          <HeroMedia media={HERO_MEDIA[current]} />
+          <HeroMedia media={HERO_MEDIA[current]} index={current} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
         </motion.div>
       </AnimatePresence>
@@ -92,8 +128,8 @@ export default function Hero() {
           <button
             key={i}
             onClick={() => {
-              setDirection(i > current ? 0 : 1)
-              setCurrent(i)
+              setDirection(i > current ? 0 : 1);
+              setCurrent(i);
             }}
             className="h-1.5 rounded-full transition-all duration-300"
             style={{
@@ -104,7 +140,7 @@ export default function Hero() {
         ))}
       </div>
 
-      {/* Scrolling indicator */}
+      {/* Scroll indicator */}
       <motion.div
         animate={{ y: [0, 10, 0] }}
         transition={{ duration: 1.5, repeat: Infinity }}
@@ -116,5 +152,5 @@ export default function Hero() {
         </svg>
       </motion.div>
     </section>
-  )
+  );
 }

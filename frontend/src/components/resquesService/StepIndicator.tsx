@@ -1,65 +1,77 @@
-"use client";
+'use client';
 
-import {
-  FaInfoCircle,
-  FaClipboardList,
-  FaCalendarAlt,
-  FaCheckCircle,
-} from "react-icons/fa";
+import { motion } from 'framer-motion';
+import { FiInfo, FiList, FiCalendar, FiCheck } from 'react-icons/fi';
 
 const steps = [
-  { label: "Basic Info", icon: <FaInfoCircle /> },
-  { label: "Service Type", icon: <FaClipboardList /> },
-  { label: "Schedule", icon: <FaCalendarAlt /> },
-  { label: "Confirmation", icon: <FaCheckCircle /> },
+  { label: "Basic Info", icon: <FiInfo /> },
+  { label: "Service Type", icon: <FiList /> },
+  { label: "Schedule", icon: <FiCalendar /> },
+  { label: "Confirmation", icon: <FiCheck /> },
 ];
 
 export default function StepIndicator({ step }: { step: number }) {
-  const getStepStatus = (index: number) => {
-    if (index + 1 < step) return "completed";
-    if (index + 1 === step) return "active";
-    return "pending";
-  };
-
-  const getStepColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-500";
-      case "active":
-        return "bg-blue-600";
-      default:
-        return "bg-gray-300";
-    }
-  };
-
   return (
-    <div className="w-full flex flex-col items-center gap-4 mb-6">
-      <div className="flex flex-wrap justify-center gap-6 sm:gap-10">
-        {steps.map((s, index) => {
-          const status = getStepStatus(index);
-          const colorClass = getStepColor(status);
+    <div className="w-full px-4 sm:px-8 mb-8">
+      <div className="relative">
+        {/* Progress line */}
+        <div className="absolute top-1/2 left-0 right-0 h-1 bg-gray-200 -translate-y-1/2 z-0">
+          <motion.div 
+            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600"
+            initial={{ width: '0%' }}
+            animate={{ 
+              width: `${((step - 1) / (steps.length - 1)) * 100}%`,
+              transition: { duration: 0.6, ease: 'easeOut' }
+            }}
+          />
+        </div>
 
-          return (
-            <div key={index} className="flex flex-col items-center text-center w-20 sm:w-24">
-              <div
-                className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl ${colorClass} transition duration-300`}
-                aria-label={s.label}
-                title={s.label}
+        {/* Steps */}
+        <div className="relative z-10 flex justify-between">
+          {steps.map((s, index) => {
+            const isCompleted = index + 1 < step;
+            const isActive = index + 1 === step;
+            const isPending = index + 1 > step;
+
+            return (
+              <motion.div
+                key={index}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: index * 0.1 }}
+                className="flex flex-col items-center"
               >
-                {s.icon}
-              </div>
-              <span className="text-xs sm:text-sm mt-2 text-gray-700">{s.label}</span>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden mt-2 sm:mt-4">
-        <div
-          className="h-full bg-blue-600 transition-all duration-500"
-          style={{ width: `${((step - 1) / (steps.length - 1)) * 100}%` }}
-        />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center 
+                  ${isCompleted ? 'bg-green-500 text-white' : ''}
+                  ${isActive ? 'bg-white border-4 border-indigo-600 text-indigo-600 shadow-lg' : ''}
+                  ${isPending ? 'bg-gray-100 text-gray-400 border-2 border-gray-300' : ''}
+                  transition-all duration-300`}
+                >
+                  {isCompleted ? (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 500 }}
+                    >
+                      <FiCheck size={20} />
+                    </motion.div>
+                  ) : (
+                    <div className={isActive ? 'scale-110' : ''}>
+                      {s.icon}
+                    </div>
+                  )}
+                </div>
+                <span className={`text-xs sm:text-sm mt-2 font-medium 
+                  ${isCompleted ? 'text-green-600' : ''}
+                  ${isActive ? 'text-indigo-600 font-semibold' : ''}
+                  ${isPending ? 'text-gray-400' : ''}`}
+                >
+                  {s.label}
+                </span>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

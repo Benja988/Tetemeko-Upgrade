@@ -22,7 +22,7 @@ const withToast = async <T>(
 /* ---------------------------- STATION SERVICES ----------------------------- */
 
 // ✅ Get all stations
-export const getStations = async (): Promise<Station[]> => {
+export const getStations = async (p0: { limit: number; fields: string[] }): Promise<Station[]> => {
   try {
     const response = await apiRequest<{ stations: Station[] }>('/stations');
     return Array.isArray(response.stations) ? response.stations : [];

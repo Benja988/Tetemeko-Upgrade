@@ -1,10 +1,11 @@
+// TrendingPodcasts Component
 'use client'
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { FiClock, FiArrowRight } from 'react-icons/fi'
-import { FaPlay, FaHeadphones,  } from 'react-icons/fa'
+import { FaPlay, FaHeadphones } from 'react-icons/fa'
 
 const podcasts = [
   {
@@ -69,6 +70,74 @@ const podcasts = [
   }
 ]
 
+type Podcast = {
+  id: number
+  title: string
+  host: string
+  image: string
+  slug: string
+  duration: string
+  listens: string
+  category: string
+}
+
+type PodcastCardProps = {
+  podcast: Podcast
+  index: number
+  isActive: boolean
+}
+
+const PodcastCard: React.FC<PodcastCardProps> = React.memo(({ podcast, index, isActive }) => (
+  <motion.div
+    className="flex-shrink-0 w-[300px]"
+    style={{
+      scale: isActive ? 1 : 0.9,
+      opacity: isActive ? 1 : 0.7,
+      zIndex: isActive ? 10 : 1
+    }}
+    whileHover={{ scale: 1.05 }}
+  >
+    <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/30 transition-all duration-300 h-full flex flex-col">
+      <div className="relative aspect-square">
+        <Image
+          src={podcast.image}
+          alt={podcast.title}
+          fill
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent" />
+        <div className="absolute top-3 right-3 bg-gray-900/80 text-xs font-medium px-2 py-1 rounded-full">
+          {podcast.category}
+        </div>
+      </div>
+      
+      <div className="p-5 flex-1 flex flex-col">
+        <h3 className="text-lg font-bold text-white line-clamp-2 mb-2">
+          {podcast.title}
+        </h3>
+        <p className="text-blue-400 text-sm mb-4">Hosted by {podcast.host}</p>
+        
+        <div className="flex items-center gap-4 text-gray-400 text-xs mb-5 mt-auto">
+          <div className="flex items-center gap-1">
+            <FiClock size={14} />
+            <span>{podcast.duration}</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <FaHeadphones size={14} />
+            <span>{podcast.listens}</span>
+          </div>
+        </div>
+        
+        <Link href={`/podcasts/${podcast.slug}`}>
+          <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-sm font-medium rounded-lg text-white transition-all">
+            <FaPlay size={12} /> Listen Now
+          </button>
+        </Link>
+      </div>
+    </div>
+  </motion.div>
+));
+
 export default function TrendingPodcasts() {
   const [width, setWidth] = useState(0)
   const carousel = useRef<HTMLDivElement>(null)
@@ -86,8 +155,8 @@ export default function TrendingPodcasts() {
   useEffect(() => {
     const controls = animate(x, -activeIndex * 320, {
       type: 'spring',
-      stiffness: 100,
-      damping: 20
+      stiffness: 50,
+      damping: 15
     })
     return controls.stop
   }, [activeIndex, x])
@@ -145,56 +214,12 @@ export default function TrendingPodcasts() {
               style={{ x }}
             >
               {podcasts.map((podcast, index) => (
-                <motion.div
+                <PodcastCard
                   key={podcast.id}
-                  className="flex-shrink-0 w-[300px]"
-                  style={{
-                    scale: index === activeIndex ? 1 : 0.9,
-                    opacity: index === activeIndex ? 1 : 0.7,
-                    zIndex: index === activeIndex ? 10 : 1
-                  }}
-                  whileHover={{ scale: 1.05 }}
-                  onClick={() => setActiveIndex(index)}
-                >
-                  <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl overflow-hidden border border-gray-700 hover:border-blue-500/30 transition-all duration-300 h-full flex flex-col">
-                    <div className="relative aspect-square">
-                      <Image
-                        src={podcast.image}
-                        alt={podcast.title}
-                        fill
-                        className="object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 via-gray-900/20 to-transparent" />
-                      <div className="absolute top-3 right-3 bg-gray-900/80 text-xs font-medium px-2 py-1 rounded-full">
-                        {podcast.category}
-                      </div>
-                    </div>
-                    
-                    <div className="p-5 flex-1 flex flex-col">
-                      <h3 className="text-lg font-bold text-white line-clamp-2 mb-2">
-                        {podcast.title}
-                      </h3>
-                      <p className="text-blue-400 text-sm mb-4">Hosted by {podcast.host}</p>
-                      
-                      <div className="flex items-center gap-4 text-gray-400 text-xs mb-5 mt-auto">
-                        <div className="flex items-center gap-1">
-                          <FiClock size={14} />
-                          <span>{podcast.duration}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <FaHeadphones size={14} />
-                          <span>{podcast.listens}</span>
-                        </div>
-                      </div>
-                      
-                      <Link href={`/podcasts/${podcast.slug}`}>
-                        <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-sm font-medium rounded-lg text-white transition-all">
-                          <FaPlay size={12} /> Listen Now
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-                </motion.div>
+                  podcast={podcast}
+                  index={index}
+                  isActive={index === activeIndex}
+                />
               ))}
             </motion.div>
           </motion.div>
@@ -214,16 +239,16 @@ export default function TrendingPodcasts() {
           </button>
         </div>
 
-          {/* View All Button */}
-          <div className="text-center mt-16">
-            <Link href="/podcasts">
-              <button className="inline-flex items-center px-6 py-3 border border-gray-700 hover:border-blue-500 text-sm font-medium rounded-full text-white bg-gray-800/50 hover:bg-gray-700/50 transition-all group">
-                View All Podcasts
-                <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </Link>
-          </div>
+        {/* View All Button */}
+        <div className="text-center mt-16">
+          <Link href="/podcasts">
+            <button className="inline-flex items-center px-6 py-3 border border-gray-700 hover:border-blue-500 text-sm font-medium rounded-full text-white bg-gray-800/50 hover:bg-gray-700/50 transition-all group">
+              View All Podcasts
+              <FiArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </Link>
         </div>
-      </section>
-    )
-  }
+      </div>
+    </section>
+  )
+}

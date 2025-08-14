@@ -52,6 +52,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/date-fns": "^2.5.3",
+    "@types/lodash": "^4.17.20",
     "@types/moment": "^2.11.29",
     "@types/node": "^20",
     "@types/react": "^19.1.2",

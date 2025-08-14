@@ -1,4 +1,6 @@
 export interface Station {
+  frequency: ReactNode;
+  id: Key | null | undefined;
   _id: string;                     // maps from _id (string from MongoDB)
   name: string;
   description?: string;

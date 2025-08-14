@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "react-intersection-observer": "^9.16.0",
     "winston": "^3.17.0",
     "zod": "^3.25.74"
   }

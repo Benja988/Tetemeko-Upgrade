@@ -1,8 +1,9 @@
+// TrendingNews Component
 'use client'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { FiCalendar, FiClock, FiArrowRight } from 'react-icons/fi'
 
 const news = [
@@ -63,6 +64,57 @@ const news = [
   }
 ]
 
+type NewsItem = {
+  id: number;
+  title: string;
+  excerpt: string;
+  image: string;
+  slug: string;
+  date: string;
+  readTime: string;
+  category: string;
+  featured: boolean;
+};
+
+type NewsCardProps = {
+  item: NewsItem;
+  isFeatured: boolean;
+  index: number;
+};
+
+const NewsCard = React.memo(({ item, isFeatured, index }: NewsCardProps) => (
+  <div 
+    key={item.id} 
+    className={`border-b border-gray-800 ${!isFeatured ? (index % 2 === 0 ? 'bg-[#121923]' : 'bg-[#0D121C]') : ''}`}
+  >
+    <Link href={`/news/${item.slug}`} className="group block p-6">
+      <div className="flex gap-4">
+        <div className="flex-shrink-0 relative w-20 h-20 rounded-md overflow-hidden border border-gray-800">
+          <Image
+            src={item.image}
+            alt={item.title}
+            fill
+            className="object-cover group-hover:scale-110 transition-transform"
+          />
+        </div>
+        <div>
+          <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gray-800 text-gray-300 rounded mb-2">
+            {item.category}
+          </span>
+          <h4 className="text-sm font-bold text-white mb-1 line-clamp-2 group-hover:text-blue-400 transition-colors">
+            {item.title}
+          </h4>
+          <div className="flex items-center gap-2 text-gray-400 text-xs">
+            <span>{item.date}</span>
+            <span>•</span>
+            <span>{item.readTime}</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  </div>
+));
+
 export default function TrendingNews() {
   const [activeCategory, setActiveCategory] = useState('All')
   const categories = ['All', ...new Set(news.map(item => item.category))]
@@ -77,21 +129,18 @@ export default function TrendingNews() {
       
       {/* Animated ink splatters */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(3)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0 }}
-            whileInView={{ opacity: 0.03, scale: 1 }}
-            transition={{ duration: 1, delay: i * 0.3 }}
-            className="absolute bg-blue-800 rounded-full filter blur-xl"
-            style={{
-              width: `${200 + Math.random() * 300}px`,
-              height: `${200 + Math.random() * 300}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`
-            }}
-          />
-        ))}
+        <motion.div
+          initial={{ opacity: 0, scale: 0 }}
+          whileInView={{ opacity: 0.03, scale: 1 }}
+          transition={{ duration: 1 }}
+          className="absolute bg-blue-800 rounded-full filter blur-xl"
+          style={{
+            width: `${200 + Math.random() * 200}px`,
+            height: `${200 + Math.random() * 200}px`,
+            left: `${Math.random() * 100}%`,
+            top: `${Math.random() * 100}%`
+          }}
+        />
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -178,36 +227,7 @@ export default function TrendingNews() {
                 <h4 className="font-bold text-white">Latest Updates</h4>
               </div>
               {filteredNews.filter(item => !item.featured).map((item, index) => (
-                <div 
-                  key={item.id} 
-                  className={`border-b border-gray-800 ${index % 2 === 0 ? 'bg-[#121923]' : 'bg-[#0D121C]'}`}
-                >
-                  <Link href={`/news/${item.slug}`} className="group block p-6">
-                    <div className="flex gap-4">
-                      <div className="flex-shrink-0 relative w-20 h-20 rounded-md overflow-hidden border border-gray-800">
-                        <Image
-                          src={item.image}
-                          alt={item.title}
-                          fill
-                          className="object-cover group-hover:scale-110 transition-transform"
-                        />
-                      </div>
-                      <div>
-                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gray-800 text-gray-300 rounded mb-2">
-                          {item.category}
-                        </span>
-                        <h4 className="text-sm font-bold text-white mb-1 line-clamp-2 group-hover:text-blue-400 transition-colors">
-                          {item.title}
-                        </h4>
-                        <div className="flex items-center gap-2 text-gray-400 text-xs">
-                          <span>{item.date}</span>
-                          <span>•</span>
-                          <span>{item.readTime}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
+                <NewsCard key={item.id} item={item} isFeatured={false} index={index} />
               ))}
             </div>
           </div>
