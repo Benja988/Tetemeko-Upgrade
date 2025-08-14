@@ -1,60 +1,68 @@
-'use client';
+'use client'
+import { motion, useInView } from 'framer-motion'
+import Image from 'next/image'
+import { useEffect, useRef, useState } from 'react'
+import { getStations } from '@/services/stations'
+import { Station } from '@/interfaces/Station'
 
-import Image from 'next/image';
-import { useEffect, useRef, useState } from 'react';
-import { motion, useInView } from 'framer-motion';
-import { toast } from 'sonner';
-import {
-  FaBroadcastTower,
-  FaMusic,
-  FaGlobeAfrica,
-  FaMicrophoneAlt,
-  FaPlayCircle,
-} from 'react-icons/fa';
-
-import { getStations } from '@/services/stations';
-import { Station } from '@/interfaces/Station';
-
+// Animation variants
 const fadeUp = {
   hidden: { opacity: 0, y: 40 },
   visible: (delay = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.7, ease: 'easeOut', delay },
+    transition: { duration: 0.7, ease: 'easeOut', delay }
   }),
-};
+}
 
-// Map station categories or types to icons
-const iconMap = {
-  radio: () => <FaBroadcastTower className="text-white text-xl" />,
-  music: () => <FaMusic className="text-pink-400 text-xl" />,
-  global: () => <FaGlobeAfrica className="text-green-400 text-xl" />,
-  mic: () => <FaMicrophoneAlt className="text-orange-400 text-xl" />,
-  play: () => <FaPlayCircle className="text-blue-400 text-xl" />,
-};
+// Timeline data with inferred types
+const timelineData = {
+  '2020s': {
+    title: 'Digital Expansion Era',
+    events: [
+      'Launched 3 new digital radio stations',
+      'Expanded to 10 counties across Kenya',
+      'Reached 1M+ monthly listeners'
+    ],
+    image: '/about/2020s.jpg'
+  },
+  '2010s': {
+    title: 'Growth Phase',
+    events: [
+      'Acquired 2 regional radio stations',
+      'Launched first TV channel',
+      'Established digital presence'
+    ],
+    image: '/about/2010s.jpg'
+  },
+  '2000s': {
+    title: 'Foundation Years',
+    events: [
+      'Founded first radio station in Nairobi',
+      'Built core team of 15 media professionals',
+      'Established brand identity'
+    ],
+    image: '/about/2000s.jpg'
+  }
+} as const
 
-const typeToIconKey: Record<string, keyof typeof iconMap> = {
-  "Radio Station": "radio",
-  "TV Station": "play",
-  // Add more mappings as needed
-};
-
-
+// Types inferred from timelineData
+type Decade = keyof typeof timelineData
+type TimelineEntry = typeof timelineData[Decade]
 
 export default function AboutUs() {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
-
-  const [stations, setStations] = useState<Station[]>([]);
+  const ref = useRef(null)
+  const isInView = useInView(ref, { once: true, margin: '-100px' })
+  const [stations, setStations] = useState<Station[]>([])
+  const [activeDecade, setActiveDecade] = useState<Decade>('2020s')
 
   useEffect(() => {
     const fetchStations = async () => {
-      const data = await getStations();
-      setStations(data);
-    };
-
-    fetchStations();
-  }, []);
+      const data = await getStations()
+      setStations(data)
+    }
+    fetchStations()
+  }, [])
 
   return (
     <section
@@ -62,164 +70,186 @@ export default function AboutUs() {
       ref={ref}
       className="relative bg-primary text-white py-24 px-4 sm:px-10 lg:px-24 overflow-hidden"
     >
-      {/* Background */}
-      <div className="absolute inset-0 -z-20">
-        <Image
-          src="/bg/bg3.jpg"
-          alt="About Tetemeko Media"
-          fill
-          className="object-cover opacity-25"
-        />
-        <div className="absolute bg-primary/40 inset-0 mix-blend-multiply" />
+      {/* Animated particles background */}
+      <div className="absolute inset-0 -z-20 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: -100 }}
+            animate={{
+              opacity: [0, 0.3, 0],
+              y: ['0%', '100vh'],
+              x: `${Math.random() * 100}%`
+            }}
+            transition={{
+              duration: 10 + Math.random() * 20,
+              repeat: Infinity,
+              delay: Math.random() * 5
+            }}
+            className="absolute w-1 h-1 rounded-full bg-white"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `-10%`
+            }}
+          />
+        ))}
       </div>
 
-      {/* Main content row */}
-      <div className="max-w-7xl mx-auto flex flex-col-reverse lg:flex-row items-center gap-16">
-        {/* Left column */}
+      <div className="max-w-7xl mx-auto">
+        {/* Section Header */}
         <motion.div
           initial="hidden"
           animate={isInView ? 'visible' : 'hidden'}
           variants={{
             visible: { transition: { staggerChildren: 0.15 } },
-            hidden: {},
+            hidden: {}
           }}
-          className="w-full lg:w-1/2"
+          className="text-center mb-16"
         >
           <motion.h2
             variants={fadeUp}
             className="text-4xl sm:text-5xl font-extrabold leading-tight mb-6 tracking-tight"
           >
-            About <span className="text-indigo-200">Tetemeko Media Group</span>
+            Our <span className="text-indigo-200">Journey</span> Through The Years
           </motion.h2>
-
           <motion.p
             variants={fadeUp}
             custom={0.2}
-            className="text-lg text-gray-300 font-light leading-relaxed mb-5"
+            className="text-lg text-gray-300 font-light leading-relaxed max-w-3xl mx-auto"
           >
-            Tetemeko Media Group is a dynamic force in Kenya — uniting vibrant radio stations, captivating TV channels, and a thriving digital network under one visionary platform.
+            From humble beginnings to becoming a media powerhouse, our story is
+            one of innovation, passion, and commitment to our audience.
           </motion.p>
-
-          <motion.p
-            variants={fadeUp}
-            custom={0.4}
-            className="text-lg text-gray-300 font-light leading-relaxed mb-8"
-          >
-            From live broadcasts and on-demand programming to a cutting-edge digital marketplace and innovative advertising solutions, Tetemeko redefines how stories are shared and communities connect — merging legacy with the future, one broadcast at a time.
-          </motion.p>
-
-          {/* Stats */}
-          <motion.div
-            className="flex gap-6 flex-wrap"
-            initial="hidden"
-            animate={isInView ? 'visible' : 'hidden'}
-            variants={{ visible: { transition: { staggerChildren: 0.1 } }, hidden: {} }}
-          >
-            {[
-              { label: 'Radio Stations', value: `${stations.length}+`, color: 'text-yellow-400' },
-              { label: 'Weekly Listeners', value: '10K+', color: 'text-cyan-400' },
-              { label: 'Live Broadcasting', value: '24/7', color: 'text-green-400' },
-            ].map((stat, i) => (
-              <motion.div
-                key={i}
-                variants={fadeUp}
-                custom={i * 0.2}
-                className="bg-white/10 px-6 py-4 rounded-xl text-center backdrop-blur-md shadow-lg flex flex-col items-center w-[130px]"
-              >
-                <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-                <div className="text-sm text-gray-300 mt-1">{stat.label}</div>
-              </motion.div>
-            ))}
-          </motion.div>
         </motion.div>
 
-        {/* Right image */}
+        {/* Timeline Navigation */}
         <motion.div
-          initial={{ opacity: 0, x: 50 }}
-          animate={isInView ? { opacity: 1, x: 0 } : {}}
-          transition={{ duration: 0.9, ease: 'easeOut' }}
-          className="w-full lg:w-1/2 relative h-[360px] sm:h-[420px] lg:h-[520px] rounded-3xl overflow-hidden shadow-[0_20px_40px_rgba(0,0,0,0.5)] border border-white/10 group"
+          initial="hidden"
+          animate={isInView ? 'visible' : 'hidden'}
+          variants={{
+            visible: { transition: { staggerChildren: 0.1 } },
+            hidden: {}
+          }}
+          className="flex justify-center gap-4 mb-12"
         >
-          <Image
-            src="/hero-images/network098.jpg"
-            alt="Tetemeko Media Team"
-            fill
-            priority
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          />
-
-          <div className="absolute inset-0 bg-black/40 group-hover:bg-black/50 transition-all duration-500 z-10" />
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.8, duration: 0.8 }}
-            className="absolute z-20 bottom-8 left-8 max-w-[80%] bg-white/10 backdrop-blur-md p-4 sm:p-5 rounded-2xl shadow-lg text-white"
-          >
-            <p className="text-base sm:text-lg font-medium">
-              Experience live radio broadcasts from our dynamic studios, anywhere in the world.
-            </p>
-            <p className="text-sm mt-2 text-white/80">
-              Now streaming across all Tetemeko stations — radio, TV, and digital platforms.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 1.5, duration: 0.7 }}
-            className="absolute top-6 right-6 w-14 h-14 sm:w-16 sm:h-16 rounded-full border-4 border-white shadow-xl overflow-hidden z-30"
-          >
-            <Image
-              src="/logo.jpg"
-              alt="Tetemeko Logo"
-              width={64}
-              height={64}
-              className="object-cover w-full h-full"
-            />
-          </motion.div>
-
-          <div className="pointer-events-none absolute inset-0 rounded-3xl border border-transparent group-hover:border-yellow-400 transition-all duration-500" />
+          {Object.keys(timelineData).map((decade, i) => (
+            <motion.button
+              key={decade}
+              variants={fadeUp}
+              custom={i * 0.2}
+              onClick={() => setActiveDecade(decade as Decade)}
+              className={`px-6 py-2 rounded-full font-medium transition-all ${
+                activeDecade === decade
+                  ? 'bg-white text-primary'
+                  : 'bg-white/10 text-white hover:bg-white/20'
+              }`}
+            >
+              {decade}
+            </motion.button>
+          ))}
         </motion.div>
-      </div>
 
-      {/* Stations Grid */}
-      <div className="px-4 md:px-12 mt-12 max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6 border-t border-white/10 pt-6">
-        {stations.map((station, i) => (
+        {/* Timeline Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Left - Image */}
           <motion.div
-            key={station._id || station.name}
-            variants={fadeUp}
-            custom={i * 0.2}
-            className="relative h-44 md:h-52 lg:h-56 rounded-xl overflow-hidden shadow-md border border-white/10 group transition-all duration-500 hover:shadow-xl bg-black/10"
+            initial={{ opacity: 0, x: -50 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.9, ease: 'easeOut' }}
+            className="relative h-96 w-full rounded-3xl overflow-hidden shadow-2xl border border-white/10 group"
           >
             <Image
-              src={station.imageUrl || '/default-logo.jpg'}
-              alt={`${station.name} Logo`}
+              src={timelineData[activeDecade].image}
+              alt={`Tetemeko Media in ${activeDecade}`}
               fill
-              className="object-cover opacity-20 group-hover:opacity-40 group-hover:scale-105 transition-all duration-700"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-black/60 group-hover:bg-black/50 transition duration-500" />
-            <div className="absolute inset-0 z-10 flex flex-col justify-center items-center px-3 text-center text-white">
-              <div className="w-10 h-10 md:w-12 md:h-12 mb-2 rounded-full border-4 border-white/70 shadow-md overflow-hidden transition-transform group-hover:scale-105">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+            <div className="absolute bottom-6 left-6 z-10">
+              <h3 className="text-2xl font-bold">
+                {timelineData[activeDecade].title}
+              </h3>
+            </div>
+          </motion.div>
+
+          {/* Right - Content */}
+          <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            animate={isInView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.3 }}
+            className="space-y-6"
+          >
+            <h3 className="text-3xl font-bold text-indigo-200">
+              {timelineData[activeDecade].title}
+            </h3>
+            <ul className="space-y-4">
+              {timelineData[activeDecade].events.map((event: string, i: number) => (
+                <li key={i} className="flex items-start gap-3">
+                  <div className="flex-shrink-0 mt-1 w-3 h-3 rounded-full bg-indigo-400" />
+                  <p className="text-gray-300">{event}</p>
+                </li>
+              ))}
+            </ul>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4 mt-8">
+              {[
+                { label: 'Stations', value: `${stations.length}+`, color: 'text-yellow-400' },
+                { label: 'Employees', value: '150+', color: 'text-cyan-400' },
+                { label: 'Awards', value: '24', color: 'text-green-400' }
+              ].map((stat, i) => (
+                <div
+                  key={i}
+                  className="bg-white/5 px-4 py-3 rounded-xl text-center backdrop-blur-md border border-white/10"
+                >
+                  <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+                  <div className="text-sm text-gray-300 mt-1">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* Stations Grid */}
+        <div className="mt-20">
+          <h3 className="text-2xl font-bold mb-8 text-center">Our Network</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {stations.slice(0, 8).map((station, i) => (
+              <motion.div
+                key={station._id || station.name}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, duration: 0.5 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -10 }}
+                className="relative aspect-square rounded-xl overflow-hidden shadow-lg group"
+              >
                 <Image
                   src={station.imageUrl || '/default-logo.jpg'}
                   alt={`${station.name} Logo`}
-                  width={48}
-                  height={48}
-                  className="object-cover w-full h-full"
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-              </div>
-
-              <div className="text-sm md:text-base font-medium flex items-center gap-2 mb-1">
-                {iconMap[typeToIconKey[station.type]]?.()}
-                {station.name}
-              </div>
-
-              <p className="text-xs text-white/70">{station.description}</p>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 flex items-end p-4 z-10">
+                  <div>
+                    <h4 className="font-bold text-white">{station.name}</h4>
+                    <p className="text-xs text-gray-300">{station.type}</p>
+                  </div>
+                </div>
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-indigo-400 transition-all duration-300" />
+              </motion.div>
+            ))}
+          </div>
+          {stations.length > 8 && (
+            <div className="text-center mt-8">
+              <button className="px-6 py-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition">
+                View All {stations.length} Stations
+              </button>
             </div>
-          </motion.div>
-        ))}
+          )}
+        </div>
       </div>
     </section>
-  );
+  )
 }

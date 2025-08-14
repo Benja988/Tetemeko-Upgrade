@@ -1,68 +1,117 @@
-'use client';
+'use client'
+import { motion, AnimatePresence } from 'framer-motion'
+import { feedbacks } from '@/constants/feedback'
+import { FaQuoteLeft, FaChevronLeft, FaChevronRight } from 'react-icons/fa'
+import { useState } from 'react'
 
-import { FC, useState } from 'react';
-import { feedbacks } from '@/constants/feedback'; // Importing feedbacks from a constants file
-import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+export default function Feedback() {
+  const [[currentIndex, direction], setCurrentIndex] = useState([0, 0])
 
-const Feedback: FC = () => {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const handlePrev = () => {
-    setCurrentIndex((prevIndex) => (prevIndex === 0 ? feedbacks.length - 1 : prevIndex - 1));
-  };
-
-  const handleNext = () => {
-    setCurrentIndex((prevIndex) => (prevIndex === feedbacks.length - 1 ? 0 : prevIndex + 1));
-  };
+  const navigate = (newDirection: number) => {
+    setCurrentIndex([(currentIndex + newDirection + feedbacks.length) % feedbacks.length, newDirection])
+  }
 
   return (
-    <section className="bg-gray-50 py-16 px-6">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="text-4xl font-bold text-blue-950 text-center mb-12">What People Say About Us</h2>
-        <div className="relative">
-          {/* Feedback Card */}
-          <div className="flex justify-center">
-            <div className="bg-white rounded-lg shadow-lg p-8 border border-gray-200 w-full max-w-lg text-center">
-              <img
-                src={feedbacks[currentIndex].image}
-                alt={feedbacks[currentIndex].name}
-                className="w-20 h-20 rounded-full object-cover mx-auto mb-4"
-              />
-              <h3 className="text-xl font-semibold text-gray-800">{feedbacks[currentIndex].name}</h3>
-              <p className="text-sm text-gray-500 mb-4">{feedbacks[currentIndex].role}</p>
-              <p className="text-gray-700 italic">"{feedbacks[currentIndex].feedback}"</p>
-            </div>
-          </div>
+    <section className="relative py-20 bg-gradient-to-b from-gray-100 to-white overflow-hidden">
+      {/* Floating speech bubbles */}
+      <div className="absolute inset-0 overflow-hidden opacity-10">
+        {[...Array(8)].map((_, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, scale: 0 }}
+            animate={{ opacity: 0.05, scale: 1 }}
+            transition={{ duration: 1, delay: i * 0.3 }}
+            className="absolute bg-blue-500 rounded-full"
+            style={{
+              width: `${100 + Math.random() * 200}px`,
+              height: `${100 + Math.random() * 200}px`,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`
+            }}
+          />
+        ))}
+      </div>
 
-          {/* Navigation Buttons */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            What Our Listeners Say
+          </h2>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Hear from our community of loyal listeners and partners
+          </p>
+        </div>
+
+        <div className="relative h-[400px] sm:h-[300px]">
+          <AnimatePresence custom={direction}>
+            <motion.div
+              key={currentIndex}
+              custom={direction}
+              initial={{ opacity: 0, x: direction > 0 ? 300 : -300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction > 0 ? -300 : 300 }}
+              transition={{ duration: 0.5 }}
+              className="absolute inset-0 flex items-center justify-center"
+            >
+              <div className="bg-white rounded-2xl shadow-xl p-8 sm:p-10 max-w-3xl mx-auto border border-gray-100">
+                <div className="flex flex-col sm:flex-row gap-8">
+                  <div className="flex-shrink-0">
+                    <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-blue-100">
+                      <img
+                        src={feedbacks[currentIndex].image}
+                        alt={feedbacks[currentIndex].name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <FaQuoteLeft className="text-blue-200 text-3xl mb-4" />
+                    <p className="text-lg text-gray-700 italic mb-6">
+                      "{feedbacks[currentIndex].feedback}"
+                    </p>
+                    <div>
+                      <h4 className="font-bold text-gray-900">{feedbacks[currentIndex].name}</h4>
+                      <p className="text-blue-600">{feedbacks[currentIndex].role}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex justify-center mt-10 gap-4">
           <button
-            onClick={handlePrev}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full shadow-md hover:bg-blue-950 transition"
+            onClick={() => navigate(-1)}
+            className="p-3 bg-white hover:bg-gray-100 rounded-full shadow-md text-blue-600 transition-colors"
           >
             <FaChevronLeft size={20} />
           </button>
+          <div className="flex items-center gap-2">
+            {feedbacks.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex([index, index > currentIndex ? 1 : -1])}
+                className={`w-3 h-3 rounded-full transition-colors ${index === currentIndex ? 'bg-blue-600' : 'bg-gray-300'}`}
+              />
+            ))}
+          </div>
           <button
-            onClick={handleNext}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-primary text-white p-3 rounded-full shadow-md hover:bg-blue-950 transition"
+            onClick={() => navigate(1)}
+            className="p-3 bg-white hover:bg-gray-100 rounded-full shadow-md text-blue-600 transition-colors"
           >
             <FaChevronRight size={20} />
           </button>
         </div>
 
-        {/* Dots Navigation */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {feedbacks.map((_, index) => (
-            <span
-              key={index}
-              className={`w-4 h-4 rounded-full ${
-                index === currentIndex ? 'bg-blue-950' : 'bg-gray-300'
-              }`}
-            ></span>
-          ))}
+        {/* CTA */}
+        <div className="text-center mt-16">
+          <button className="inline-flex items-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-full transition-all shadow-lg hover:shadow-blue-500/30">
+            Share Your Experience
+          </button>
         </div>
       </div>
     </section>
-  );
-};
-
-export default Feedback;
+  )
+}

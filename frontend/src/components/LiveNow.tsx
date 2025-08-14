@@ -1,143 +1,187 @@
-'use client';
+'use client'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
+import Image from 'next/image'
+import Link from 'next/link'
+import { getStations } from '@/services/stations'
+import { Station } from '@/interfaces/Station'
 
-import { useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
-import Link from 'next/link';
-import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
-import { getStations } from '@/services/stations';
-import { Station } from '@/interfaces/Station';
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: {
-      delay: i * 0.15,
-      duration: 0.5,
-      ease: 'easeOut',
-    },
-  }),
-};
+const RadioWaveVisualization = ({ isPlaying }: { isPlaying: boolean }) => {
+  return (
+    <div className="relative w-16 h-16 flex items-center justify-center">
+      {[1, 2, 3].map((i) => (
+        <motion.div
+          key={i}
+          animate={{
+            scale: isPlaying ? [1, 1.5, 1] : 1,
+            opacity: isPlaying ? [0.8, 0] : 0.3
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            repeatDelay: i * 0.3,
+            ease: 'easeOut'
+          }}
+          className="absolute border-2 border-blue-400 rounded-full"
+          style={{ width: `${i * 20}px`, height: `${i * 20}px` }}
+        />
+      ))}
+      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center z-10">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <polygon points="5 3 19 12 5 21 5 3" />
+        </svg>
+      </div>
+    </div>
+  )
+}
 
 export default function LiveNow() {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [stations, setStations] = useState<Station[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const amount = 280;
-      scrollRef.current.scrollBy({
-        left: direction === 'left' ? -amount : amount,
-        behavior: 'smooth',
-      });
-    }
-  };
+  const [stations, setStations] = useState<Station[]>([])
+  const [loading, setLoading] = useState(true)
+  const [hoveredStation, setHoveredStation] = useState<string | null>(null)
+  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchStations = async () => {
-      const data = await getStations();
-      const liveStations = (data || []).filter((station: Station) => station.isActive);
-      setStations(liveStations);
-      setLoading(false);
-    };
+      const data = await getStations()
+      const liveStations = (data || []).filter((station: Station) => station.isActive)
+      setStations(liveStations)
+      setLoading(false)
+    }
+    fetchStations()
+  }, [])
 
-    fetchStations();
-  }, []);
+  const togglePlay = (stationId: string) => {
+    setCurrentlyPlaying(currentlyPlaying === stationId ? null : stationId)
+  }
 
   return (
-    <section className="py-20 bg-[#07131F] text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
+    <section className="py-20 bg-gradient-to-b from-[#07131F] to-[#0A1B2D] text-white relative overflow-hidden">
+      {/* Floating audio waves background */}
+      <div className="absolute inset-0 overflow-hidden opacity-20">
+        {[...Array(10)].map((_, i) => (
+          <motion.div
+            key={i}
+            animate={{
+              x: ['-100%', '100%'],
+              opacity: [0, 0.5, 0]
+            }}
+            transition={{
+              duration: 15 + Math.random() * 20,
+              repeat: Infinity,
+              delay: Math.random() * 5
+            }}
+            className="absolute h-1 bg-blue-400 rounded-full"
+            style={{
+              width: `${100 + Math.random() * 300}px`,
+              top: `${Math.random() * 100}%`
+            }}
+          />
+        ))}
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 relative z-10">
         {/* Header */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-2">Live Now</h2>
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl font-bold mb-4">Live Broadcasts</h2>
           <div className="mx-auto h-1 w-28 bg-gradient-to-r from-blue-400 via-blue-600 to-blue-400 rounded-full mb-4" />
-          <p className="text-blue-200 max-w-xl mx-auto text-base sm:text-lg">
-            Tune in to our stations broadcasting live across East Africa.
+          <p className="text-blue-200 max-w-xl mx-auto text-lg">
+            Tune in to our stations broadcasting live right now
           </p>
         </div>
 
-        {/* Mobile Arrows */}
-        <div className="relative sm:hidden mt-6 mb-3">
-          <button
-            onClick={() => scroll('left')}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-[#0a1b2d] p-2 rounded-full shadow text-white"
-          >
-            <IoIosArrowBack size={20} />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-[#0a1b2d] p-2 rounded-full shadow text-white"
-          >
-            <IoIosArrowForward size={20} />
-          </button>
-        </div>
-
-        {/* Station Cards */}
+        {/* Stations List - Interactive Audio Wave */}
         {loading ? (
-          <p className="text-center text-blue-200">Loading live stations...</p>
+          <div className="flex justify-center">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : stations.length === 0 ? (
           <p className="text-center text-blue-400">No stations are live at the moment.</p>
         ) : (
-          <div
-            ref={scrollRef}
-            className="flex gap-5 overflow-x-auto sm:overflow-visible sm:grid sm:grid-cols-2 lg:grid-cols-3 hide-scrollbar scroll-smooth px-1 sm:px-0"
-          >
-            {stations.map((station, index) => (
+          <div className="space-y-6 max-w-4xl mx-auto">
+            {stations.map((station) => (
               <motion.div
                 key={station._id}
-                custom={index}
-                initial="hidden"
-                whileInView="visible"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
                 viewport={{ once: true }}
-                variants={cardVariants}
-                className="min-w-[250px] sm:min-w-0 bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 sm:p-5 flex flex-col justify-between shadow-md hover:shadow-xl transition-all duration-300"
+                onMouseEnter={() => setHoveredStation(station._id)}
+                onMouseLeave={() => setHoveredStation(null)}
+                className="relative bg-white/5 backdrop-blur-md rounded-xl p-4 sm:p-6 border border-white/10 hover:border-blue-500/50 transition-all duration-300"
               >
-                {/* Logo & Name */}
-                <div className="flex items-center gap-4 mb-3">
-                  <div className="relative w-14 h-14 rounded-full overflow-hidden border border-white/20">
+                <div className="flex items-center gap-4">
+                  {/* Station Logo */}
+                  <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 border-white/20 flex-shrink-0">
                     <Image
-                      src={station.imageUrl}
+                      src={station.imageUrl || '/default-logo.jpg'}
                       alt={station.name}
                       fill
                       className="object-cover"
                     />
                   </div>
-                  <div className="text-blue-100 font-semibold text-base sm:text-lg">
-                    {station.name}
+
+                  {/* Station Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-xl font-bold text-white truncate">{station.name}</h3>
+                    <p className="text-blue-300 text-sm mb-2">{station.type}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {station.genre.slice(0, 3).map((tag, idx) => (
+                        <span
+                          key={idx}
+                          className="bg-blue-600/20 border border-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full text-xs"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Play Button with Visualizer */}
+                  <button
+                    onClick={() => togglePlay(station._id)}
+                    className="flex-shrink-0"
+                  >
+                    <RadioWaveVisualization isPlaying={currentlyPlaying === station._id} />
+                  </button>
                 </div>
 
-                {/* Description */}
-                <p className="text-blue-300 text-sm mb-4 hidden sm:block line-clamp-3">
-                  {station.description}
-                </p>
-
-                {/* Bottom Section */}
-                <div className="flex items-center justify-between mt-auto">
-                  <div className="flex gap-1 flex-wrap text-xs">
-                    {station.genre.map((tag, idx) => (
-                      <span
-                        key={idx}
-                        className="bg-blue-600/20 border border-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <Link href={`/stations/${station._id}`} passHref>
-                    <button className="ml-2 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-xs sm:text-sm font-semibold rounded-lg transition">
-                      Listen Live
-                    </button>
-                  </Link>
-                </div>
+                {/* Expanded Info on Hover */}
+                {hoveredStation === station._id && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-4 overflow-hidden"
+                  >
+                    <p className="text-gray-300 text-sm">{station.description}</p>
+                    <div className="flex justify-between items-center mt-4">
+                      <div className="flex items-center gap-2 text-sm text-blue-300">
+                        <span>Currently playing:</span>
+                        <span className="font-medium">Latest Hits Mix</span>
+                      </div>
+                      <Link href={`/stations/${station._id}`} passHref>
+                        <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-sm font-medium rounded-lg transition">
+                          Visit Station
+                        </button>
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
               </motion.div>
             ))}
           </div>
         )}
+
+        {/* All Stations Link */}
+        <div className="text-center mt-16">
+          <Link href="/stations">
+            <button className="inline-flex items-center px-6 py-3 border border-white/20 hover:border-blue-500 text-sm font-medium rounded-full text-white bg-white/5 hover:bg-white/10 transition-all">
+              Explore All Stations
+            </button>
+          </Link>
+        </div>
       </div>
     </section>
-  );
+  )
 }

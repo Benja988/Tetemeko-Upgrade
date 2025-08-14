@@ -21,7 +21,6 @@ const CategorySchema = new mongoose.Schema({
   slug: {
     type: String,
     required: [true, 'Slug is required'],
-    unique: true,
     trim: true,
     minlength: [1, 'Slug must be at least 1 character'],
     maxlength: [100, 'Slug cannot exceed 100 characters'],

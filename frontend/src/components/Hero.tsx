@@ -1,22 +1,28 @@
 'use client'
 import { HERO_MEDIA } from '@/constants/heroMedia'
 import { useEffect, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import HeroMedia from './Hero/HeroMedia'
 import HeroNavbar from './Hero/HeroNavbar'
 import HeroContent from './Hero/HeroContent'
 import HeroControls from './Hero/HeroControls'
 
+const transition = { duration: 1.2, ease: [0.76, 0, 0.24, 1] }
+
 export default function Hero() {
   const [current, setCurrent] = useState(0)
   const [paused, setPaused] = useState(false)
+  const [direction, setDirection] = useState(0) // 0: next, 1: prev
 
   const total = HERO_MEDIA.length
 
   const nextSlide = useCallback(() => {
+    setDirection(0)
     setCurrent(c => (c + 1) % total)
   }, [total])
 
   const prevSlide = useCallback(() => {
+    setDirection(1)
     setCurrent(c => (c - 1 + total) % total)
   }, [total])
 
@@ -27,19 +33,88 @@ export default function Hero() {
     return () => clearInterval(id)
   }, [paused, nextSlide])
 
+  // 3D tilt effect
+  const [tilt, setTilt] = useState({ x: 0, y: 0 })
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+    setTilt({
+      x: (x - centerX) / 20,
+      y: (y - centerY) / 20
+    })
+  }
+
   return (
     <section
       className="relative min-h-screen w-full bg-primary text-white overflow-hidden flex flex-col"
       onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      onMouseLeave={() => {
+        setPaused(false)
+        setTilt({ x: 0, y: 0 })
+      }}
+      onMouseMove={handleMouseMove}
     >
-      <HeroMedia media={HERO_MEDIA[current]} />
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden z-0">
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-900/20 rounded-full filter blur-[100px]"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-900/20 rounded-full filter blur-[100px]"></div>
+      </div>
 
-      <div className="absolute inset-0 bg-black bg-opacity-60 z-10" />
+      <AnimatePresence custom={direction} mode="wait">
+        <motion.div
+          key={current}
+          custom={direction}
+          initial={{ opacity: 0, x: direction === 0 ? 100 : -100 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: direction === 0 ? -100 : 100 }}
+          transition={transition}
+          style={{
+            transform: `perspective(1000px) rotateX(${-tilt.y}deg) rotateY(${tilt.x}deg)`,
+            transition: 'transform 0.5s cubic-bezier(0.17, 0.67, 0.83, 0.67)'
+          }}
+          className="absolute inset-0 z-10"
+        >
+          <HeroMedia media={HERO_MEDIA[current]} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+        </motion.div>
+      </AnimatePresence>
 
       <HeroNavbar />
       <HeroContent />
       <HeroControls onPrev={prevSlide} onNext={nextSlide} />
+
+      {/* Progress indicator */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+        {HERO_MEDIA.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => {
+              setDirection(i > current ? 0 : 1)
+              setCurrent(i)
+            }}
+            className="h-1.5 rounded-full transition-all duration-300"
+            style={{
+              width: i === current ? '24px' : '8px',
+              backgroundColor: i === current ? 'white' : 'rgba(255,255,255,0.3)'
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Scrolling indicator */}
+      <motion.div
+        animate={{ y: [0, 10, 0] }}
+        transition={{ duration: 1.5, repeat: Infinity }}
+        className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center"
+      >
+        <span className="text-xs mb-1">Scroll Down</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 5v14M19 12l-7 7-7-7"/>
+        </svg>
+      </motion.div>
     </section>
   )
 }
