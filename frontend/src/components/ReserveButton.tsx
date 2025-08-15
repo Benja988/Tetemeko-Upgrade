@@ -35,7 +35,7 @@ export default function ReserveButton({ variant = 'primary' }: { variant?: 'prim
       }}
       viewport={{ once: true, margin: '0px 0px -50px 0px' }}
     >
-      <Link href="/requestServices" passHref legacyBehavior>
+      <Link href="/requestServices" passHref>
         <motion.a
           whileHover={{ 
             y: -4,

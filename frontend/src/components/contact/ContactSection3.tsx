@@ -1,6 +1,7 @@
-"use client";
-
+'use client';
 import { useState } from "react";
+import { motion } from 'framer-motion';
+import { FiSend, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 
 export default function ContactSection3() {
   const [formData, setFormData] = useState({
@@ -11,6 +12,7 @@ export default function ContactSection3() {
   });
 
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,95 +20,147 @@ export default function ContactSection3() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
     // Simulate form submission
-    if (!formData.name || !formData.email || !formData.message) {
-      setStatus("error");
-      return;
-    }
-
-    setStatus("success");
-    // Reset form
-    setFormData({ name: "", email: "", subject: "", message: "" });
+    setTimeout(() => {
+      if (!formData.name || !formData.email || !formData.message) {
+        setStatus("error");
+      } else {
+        setStatus("success");
+        setFormData({ name: "", email: "", subject: "", message: "" });
+      }
+      setIsSubmitting(false);
+    }, 1500);
   };
 
   return (
-    <section className="bg-white py-20 px-6 md:px-16 text-gray-800">
+    <section id="contact-form" className="bg-white py-16 px-4 sm:px-6 text-gray-800">
       <div className="max-w-4xl mx-auto">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10">Send Us a Message</h2>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="text-center mb-12"
+        >
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Send Us a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Message</span>
+          </h2>
+          <p className="text-gray-600 max-w-xl mx-auto">
+            Fill out the form below and our team will get back to you as soon as possible
+          </p>
+        </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 bg-gray-50 p-8 rounded-xl shadow-md">
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Your Name *</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="John Doe"
-              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
-          </div>
+        <motion.form 
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+          className="space-y-6 bg-gray-50 p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Name */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Your Name *</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="John Doe"
+                className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                required
+              />
+            </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Email Address *</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="you@example.com"
-              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-            />
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">Email Address *</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                required
+              />
+            </div>
           </div>
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium mb-1">Subject</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700">Subject</label>
             <input
               type="text"
               name="subject"
               value={formData.subject}
               onChange={handleChange}
               placeholder="I want to advertise"
-              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
             />
           </div>
 
           {/* Message */}
           <div>
-            <label className="block text-sm font-medium mb-1">Message *</label>
+            <label className="block text-sm font-medium mb-2 text-gray-700">Message *</label>
             <textarea
               name="message"
               rows={5}
               value={formData.message}
               onChange={handleChange}
               placeholder="Type your message here..."
-              className="w-full bg-white px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
               required
             ></textarea>
           </div>
 
           {/* Feedback */}
           {status === "success" && (
-            <p className="text-green-600 font-medium">Thank you! We’ll get back to you shortly.</p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 bg-green-50 text-green-700 p-4 rounded-lg border border-green-100"
+            >
+              <FiCheckCircle className="text-green-500 text-xl" />
+              <p className="font-medium">Thank you! We'll get back to you shortly.</p>
+            </motion.div>
           )}
           {status === "error" && (
-            <p className="text-red-600 font-medium">Please fill out all required fields.</p>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 bg-red-50 text-red-700 p-4 rounded-lg border border-red-100"
+            >
+              <FiAlertCircle className="text-red-500 text-xl" />
+              <p className="font-medium">Please fill out all required fields.</p>
+            </motion.div>
           )}
 
           {/* Submit */}
-          <button
+          <motion.button
             type="submit"
-            className="bg-primary text-white font-semibold px-6 py-3 rounded-md hover:bg-primary/90 transition"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={isSubmitting}
+            className={`w-full flex items-center justify-center gap-2 font-semibold px-6 py-3 rounded-lg transition-all ${
+              isSubmitting 
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-gradient-to-r from-primary to-secondary text-white shadow-md hover:shadow-lg'
+            }`}
           >
-            Send Message
-          </button>
-        </form>
+            {isSubmitting ? (
+              'Sending...'
+            ) : (
+              <>
+                <FiSend />
+                Send Message
+              </>
+            )}
+          </motion.button>
+        </motion.form>
       </div>
     </section>
   );
