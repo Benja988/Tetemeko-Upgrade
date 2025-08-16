@@ -32,7 +32,7 @@ export default function RequestServicesPage() {
       <Navbar />
 
       {/* Hero Section */}
-      <motion.section 
+      <motion.section
         className="relative bg-gradient-to-br from-blue-900 to-indigo-900 py-20 px-4 text-white overflow-hidden"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -45,7 +45,7 @@ export default function RequestServicesPage() {
         </div>
 
         <div className="max-w-5xl mx-auto relative z-10 text-center">
-          <motion.h1 
+          <motion.h1
             className="text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight"
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -53,7 +53,7 @@ export default function RequestServicesPage() {
           >
             Professional <span className="text-blue-300">Media Services</span> On Demand
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-xl text-blue-100 max-w-3xl mx-auto mb-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -65,7 +65,7 @@ export default function RequestServicesPage() {
       </motion.section>
 
       {/* Form Section */}
-      <motion.section 
+      <motion.section
         className="max-w-4xl mx-auto px-4 sm:px-6 py-12 md:py-16"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -75,7 +75,7 @@ export default function RequestServicesPage() {
           <StepIndicator step={step} />
         </div>
 
-        <motion.div 
+        <motion.div
           className="bg-white rounded-xl shadow-2xl overflow-hidden border border-gray-100"
           layout
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
@@ -90,7 +90,7 @@ export default function RequestServicesPage() {
             <StepThree step={step} onSubmit={onSubmit} onBack={onBack} formData={formData} setFormData={setFormData} />
           )}
           {step === 4 && (
-            <motion.div 
+            <motion.div
               className="text-center px-6 py-12 sm:px-12"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -101,7 +101,7 @@ export default function RequestServicesPage() {
               </div>
               <h2 className="text-3xl font-bold text-gray-800 mb-4">Request Submitted!</h2>
               <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                We've received your service request. Our team will contact you within 24 hours to confirm details.
+                We&apos;ve received your service request. Our team will contact you within 24 hours to confirm details.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
@@ -123,7 +123,7 @@ export default function RequestServicesPage() {
       </motion.section>
 
       {/* Services CTA Section */}
-      <motion.section 
+      <motion.section
         className="bg-gray-50 py-16 px-4 sm:px-6"
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}

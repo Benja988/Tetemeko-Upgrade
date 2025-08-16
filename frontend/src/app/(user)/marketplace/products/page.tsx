@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Product } from '@/interfaces/Products';
 
 import { products as sampleProducts } from '@/data/products';
@@ -8,7 +8,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import CategoryFilter from '@/components/marketplace/CategoryFilter';
 import SearchBar from '@/components/marketplace/SearchBar';
 
-import ProductCard from '@/components/marketplace/ProductCard';
+// import ProductCard from '@/components/marketplace/ProductCard';
 import SidebarFilters from '@/components/marketplace/SidebarFilters';
 import ProductsGrid from '@/components/marketplace/ProductsGrid';
 import MarketPlaceFooter from '@/components/marketplace/MarketPlaceFooter';

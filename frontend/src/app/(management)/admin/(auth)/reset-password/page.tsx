@@ -33,10 +33,14 @@ export default function ResetPasswordPage() {
       await resetPassword(token, password)
       setSuccess('Password has been reset successfully.')
       setTimeout(() => router.push('/admin/login'), 2000)
-    } catch (err: any) {
-      setError(err.message || 'Reset failed.')
+    }catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Reset failed.');
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 

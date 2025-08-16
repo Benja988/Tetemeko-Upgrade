@@ -2,6 +2,8 @@ import { getNewsById } from '@/services/news/newsService';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import NewsFooter from '@/components/news/NewsFooter';
+import Image from 'next/image';
+
 
 interface Props {
   params: Promise<{
@@ -55,9 +57,11 @@ export default async function ArticlePage({ params }: Props) {
             </p>
           )}
 
-          <img
+          <Image
             src={news.thumbnail || news.featuredImage || '/placeholder.jpg'}
             alt={news.title}
+            width={1200}
+            height={600}
             className="w-full h-96 object-cover rounded-lg mb-8"
           />
 

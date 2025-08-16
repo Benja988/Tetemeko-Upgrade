@@ -1,4 +1,4 @@
-import Footer from '@/components/Footer';
+// import Footer from '@/components/Footer';
 import TopNav from '@/components/TopNav';
 
 export default function UsersLayout({ children }: { children: React.ReactNode }) {

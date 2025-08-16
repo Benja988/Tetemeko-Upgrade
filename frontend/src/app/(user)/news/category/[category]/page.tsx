@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import NewsFooter from '@/components/news/NewsFooter';
+import Image from 'next/image';
 
 interface Props {
   params: {
@@ -45,7 +46,7 @@ export default async function CategoryPage({ params }: Props) {
           {newsList.map((news) => (
             <Link href={`/news/article/${slugify(news.title)}-${news._id}`} key={news._id}>
               <div className="bg-gray-900 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition">
-                <img
+                <Image
                   src={news.thumbnail || news.featuredImage || '/placeholder.jpg'}
                   alt={news.title}
                   className="w-full h-48 object-cover"

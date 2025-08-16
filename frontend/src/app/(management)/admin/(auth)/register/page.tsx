@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
+import { AxiosError } from 'axios'
 
 export default function AdminRegisterPage() {
   const router = useRouter()
@@ -86,24 +87,32 @@ export default function AdminRegisterPage() {
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitError('')
-    if (!validateAll()) return
+  e.preventDefault();
+  setSubmitError('');
+  if (!validateAll()) return;
 
-    setLoading(true)
-    try {
-      await registerAdmin(form.name, form.email, form.password, form.adminSecret)
-      router.push('/admin/login')
-    } catch (err: any) {
-      const message =
-        err?.response?.data?.message ||
-        err?.message ||
-        'Registration failed. Please try again.'
-      setSubmitError(message)
-    } finally {
-      setLoading(false)
+  setLoading(true);
+  try {
+    await registerAdmin(form.name, form.email, form.password, form.adminSecret);
+    router.push('/admin/login');
+  } catch (err: unknown) {
+  let message = 'Registration failed. Please try again.'
+
+  if ((err as AxiosError)?.response?.data && typeof (err as AxiosError).response?.data === 'object') {
+    const data = (err as AxiosError).response?.data as { message?: string }
+    if (data.message) {
+      message = data.message
     }
+  } else if (err instanceof Error) {
+    message = err.message
   }
+
+  setSubmitError(message)
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">

@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
-import { label } from 'framer-motion/client'
 
 export default function ForgotPasswordPage() {
   const { forgotPassword } = useAuth()
@@ -21,8 +20,14 @@ export default function ForgotPasswordPage() {
     try {
       await forgotPassword(email)
       setMessage('Check your email for reset instructions.')
-    } catch (err: any) {
-      setError(err.message || 'Failed to send reset email.')
+    }
+
+    catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to send reset email.');
+      }
     } finally {
       setLoading(false)
     }

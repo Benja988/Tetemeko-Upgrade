@@ -1,6 +1,6 @@
 'use client';
 
-import { FC, useState, useEffect } from 'react';
+import { FC } from 'react';
 
 // Core layout
 import Navbar from '@/components/Navbar';
