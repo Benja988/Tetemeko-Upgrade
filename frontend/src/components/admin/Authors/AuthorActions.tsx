@@ -1,5 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
+import { FiPlus, FiEdit2, FiCheck, FiDownload, FiTrash2 } from 'react-icons/fi';
+
 interface AuthorActionsProps {
   onCreate: () => void;
   onExport: () => void;
@@ -9,11 +12,19 @@ interface AuthorActionsProps {
   disableUpdate?: boolean;
   disableVerify?: boolean;
   disableDelete?: boolean;
+  selectedCount?: number;
+  isLoading?: boolean;
 }
 
-const buttonBaseClasses = `flex items-center justify-center gap-2 px-4 py-2 rounded text-sm font-semibold transition 
-  focus:outline-none focus:ring-2 focus:ring-offset-1
-  w-full sm:w-auto`; // full width on mobile, auto width on larger
+type ButtonVariant = 'primary' | 'success' | 'warning' | 'danger' | 'info';
+
+const ButtonClasses: Record<ButtonVariant, string> = {
+  primary: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500',
+  success: 'bg-green-600 hover:bg-green-700 focus:ring-green-500',
+  warning: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500',
+  danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
+  info: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500',
+};
 
 export default function AuthorActions({
   onCreate,
@@ -24,76 +35,77 @@ export default function AuthorActions({
   disableUpdate = false,
   disableVerify = false,
   disableDelete = false,
+  selectedCount = 0,
+  isLoading = false,
 }: AuthorActionsProps) {
+  const baseClasses = useMemo(() => 
+    `flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all
+     focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-opacity-75
+     disabled:opacity-60 disabled:cursor-not-allowed
+     w-full sm:w-auto`, 
+  []);
+
+  const getButtonClasses = (variant: ButtonVariant, disabled?: boolean) => 
+    `${baseClasses} ${ButtonClasses[variant]} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`;
+
+  const buttonLabels = useMemo(() => ({
+    create: selectedCount > 0 ? `Create (${selectedCount} selected)` : 'Create',
+    update: selectedCount > 1 ? `Update ${selectedCount}` : 'Update Selected',
+    verify: selectedCount > 1 ? `Verify ${selectedCount}` : 'Verify Selected',
+    delete: selectedCount > 1 ? `Delete ${selectedCount}` : 'Delete Selected',
+    export: 'Export',
+  }), [selectedCount]);
+
   return (
-    <div className="flex flex-col sm:flex-row sm:flex-wrap justify-end gap-3 mb-6">
-      
+    <div className="flex flex-col sm:flex-row flex-wrap gap-3">
       <button
         onClick={onCreate}
-        title="Create a new author"
-        className={`${buttonBaseClasses} bg-green-600 text-white hover:bg-green-700 focus:ring-green-500`}
-        type="button"
+        disabled={isLoading}
+        className={getButtonClasses('success')}
+        aria-label="Create new author"
       >
-        {/* Plus icon */}
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-        </svg>
-        Create
+        <FiPlus className="w-4 h-4" />
+        {buttonLabels.create}
       </button>
 
       <button
         onClick={onUpdateSelected}
-        disabled={disableUpdate}
-        title={disableUpdate ? "No authors selected" : "Update selected authors"}
-        className={`${buttonBaseClasses} bg-yellow-600 text-white hover:bg-yellow-700 focus:ring-yellow-500 disabled:opacity-50 disabled:cursor-not-allowed`}
-        type="button"
+        disabled={disableUpdate || isLoading}
+        className={getButtonClasses('warning', disableUpdate)}
+        aria-label={disableUpdate ? "No author selected to update" : "Update selected author"}
       >
-        {/* Pencil/edit icon */}
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5m-7-7l7 7" />
-        </svg>
-        Update Selected
+        <FiEdit2 className="w-4 h-4" />
+        {buttonLabels.update}
       </button>
 
       <button
         onClick={onVerifySelected}
-        disabled={disableVerify}
-        title={disableVerify ? "No authors selected" : "Verify selected authors"}
-        className={`${buttonBaseClasses} bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed`}
-        type="button"
+        disabled={disableVerify || isLoading}
+        className={getButtonClasses('info', disableVerify)}
+        aria-label={disableVerify ? "No author selected to verify" : "Verify selected author"}
       >
-        {/* Check icon */}
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-        </svg>
-        Verify Selected
+        <FiCheck className="w-4 h-4" />
+        {buttonLabels.verify}
       </button>
 
       <button
         onClick={onExport}
-        title="Export authors data"
-        className={`${buttonBaseClasses} bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500`}
-        type="button"
+        disabled={isLoading}
+        className={getButtonClasses('primary')}
+        aria-label="Export authors data"
       >
-        {/* Download icon */}
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2m-6-4v6m0 0l-3-3m3 3l3-3M12 12V4" />
-        </svg>
-        Export
+        <FiDownload className="w-4 h-4" />
+        {buttonLabels.export}
       </button>
 
       <button
         onClick={onDeleteSelected}
-        disabled={disableDelete}
-        title={disableDelete ? "No authors selected" : "Delete selected authors"}
-        className={`${buttonBaseClasses} bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed`}
-        type="button"
+        disabled={disableDelete || isLoading}
+        className={getButtonClasses('danger', disableDelete)}
+        aria-label={disableDelete ? "No author selected to delete" : "Delete selected author"}
       >
-        {/* Trash icon */}
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-4h4m-4 0a1 1 0 00-1 1v1h6V4a1 1 0 00-1-1m-4 0h4" />
-        </svg>
-        Delete Selected
+        <FiTrash2 className="w-4 h-4" />
+        {buttonLabels.delete}
       </button>
     </div>
   );

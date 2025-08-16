@@ -1,31 +1,30 @@
 'use client';
 
-import clsx from 'clsx';
+import type { AuthorFilter } from './AuthorsPageLayout';
 
 interface AuthorTabsProps {
-  activeFilter: string;
-  setFilter: (filter: string) => void;
+  activeFilter: AuthorFilter;
+  setFilter: (filter: AuthorFilter) => void;
 }
 
 const tabs = [
-  { label: 'All', value: '' },
-  { label: 'Unverified', value: 'unverified' },
-  { label: 'verified', value: 'verified' },
+  { label: 'All Authors', value: '' },
+  { label: 'Pending Verification', value: 'unverified' },
+  { label: 'Verified', value: 'verified' },
 ];
 
 export default function AuthorTabs({ activeFilter, setFilter }: AuthorTabsProps) {
   return (
-    <div className="flex gap-4 border-b border-gray-300">
+    <div className="flex border-b border-gray-200">
       {tabs.map((tab) => (
         <button
           key={tab.value}
-          onClick={() => setFilter(tab.value)}
-          className={clsx(
-            'pb-2 text-sm font-medium border-b-2 transition-all',
+          onClick={() => setFilter(tab.value as AuthorFilter)}
+          className={`px-4 py-2 text-sm font-medium relative ${
             activeFilter === tab.value
-              ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
-              : 'border-transparent text-gray-600 hover:text-[var(--color-primary)]'
-          )}
+              ? 'text-blue-600 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
           {tab.label}
         </button>

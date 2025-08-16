@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Author } from '@/types/author';
-
 import {
   deleteAuthor,
   getAuthors,
@@ -11,172 +10,234 @@ import {
   verifyAuthor,
 } from '@/services/authors';
 
+// Components
 import AuthorTabs from './AuthorTabs';
 import AuthorSearchBar from './AuthorSearchBar';
 import AuthorFilterBar from './AuthorFilterBar';
 import AuthorActions from './AuthorActions';
 import AuthorTable from './AuthorTable';
 import { CreateAuthorModal } from './CreateAuthorModal';
-import UpdateAuthorModal from './UpdateAuthorModal';
 import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ExportAuthorsModal } from './ExportAuthorsModal';
+import { AuthorStats } from './AuthorStats';
+import { UpdateAuthorModal } from './UpdateAuthorModal';
+import { BatchVerifyModal } from './BatchVerifyModal';
 
 interface AuthorsPageLayoutProps {
   heading: string;
   defaultFilter?: string;
 }
 
+// 🔥 Unified filter type
+export type AuthorFilter =
+  | ''
+  | 'unverified'
+  | 'verified'
+  | 'author'
+  | 'contributor'
+  | 'editor';
+
 export default function AuthorsPageLayout({
   heading,
   defaultFilter = '',
 }: AuthorsPageLayoutProps) {
+  // State management
   const [rawAuthors, setRawAuthors] = useState<Author[]>([]);
-  const [authors, setAuthors] = useState<Author[]>([]);
+  const [filteredAuthors, setFilteredAuthors] = useState<Author[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterOption, setFilterOption] = useState(defaultFilter);
-  const [uiFilter, setUiFilter] = useState('');
+  const [filterOption, setFilterOption] = useState<AuthorFilter>('');
+  const [uiFilter, setUiFilter] = useState<AuthorFilter>(
+    defaultFilter as AuthorFilter
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [selectedAuthorIds, setSelectedAuthorIds] = useState<string[]>([]);
-  const [selectedAuthorNames, setSelectedAuthorNames] = useState<string[]>([]);
   const [authorToUpdate, setAuthorToUpdate] = useState<Author | null>(null);
 
+  // Modal states
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
+  const [isBatchVerifyModalOpen, setBatchVerifyModalOpen] = useState(false);
 
-  const applyFilter = (authors: Author[], filter: string) => {
-    if (filter === 'unverified') return authors.filter((a) => !a.isVerified);
-    if (filter === 'verified') return authors.filter((a) => a.isVerified);
-    return authors;
-  };
+  // Derived state
+  const selectedAuthors = useMemo(() => {
+    return rawAuthors.filter((author) =>
+      selectedAuthorIds.includes(author._id)
+    );
+  }, [rawAuthors, selectedAuthorIds]);
 
-  const fetchAuthors = async () => {
+  const stats = useMemo(() => {
+    return {
+      total: rawAuthors.length,
+      verified: rawAuthors.filter((a) => a.isVerified).length,
+      unverified: rawAuthors.filter((a) => !a.isVerified).length,
+    };
+  }, [rawAuthors]);
+
+  // Data filtering logic
+  const applyFilters = useCallback(
+    (authors: Author[], filter: AuthorFilter, search: string) => {
+      let result = [...authors];
+
+      if (search) {
+        const query = search.toLowerCase();
+        result = result.filter(
+          (a) =>
+            a.name.toLowerCase().includes(query) ||
+            (a.email && a.email.toLowerCase().includes(query)) ||
+            (a.bio && a.bio.toLowerCase().includes(query))
+        );
+      }
+
+      if (filter === 'unverified') return result.filter((a) => !a.isVerified);
+      if (filter === 'verified') return result.filter((a) => a.isVerified);
+
+      // role filters (optional if your Author has a `role`)
+      if (['author', 'contributor', 'editor'].includes(filter)) {
+        return result.filter((a) => a.role === filter);
+      }
+
+      return result;
+    },
+    []
+  );
+
+  // Data fetching
+  const fetchAuthors = useCallback(async () => {
     try {
       setIsLoading(true);
       const fetched = await getAuthors();
       setRawAuthors(fetched);
-      setAuthors(applyFilter(fetched, uiFilter));
+      setFilteredAuthors(applyFilters(fetched, uiFilter, searchQuery));
       setSelectedAuthorIds([]);
     } catch (error) {
       console.error('Error fetching authors:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [uiFilter, searchQuery, applyFilters]);
 
+  // Effects
   useEffect(() => {
     fetchAuthors();
-  }, [filterOption]);
+  }, [filterOption, fetchAuthors]);
 
   useEffect(() => {
-    setAuthors(applyFilter(rawAuthors, uiFilter));
-  }, [uiFilter, rawAuthors]);
+    setFilteredAuthors(applyFilters(rawAuthors, uiFilter, searchQuery));
+  }, [uiFilter, rawAuthors, searchQuery, applyFilters]);
 
-  useEffect(() => {
-    const names = selectedAuthorIds.map((id) => {
-      const found = rawAuthors.find((a) => a._id === id);
-      return found?.name ?? id;
-    });
-    setSelectedAuthorNames(names);
-  }, [selectedAuthorIds, rawAuthors]);
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    if (!query.trim()) {
-      fetchAuthors();
-      return;
-    }
-    try {
-      setIsLoading(true);
-      const results = await searchAuthors(query);
-      setAuthors(applyFilter(results, uiFilter));
-      setSelectedAuthorIds([]);
-    } catch (error) {
-      console.error('Search failed:', error);
-      setAuthors([]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDeleteAuthors = async () => {
-    try {
-      for (const id of selectedAuthorIds) {
-        await deleteAuthor(id);
+  // Event handlers
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query);
+      if (!query.trim()) {
+        await fetchAuthors();
+        return;
       }
+      try {
+        setIsLoading(true);
+        const results = await searchAuthors(query);
+        setFilteredAuthors(applyFilters(results, uiFilter, query));
+      } catch (error) {
+        console.error('Search failed:', error);
+        setFilteredAuthors([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [fetchAuthors, uiFilter, applyFilters]
+  );
+
+  const handleDeleteAuthors = useCallback(async () => {
+    try {
+      await Promise.all(selectedAuthorIds.map((id) => deleteAuthor(id)));
       await fetchAuthors();
     } catch (error) {
       console.error('Delete failed:', error);
     } finally {
       setDeleteModalOpen(false);
-      setSelectedAuthorIds([]);
     }
-  };
+  }, [selectedAuthorIds, fetchAuthors]);
 
-  const handleVerify = async () => {
-    if (selectedAuthorIds.length !== 1) return;
-    try {
-      setIsLoading(true);
-      await verifyAuthor(selectedAuthorIds[0]);
-      await fetchAuthors();
-    } catch (error) {
-      console.error('Verification failed:', error);
-    } finally {
-      setIsLoading(false);
-      setSelectedAuthorIds([]);
+  const handleVerify = useCallback(async () => {
+    if (selectedAuthorIds.length === 1) {
+      try {
+        setIsLoading(true);
+        await verifyAuthor(selectedAuthorIds[0]);
+        await fetchAuthors();
+      } catch (error) {
+        console.error('Verification failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else if (selectedAuthorIds.length > 1) {
+      setBatchVerifyModalOpen(true);
     }
-  };
+  }, [selectedAuthorIds, fetchAuthors]);
 
-  const handleOpenUpdateModal = () => {
+  const handleOpenUpdateModal = useCallback(() => {
     if (selectedAuthorIds.length !== 1) return;
     const selected = rawAuthors.find((a) => a._id === selectedAuthorIds[0]);
     if (selected) {
       setAuthorToUpdate(selected);
       setUpdateModalOpen(true);
     }
-  };
+  }, [selectedAuthorIds, rawAuthors]);
 
-  const handleUpdateSubmit = async (data: Partial<Author>) => {
-    if (!authorToUpdate) return;
-    try {
-      setIsLoading(true);
-      await updateAuthor(authorToUpdate._id, data);
-      await fetchAuthors();
-      setUpdateModalOpen(false);
-      setAuthorToUpdate(null);
-      setSelectedAuthorIds([]);
-    } catch (error) {
-      console.error('Update failed:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const handleUpdateSubmit = useCallback(
+    async (data: Partial<Author>) => {
+      if (!authorToUpdate) return;
+      try {
+        setIsLoading(true);
+        await updateAuthor(authorToUpdate._id, data);
+        await fetchAuthors();
+        setUpdateModalOpen(false);
+      } catch (error) {
+        console.error('Update failed:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [authorToUpdate, fetchAuthors]
+  );
 
-  const toggleSelectAll = () => {
-    if (selectedAuthorIds.length === authors.length) {
-      setSelectedAuthorIds([]);
-    } else {
-      setSelectedAuthorIds(authors.map((a) => a._id));
-    }
-  };
+  const toggleSelectAll = useCallback(() => {
+    setSelectedAuthorIds((prev) =>
+      prev.length === filteredAuthors.length
+        ? []
+        : filteredAuthors.map((a) => a._id)
+    );
+  }, [filteredAuthors]);
+
+  const toggleAuthorSelection = useCallback((id: string) => {
+    setSelectedAuthorIds((prev) =>
+      prev.includes(id) ? prev.filter((aid) => aid !== id) : [...prev, id]
+    );
+  }, []);
 
   return (
-    <section className="min-h-screen bg-[var(--color-light)] px-4 py-6">
+    <section className="min-h-screen bg-gray-50 px-4 py-6">
       <header className="mb-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
             {heading}
           </h1>
+          <AuthorStats
+            total={stats.total}
+            verified={stats.verified}
+            unverified={stats.unverified}
+          />
         </div>
-        <div className="w-full overflow-x-auto">
-          <AuthorTabs activeFilter={uiFilter} setFilter={setUiFilter} />
-        </div>
+        <AuthorTabs activeFilter={uiFilter} setFilter={setUiFilter} />
       </header>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-        <AuthorSearchBar onSearch={handleSearch} />
-        <AuthorFilterBar onFilter={setFilterOption} />
+        <AuthorSearchBar onSearch={handleSearch} isLoading={isLoading} />
+        <AuthorFilterBar
+          onFilter={setFilterOption}
+          currentFilter={filterOption}
+        />
       </div>
 
       <div className="mb-4">
@@ -187,26 +248,24 @@ export default function AuthorsPageLayout({
           onVerifySelected={handleVerify}
           onDeleteSelected={() => setDeleteModalOpen(true)}
           disableUpdate={selectedAuthorIds.length !== 1}
-          disableVerify={selectedAuthorIds.length !== 1}
           disableDelete={selectedAuthorIds.length === 0}
+          selectedCount={selectedAuthorIds.length}
         />
       </div>
 
-      <div className="w-full overflow-x-auto">
-        <AuthorTable
-          authors={authors}
-          search={searchQuery}
-          filter={filterOption}
-          selectedAuthorIds={selectedAuthorIds}
-          onSelectAuthors={setSelectedAuthorIds}
-          onToggleSelectAll={toggleSelectAll}
-        />
-      </div>
+      <AuthorTable
+        authors={filteredAuthors}
+        isLoading={isLoading}
+        selectedAuthorIds={selectedAuthorIds}
+        onSelectAuthor={toggleAuthorSelection}
+        onToggleSelectAll={toggleSelectAll}
+      />
 
+      {/* Modals */}
       <CreateAuthorModal
         isOpen={isCreateModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onCreated={fetchAuthors}
+        onCreate={fetchAuthors}
       />
 
       <UpdateAuthorModal
@@ -219,17 +278,26 @@ export default function AuthorsPageLayout({
       <ConfirmDeleteModal
         isOpen={isDeleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
-        authorIds={selectedAuthorIds}
-        authorNames={selectedAuthorNames}
-        onDeleted={handleDeleteAuthors}
-        message={`Are you sure you want to delete ${selectedAuthorIds.length} selected author(s)?`}
+        authors={selectedAuthors.map(a => ({ id: a._id, name: a.name }))}
+        onConfirm={handleDeleteAuthors}   // delete logic
+        onDeleted={fetchAuthors}          // refetch list after delete
       />
 
       <ExportAuthorsModal
         isOpen={isExportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        authors={authors}
+        authors={filteredAuthors}
       />
+
+      {/*<BatchVerifyModal
+        isOpen={isBatchVerifyModalOpen}
+        onClose={() => setBatchVerifyModalOpen(false)}
+        count={selectedAuthorIds.length}
+        onConfirm={() => {
+          // TODO: implement batch verify later
+          setBatchVerifyModalOpen(false);
+        }}
+      />*/}
     </section>
   );
 }
