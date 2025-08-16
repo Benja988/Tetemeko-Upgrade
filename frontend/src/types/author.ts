@@ -15,7 +15,7 @@ export interface Author {
   email?: string;
   bio?: string;
   avatar?: string;
-  role: AuthorRole;
+  role?: AuthorRole;
   isVerified?: boolean;
   createdAt?: string;
   updatedAt?: string;
