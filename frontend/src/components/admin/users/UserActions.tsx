@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Mail, Trash2, Download, MoreVertical } from 'lucide-react';
+import { Trash2, Download, MoreVertical } from 'lucide-react';
 import { IUser } from '@/types/user';
 
 // Button Component (unchanged)

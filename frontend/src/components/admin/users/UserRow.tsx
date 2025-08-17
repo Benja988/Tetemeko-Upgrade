@@ -9,6 +9,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ToggleActiveStatusModal } from './ToggleActiveStatusModal';
 import { ViewUserModal } from './ViewUserModal';
 import { deleteUser, updateUser } from '@/services/users';
+import Image from 'next/image';
 
 type UserAction =
   | 'edit'
@@ -164,7 +165,7 @@ export default function UserRow({
 
         </td>
         <td className="p-3">
-          <img
+          <Image
             src={user.profilePictureUrl || '/avatar.jpg'}
             alt={`${user.name}'s profile`}
             className="h-8 w-8 rounded-full object-cover border border-gray-200"

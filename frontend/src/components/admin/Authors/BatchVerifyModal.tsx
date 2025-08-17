@@ -2,7 +2,7 @@
 
 import { Dialog } from '@headlessui/react';
 import { useState } from 'react';
-import { FiCheck, FiX, FiUserCheck } from 'react-icons/fi';
+import { FiCheck, FiUserCheck } from 'react-icons/fi';
 
 interface BatchVerifyModalProps {
   isOpen: boolean;

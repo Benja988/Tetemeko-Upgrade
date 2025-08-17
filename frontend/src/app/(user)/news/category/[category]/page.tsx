@@ -9,11 +9,11 @@ import Navbar from '@/components/Navbar';
 import NewsFooter from '@/components/news/NewsFooter';
 import Image from 'next/image';
 
-interface Props {
-  params: {
-    category: string;
-  };
-}
+// interface Props {
+//   params: {
+//     category: string;
+//   };
+// }
 
 export async function generateMetadata(
   props: { params: Promise<{ category: string }> }
@@ -27,7 +27,7 @@ export async function generateMetadata(
 }
 
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params }: { params: { category: string } }) {
   const { category } = await params;
 
   const result = await getNewsByCategory(category);

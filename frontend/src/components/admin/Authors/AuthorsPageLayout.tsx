@@ -21,7 +21,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ExportAuthorsModal } from './ExportAuthorsModal';
 import { AuthorStats } from './AuthorStats';
 import { UpdateAuthorModal } from './UpdateAuthorModal';
-import { BatchVerifyModal } from './BatchVerifyModal';
+// import { BatchVerifyModal } from './BatchVerifyModal';
 
 interface AuthorsPageLayoutProps {
   heading: string;
@@ -58,7 +58,7 @@ export default function AuthorsPageLayout({
   const [isUpdateModalOpen, setUpdateModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
-  const [isBatchVerifyModalOpen, setBatchVerifyModalOpen] = useState(false);
+  // const [isBatchVerifyModalOpen, setBatchVerifyModalOpen] = useState(false);
 
   // Derived state
   const selectedAuthors = useMemo(() => {
@@ -172,7 +172,7 @@ export default function AuthorsPageLayout({
         setIsLoading(false);
       }
     } else if (selectedAuthorIds.length > 1) {
-      setBatchVerifyModalOpen(true);
+      // setBatchVerifyModalOpen(true);
     }
   }, [selectedAuthorIds, fetchAuthors]);
 

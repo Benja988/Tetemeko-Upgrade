@@ -1,6 +1,6 @@
 'use client';
 
-import { Editor } from '@tiptap/react';
+import { Editor, ChainedCommands } from '@tiptap/react';
 import {
   Bold,
   Italic,
@@ -37,21 +37,27 @@ const getActiveStyle = (active: boolean) =>
   active ? 'bg-blue-100 text-blue-700 font-semibold' : '';
 
 export default function EditorToolbar({ editor, handleImageUpload, uploading, onCollapse }: Props) {
-  if (!editor) return null;
-
   const [textColor, setTextColor] = useState('#000000');
 
-  const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const color = e.target.value;
-    setTextColor(color);
-    // Make sure the Color extension is added to your TipTap editor setup for this to work.
-    if ((editor as any).chain().setColor) {
-      (editor as any).chain().focus().setColor(color).run();
-    } else {
-      // Fallback: you may want to show an error or handle color another way
-      console.warn('Color extension is not enabled in the editor.');
-    }
-  };
+  if (!editor) return null;
+
+  interface ColorCommands {
+  setColor: (color: string) => ChainedCommands;
+}
+
+type EditorWithColor = Editor & {
+  chain: () => ChainedCommands & ColorCommands;
+};
+  
+
+const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const color = e.target.value;
+  setTextColor(color);
+
+  const chain = (editor as EditorWithColor).chain();
+  chain.focus().setColor(color).run();
+};
+
 
   return (
     <div className="flex flex-wrap gap-2 items-center p-3 bg-white border-b border-gray-200 sticky top-0 z-20 shadow-sm rounded-t-lg">

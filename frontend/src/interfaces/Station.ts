@@ -1,21 +1,25 @@
 export interface Station {
-  frequency: React.ReactNode;
-  id: React.Key | null | undefined;
-  _id: string; // MongoDB ID
+  _id: string;
   name: string;
   description?: string;
   streamUrl?: string;
   imageUrl: string;
   location: string;
-  genre: string[]; // array for DB/API
+  genre: string[];
   isActive: boolean;
-  type: "Radio Station" | "TV Station";
+  type: 'Radio Station' | 'TV Station';
   liveShow?: string;
   listenerz?: number;
+  createdBy?: string;
+  updatedBy?: string;
+  deletedBy?: string;
+  deletedAt?: string;
+  frequency?: string;
+
 }
 
 export interface StationFormData
-  extends Omit<Station, "_id" | "genre" | "listenerz"> {
-  genres: string; // comma-separated for form
-  listenerz: string; // keep as string for input
+  extends Omit<Station, '_id' | 'genre' | 'listenerz' | 'createdBy' | 'updatedBy' | 'deletedBy' | 'deletedAt'> {
+  genres: string; // Comma-separated string for form input
+  listenerz: string; // String for form input
 }

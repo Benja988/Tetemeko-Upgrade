@@ -2,13 +2,13 @@
 
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import StationsFooter from "@/components/stations/StationsFooter";
+// import StationsFooter from "@/components/stations/StationsFooter";
 import StationsSection1 from "@/components/stations/StationsSection1";
 import StationsSection2 from "@/components/stations/StationsSection2";
 import StationsSection3 from "@/components/stations/StationsSection3";
 import StationsSection4 from "@/components/stations/StationsSection4";
 import StationsSection5 from "@/components/stations/StationsSection5";
-import { motion } from "framer-motion";
+// import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 
 export default function StationsPage() {

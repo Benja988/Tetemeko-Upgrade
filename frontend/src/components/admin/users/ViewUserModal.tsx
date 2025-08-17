@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { IUser } from "@/types/user";
 import { FocusTrap } from "@headlessui/react";
+import Image from "next/image";
 
 interface ViewUserModalProps {
   isOpen: boolean;
@@ -93,7 +94,7 @@ export const ViewUserModal: React.FC<ViewUserModalProps> = ({ isOpen, onClose, u
               {/* Avatar */}
               <div className="flex justify-center sm:justify-start flex-shrink-0">
                 {user.profilePictureUrl ? (
-                  <img
+                  <Image
                     src={user.profilePictureUrl}
                     alt={`${user.name}'s avatar`}
                     className="w-32 h-32 rounded-full object-cover border-4 border-gray-300 shadow-md"

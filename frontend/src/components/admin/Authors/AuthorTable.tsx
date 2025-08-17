@@ -4,6 +4,7 @@ import { Author } from '@/types/author';
 import { formatDate } from '@/lib/utils';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import Image from 'next/image';
 
 interface AuthorTableProps {
   authors: Author[];
@@ -88,7 +89,7 @@ export default function AuthorTable({
               <td className="p-4">
                 <div className="flex items-center gap-3">
                   {author.avatar ? (
-                    <img
+                    <Image
                       src={author.avatar}
                       alt={`${author.name} avatar`}
                       className="w-10 h-10 rounded-full object-cover"

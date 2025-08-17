@@ -1,3 +1,5 @@
+// src/services/authors/index.ts
+
 import { apiRequest } from '@/lib/api'
 import { toast } from 'sonner'
 

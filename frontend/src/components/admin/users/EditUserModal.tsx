@@ -4,6 +4,7 @@ import { IUser, UserRole } from '@/types/user';
 import { Switch } from '@headlessui/react';
 import { cn } from '@/lib/utils';
 import { updateUser } from '@/services/users';
+import Image from 'next/image';
 
 interface EditUserModalProps {
   user: IUser | null;
@@ -94,7 +95,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
         <div className="flex flex-col items-center space-y-3">
           <div className="w-28 h-28 rounded-full border border-gray-300 shadow-md overflow-hidden bg-gradient-to-tr from-gray-50 to-gray-100 flex items-center justify-center">
             {formState.profilePictureUrl ? (
-              <img
+              <Image
                 src={formState.profilePictureUrl}
                 alt="Profile"
                 onError={(e) => ((e.target as HTMLImageElement).src = '/default-profile.png')}

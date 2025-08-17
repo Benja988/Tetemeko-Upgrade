@@ -16,7 +16,7 @@ import TextAlign from '@tiptap/extension-text-align';
 import Color from '@tiptap/extension-color';
 import TextStyle from '@tiptap/extension-text-style';
 import CharacterCount from '@tiptap/extension-character-count';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import EditorToolbar from './EditorToolbar';
 import { getCategories } from '@/services/categories/categoryService'; // New service for fetching authors
 import { Category } from '@/interfaces/Category'; // New interface for Author
@@ -26,6 +26,7 @@ import { News } from '@/interfaces/News';
 import { Loader2 } from 'lucide-react';
 import { Author } from '@/types/author';
 import { getAuthors } from '@/services/authors';
+import NextImage from "next/image";
 
 interface NewsArticleFormProps {
   onSuccess?: () => void;
@@ -60,7 +61,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
   const [categories, setCategories] = useState<Category[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // const scrollRef = useRef<HTMLDivElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -148,6 +149,66 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
+
+    setUploading(true);
+    const payload = {
+      title,
+      summary,
+      content,
+      author,
+      category,
+      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
+      isPublished,
+      thumbnail,
+      featuredImage,
+      videoUrl,
+      seoTitle,
+      seoDescription,
+      readingTime: Number(readingTime),
+      isFeatured,
+      isBreaking,
+    };
+
+    try {
+      const result = existingNews
+        ? await updateNewsById(existingNews._id, payload)
+        : await createNews(payload);
+      if (result) {
+        alert('News article saved successfully!');
+        setTitle('');
+        setSummary('');
+        setSeoTitle('');
+        setSeoDescription('');
+        setTags('');
+        setCategory('');
+        setAuthor('');
+        setPublishedAt('');
+        setVideoUrl('');
+        setReadingTime(0);
+        setIsPublished(false);
+        setIsFeatured(false);
+        setIsBreaking(false);
+        setThumbnail('');
+        setFeaturedImage('');
+        setContent('');
+        editor?.commands.clearContent();
+        localStorage.removeItem('newsDraft');
+        onSuccess?.();
+      }
+    } catch (err: unknown) {
+      setErrors((prev) => ({
+        ...prev,
+        submit:
+          err instanceof Error ? err.message : 'Failed to save article',
+      }));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.key === 's') {
@@ -189,7 +250,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
         try {
           const base64 = await toBase64(file);
           editor?.chain().focus().setImage({ src: base64, alt: 'Uploaded image' }).run();
-        } catch (err) {
+        } catch {
           setErrors((prev) => ({ ...prev, image: 'Failed to upload image' }));
         } finally {
           setUploading(false);
@@ -244,67 +305,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
     }
   };
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-
-    setUploading(true);
-    const payload = {
-      title,
-      summary,
-      content,
-      author,
-      category,
-      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
-      publishedAt: publishedAt ? new Date(publishedAt).toISOString() : undefined,
-      isPublished,
-      thumbnail,
-      featuredImage,
-      videoUrl,
-      seoTitle,
-      seoDescription,
-      readingTime: Number(readingTime),
-      isFeatured,
-      isBreaking,
-    };
-
-    try {
-      const result = existingNews
-        ? await updateNewsById(existingNews._id, payload)
-        : await createNews(payload);
-      if (result) {
-        alert('News article saved successfully!');
-        setTitle('');
-        setSummary('');
-        setSeoTitle('');
-        setSeoDescription('');
-        setTags('');
-        setCategory('');
-        setAuthor('');
-        setPublishedAt('');
-        setVideoUrl('');
-        setReadingTime(0);
-        setIsPublished(false);
-        setIsFeatured(false);
-        setIsBreaking(false);
-        setThumbnail('');
-        setFeaturedImage('');
-        setContent('');
-        editor?.commands.clearContent();
-        localStorage.removeItem('newsDraft');
-        onSuccess?.();
-      }
-    } catch (err) {
-      setErrors((prev) => ({
-        ...prev,
-        submit:
-          err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string'
-            ? (err as any).message
-            : 'Failed to save article',
-      }));
-    } finally {
-      setUploading(false);
-    }
-  };
+  
 
   return (
     <div className="p-6 mx-auto space-y-6 bg-gray-50 rounded-xl shadow-lg max-w-5xl">
@@ -364,7 +365,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
             className="block text-sm font-medium text-gray-700"
           >
             Publication Date <span className="text-red-500">*</span>
-          </label> 
+          </label>
           <input
             id="publishedAt"
             type="datetime-local"
@@ -476,7 +477,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
             className="w-full p-3 rounded-lg border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
           {thumbnail && (
-            <img src={thumbnail} alt="Thumbnail preview" className="mt-2 w-40 rounded-lg shadow-sm" />
+            <NextImage src={thumbnail} alt="Thumbnail preview" className="mt-2 w-40 rounded-lg shadow-sm" />
           )}
           {errors.thumbnail && <p className="text-red-500 text-sm">{errors.thumbnail}</p>}
         </div>

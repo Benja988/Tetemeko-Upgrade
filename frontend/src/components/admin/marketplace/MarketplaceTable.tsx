@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Product } from '@/interfaces/Products';
+import { Product } from '@/services/products';
+import Image from 'next/image';
 
 interface MarketplaceTableProps {
   products: Product[];
+  selectedProductId: string | null;
+  onSelectProduct: (id: string | null) => void;
 }
 
-export default function MarketplaceTable({ products }: MarketplaceTableProps) {
+export default function MarketplaceTable({ products, selectedProductId, onSelectProduct }: MarketplaceTableProps) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const toggleExpanded = (id: string) => {
@@ -17,12 +20,13 @@ export default function MarketplaceTable({ products }: MarketplaceTableProps) {
   return (
     <div className="overflow-x-auto rounded-lg border bg-white">
       <table className="min-w-full table-auto border-collapse">
-        <thead className="bg-gray-100 text-left text-sm font-semibold">
+        <thead className="bg-gray-100 text-left text-sm font-semibold text-gray-700">
           <tr>
+            <th className="p-3">Select</th>
             <th className="p-3">Image</th>
-            <th className="p-3">Name</th>
+            <th className="p-3">Title</th>
             <th className="p-3">Category</th>
-            <th className="p-3">Brand</th>
+            <th className="p-3">Seller</th>
             <th className="p-3">Price</th>
             <th className="p-3">Stock</th>
             <th className="p-3">Status</th>
@@ -32,15 +36,38 @@ export default function MarketplaceTable({ products }: MarketplaceTableProps) {
         <tbody>
           {products.map((product) => (
             <>
-              <tr key={product.id} className="border-t text-sm hover:bg-gray-50 transition-all duration-200">
+              <tr
+                key={product._id}
+                className={`border-t text-sm hover:bg-gray-50 transition-all duration-200 ${
+                  selectedProductId === product._id ? 'bg-blue-50' : ''
+                }`}
+              >
                 <td className="p-3">
-                  <img src={product.image} alt={product.name} className="h-10 w-10 rounded object-cover" />
+                  <input
+                    type="checkbox"
+                    checked={selectedProductId === product._id}
+                    onChange={() => onSelectProduct(selectedProductId === product._id ? null : product._id)}
+                    className="h-4 w-4"
+                  />
                 </td>
-                <td className="p-3 font-medium">{product.name}</td>
+                <td className="p-3">
+                  {product.images[0] ? (
+                    <Image
+                      src={product.images[0]}
+                      alt={product.title}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded object-cover"
+                    />
+                  ) : (
+                    <div className="h-10 w-10 bg-gray-200 rounded" />
+                  )}
+                </td>
+                <td className="p-3 font-medium">{product.title}</td>
                 <td className="p-3">{product.category}</td>
-                <td className="p-3">{product.brand}</td>
-                <td className="p-3">${product.price.toFixed(2)}</td>
-                <td className="p-3">{product.countInStock}</td>
+                <td className="p-3">{product.seller}</td>
+                <td className="p-3">${(product.price * (1 - product.discount / 100)).toFixed(2)}</td>
+                <td className="p-3">{product.stock}</td>
                 <td className="p-3">
                   <span
                     className={`px-3 py-1 text-xs rounded-full font-medium ${
@@ -54,29 +81,28 @@ export default function MarketplaceTable({ products }: MarketplaceTableProps) {
                 </td>
                 <td className="p-3">
                   <button
-                    onClick={() => toggleExpanded(product.id)}
+                    onClick={() => toggleExpanded(product._id)}
                     className="text-blue-600 hover:underline text-sm"
                   >
-                    {expanded === product.id ? 'Hide Details' : 'View Details'}
+                    {expanded === product._id ? 'Hide Details' : 'View Details'}
                   </button>
                 </td>
               </tr>
 
-              {expanded === product.id && (
+              {expanded === product._id && (
                 <tr className="bg-gray-50 text-sm">
-                  <td colSpan={8} className="p-4">
+                  <td colSpan={9} className="p-4">
                     <div className="space-y-4">
                       <p><strong>Description:</strong> {product.description}</p>
-                      <p><strong>SKU:</strong> {product.sku}</p>
-                      <p><strong>Weight:</strong> {product.weight}</p>
-                      <p><strong>Dimensions:</strong> {product.dimensions}</p>
-                      <p><strong>Tags:</strong> {product.tags?.join(', ')}</p>
+                      <p><strong>Tags:</strong> {product.tags?.join(', ') || 'None'}</p>
                       <div className="flex space-x-2 mt-2">
-                        {product.media?.map((url, idx) => (
-                          <img
+                        {product.images?.map((url, idx) => (
+                          <Image
                             key={idx}
                             src={url}
-                            alt={`${product.name} media ${idx + 1}`}
+                            alt={`${product.title} image ${idx + 1}`}
+                            width={80}
+                            height={80}
                             className="h-20 w-20 rounded object-cover border"
                           />
                         ))}

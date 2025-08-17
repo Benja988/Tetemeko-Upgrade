@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { Category, CategoryFormInput, CategoryType } from '@/interfaces/Category';
+import { Category, CategoryFormInput } from '@/interfaces/Category';
 import { createCategory, updateCategory } from '@/services/categories/categoryService';
 
 interface Props {

@@ -1,10 +1,10 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+// import { usePathname } from 'next/navigation'
 
 export default function DashboardHeader() {
-  const pathname = usePathname()
-  const page = pathname.split('/').pop()?.replace(/-/g, ' ').toUpperCase() || 'DASHBOARD'
+  // const pathname = usePathname()
+  // const page = pathname.split('/').pop()?.replace(/-/g, ' ').toUpperCase() || 'DASHBOARD'
 
   return (
     <header className="bg-white shadow px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">

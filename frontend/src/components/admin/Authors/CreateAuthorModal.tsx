@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import { FiPlus, FiX, FiUpload, FiUser, FiMail, FiEdit3 } from 'react-icons/fi';
+import { FiPlus, FiX, FiUpload, FiUser, FiMail } from 'react-icons/fi';
 import Image from 'next/image';
 import { Author } from '@/types/author';
 

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@headlessui/react": "^2.2.4",
+    "@tippyjs/react": "^4.2.6",
     "@tiptap/core": "^2.12.0",
     "@tiptap/extension-character-count": "^2.12.0",
     "@tiptap/extension-color": "^2.26.1",
@@ -37,6 +38,7 @@
     "lucide-react": "^0.488.0",
     "moment": "^2.30.1",
     "next": "15.3.0",
+    "papaparse": "^5.5.3",
     "react": "^19.0.0",
     "react-datepicker": "^8.4.0",
     "react-dom": "^19.0.0",
@@ -56,6 +58,7 @@
     "@types/lodash": "^4.17.20",
     "@types/moment": "^2.11.29",
     "@types/node": "^20",
+    "@types/papaparse": "^5.3.16",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/react-toastify": "^4.0.2",

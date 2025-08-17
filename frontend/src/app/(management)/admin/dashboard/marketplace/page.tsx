@@ -2,6 +2,6 @@
 
 import MarketplacePageLayout from "@/components/admin/marketplace/MarketplacePageLayout";
 
-export default function NewsPage() {
-  return <MarketplacePageLayout heading="News Management" />;
+export default function MarketplacePage() {
+  return <MarketplacePageLayout heading="Marketplace Products" />;
 }

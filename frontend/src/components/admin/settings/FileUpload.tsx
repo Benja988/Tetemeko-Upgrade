@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useState } from "react";
 
 export default function FileUpload() {
@@ -16,7 +17,7 @@ export default function FileUpload() {
     <div className="flex flex-col space-y-2">
       <input type="file" accept="image/*" onChange={handleChange} />
       {preview && (
-        <img src={preview} alt="Preview" className="w-full max-w-xs rounded" />
+        <Image src={preview} alt="Preview" className="w-full max-w-xs rounded" />
       )}
     </div>
   );

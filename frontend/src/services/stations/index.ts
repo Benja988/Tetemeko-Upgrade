@@ -1,6 +1,6 @@
 import { apiRequest } from '@/lib/api'
 import { toast } from 'sonner'
-import { Station, StationInput } from "@/interfaces/Station"
+import { Station, StationFormData } from "@/interfaces/Station"
 
 /* ------------------------ TOAST HANDLER WRAPPER ------------------------ */
 
@@ -45,13 +45,14 @@ export const getStationById = async (id: string): Promise<Station | null> => {
 
 // ✅ Create a new station
 export const createStation = async (
-  data: StationInput
+  data: Omit<Station, "_id">
 ): Promise<Station | null> =>
   withToast(
     () => apiRequest<Station>('/stations', 'POST', data),
     'Station created successfully.',
     'Failed to create station.'
-  )
+  );
+
 
 // ✅ Update a station
 export const updateStation = async (

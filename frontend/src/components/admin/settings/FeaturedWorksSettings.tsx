@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 
 interface FeaturedWork {
@@ -84,7 +85,7 @@ export default function FeaturedWorksSettings() {
                   <p className="text-sm text-gray-600">{work.description}</p>
                 )}
                 {work.imageUrl && (
-                  <img
+                  <Image
                     src={work.imageUrl}
                     alt={work.title}
                     className="mt-2 h-32 object-cover rounded"

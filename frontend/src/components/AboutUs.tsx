@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useEffect, useMemo, useState } from 'react'
 import { getStations } from '@/services/stations'
 import { Station } from '@/interfaces/Station'
-import { FiChevronLeft, FiChevronRight, FiRadio, FiUsers, FiAward, FiPlay } from 'react-icons/fi'
+import { FiChevronRight, FiRadio, FiUsers, FiAward, FiPlay } from 'react-icons/fi'
 
 // Animation variants
 const fadeUp = {
@@ -37,7 +37,7 @@ const timelineData = {
       'Introduced mobile streaming app',
       'Partnered with 50+ local artists'
     ],
-    image: '/about/2020s.jpg',
+    image: '/googleDeepmind.jpg',
     video: '/about/2020s-video.mp4',
     stats: {
       listeners: '1.2M',
@@ -54,7 +54,7 @@ const timelineData = {
       'Won National Media Award',
       'Expanded to 5 counties'
     ],
-    image: '/about/2010s.jpg',
+    image: '/network090.jpg',
     video: '/about/2010s-video.mp4',
     stats: {
       listeners: '500K',
@@ -71,7 +71,7 @@ const timelineData = {
       'First live broadcast',
       'Pioneered local music showcase'
     ],
-    image: '/about/2000s.jpg',
+    image: '/network098.jpg',
     video: '/about/2000s-video.mp4',
     stats: {
       listeners: '50K',
@@ -82,7 +82,7 @@ const timelineData = {
 } as const
 
 type Decade = keyof typeof timelineData
-type TimelineEntry = typeof timelineData[Decade]
+// type TimelineEntry = typeof timelineData[Decade]
 
 export default function AboutUs() {
   const [stations, setStations] = useState<Station[]>([])

@@ -1,8 +1,6 @@
-// components/admin/podcasts/PodcastsPageLayout.tsx
-
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Podcast, Episode } from '@/interfaces/podcasts';
 import PodcastsActions from './PodcastsActions';
 import PodcastsTabs from './PodcastsTabs';
@@ -23,23 +21,25 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
   const [selectedPodcasts, setSelectedPodcasts] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchPodcasts = async () => {
+  const fetchPodcasts = useCallback(async () => {
     setIsLoading(true);
-    const params: Record<string, any> = { page, limit: 10 };
+    const params: Record<string, string | number> = { page, limit: 10 };
     if (searchTerm) params.search = searchTerm;
-    if (statusFilter !== 'All') params.isActive = statusFilter === 'Active' ? 'true' : 'false';
+    if (statusFilter !== 'All') {
+      params.isActive = statusFilter === 'Active' ? 'true' : 'false';
+    }
 
     const result = await getAllPodcasts(params);
     if (result) {
-      setPodcasts(result.podcasts);
-      setTotalPages(result.totalPages);
+      // setPodcasts(result.podcasts);
+      // setTotalPages(result.totalPages);
     }
     setIsLoading(false);
-  };
+  }, [page, searchTerm, statusFilter]);
 
   useEffect(() => {
     fetchPodcasts();
-  }, [page, searchTerm, statusFilter]);
+  }, [fetchPodcasts]);
 
   const handleAddPodcast = (podcast: Podcast) => {
     setPodcasts((prev) => [podcast, ...prev]);
@@ -57,7 +57,6 @@ export default function PodcastsPageLayout({ heading }: PodcastsPageLayoutProps)
   };
 
   const handleExport = (format: string) => {
-    // Placeholder: Implement export logic (e.g., download file)
     console.log(`Exporting podcasts in ${format} format:`, selectedPodcasts);
   };
 

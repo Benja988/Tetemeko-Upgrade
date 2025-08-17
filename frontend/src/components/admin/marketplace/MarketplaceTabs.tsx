@@ -14,7 +14,7 @@ export default function MarketplaceTabs({ currentFilter, onChangeFilter }: Marke
         <button
           key={status}
           onClick={() => onChangeFilter(status)}
-          className={`px-4 py-2 rounded ${
+          className={`px-4 py-2 rounded-md font-medium transition-colors ${
             currentFilter === status
               ? 'bg-blue-600 text-white'
               : 'bg-gray-200 text-gray-700 hover:bg-gray-300'

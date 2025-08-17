@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { Podcast, Episode } from '@/interfaces/podcasts';
-import { Play, Pause, Edit, Trash2, Download } from 'lucide-react';
+import { Play, Pause, Edit, Trash2 } from 'lucide-react';
 import { Menu } from '@headlessui/react';
 import EditPodcastModal from './EditPodcastModal';
 import DeletePodcastModal from './DeletePodcastModal';
@@ -15,6 +15,7 @@ import PodcastRowActions from './PodcastRowActions';
 import AddEpisodeModal from './AddEpisodeModal';
 import EditEpisodeModal from './EditEpisodeModal';
 import DeleteEpisodeModal from './DeleteEpisodeModal';
+import Image from 'next/image';
 
 interface PodcastsTableProps {
   podcasts: Podcast[];
@@ -58,19 +59,19 @@ export default function PodcastsTable({
     }));
   };
 
-  const handleToggleStatus = async (podcast: Podcast) => {
-    const updatedPodcast = await togglePodcastStatus(podcast._id);
-    if (updatedPodcast) {
-      onPodcastUpdated(updatedPodcast);
-    }
-  };
+  // const handleToggleStatus = async (podcast: Podcast) => {
+  //   const updatedPodcast = await togglePodcastStatus(podcast._id);
+  //   if (updatedPodcast) {
+  //     onPodcastUpdated(updatedPodcast);
+  //   }
+  // };
 
-  const handleDeleteEpisode = async (podcastId: string, episodeId: string) => {
-    const success = await deleteEpisodeById(podcastId, episodeId);
-    if (success) {
-      onEpisodeDeleted(podcastId, episodeId);
-    }
-  };
+  // const handleDeleteEpisode = async (podcastId: string, episodeId: string) => {
+  //   const success = await deleteEpisodeById(podcastId, episodeId);
+  //   if (success) {
+  //     onEpisodeDeleted(podcastId, episodeId);
+  //   }
+  // };
 
   return (
     <>
@@ -119,7 +120,7 @@ export default function PodcastsTable({
                     />
                   </td>
                   <td className="px-5 py-4 align-top">
-                    <img
+                    <Image
                       src={podcast.coverImage || 'https://via.placeholder.com/48'}
                       alt={podcast.title}
                       className="h-12 w-12 rounded-lg border border-gray-200 object-cover shadow-sm"
