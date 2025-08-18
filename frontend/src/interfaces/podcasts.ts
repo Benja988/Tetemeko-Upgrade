@@ -3,16 +3,12 @@ export interface Episode {
   _id: string;
   title: string;
   description: string;
-  duration: number;
   audioUrl: string;
-  tags?: string[];
+  duration: number;
   episodeNumber?: number;
-  publishedDate?: string;
-  isActive?: boolean;
-  podcast: string;
-  createdBy?: {
-    name: string;
-  };
+  tags?: string[];
+  publishedDate: string;
+  createdBy?: { name: string };
 }
 
 export interface EpisodeInput {
@@ -25,21 +21,19 @@ export interface EpisodeInput {
 }
 
 
+// src/interfaces/podcasts.ts
 export interface Podcast {
   _id: string;
   title: string;
   description: string;
   coverImage?: string;
-  station?: string;
-  category: string;
-  createdBy?: {
-    name: string;
-  };
-  episodes?: any[];
+  category?: { _id: string; name: string };
+  station?: { _id: string; name: string };
+  episodes?: Episode[];
+  createdBy?: { name: string };
   isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
 }
+
 
 export interface PodcastInput {
   title: string;
