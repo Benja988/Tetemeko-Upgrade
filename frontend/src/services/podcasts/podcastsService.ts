@@ -15,6 +15,27 @@ interface PaginatedResponse<T> {
   };
 }
 
+export interface PaginatedPodcastsResponse<T> {
+  podcasts: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+export interface PaginatedEpisodesResponse<T> {
+  episodes: T[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+
 // Interface for API error response
 interface APIErrorResponse {
   message: string;

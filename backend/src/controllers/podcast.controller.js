@@ -27,7 +27,7 @@ const checkPermissions = (user) => {
 
 // Validate podcast data
 const validatePodcastData = ({ title, description, category, station, coverImage }) => {
-  if (!title || typeof title !== 'string' || title.length < 1 || title.length > 200) {
+  /*if (!title || typeof title !== 'string' || title.length < 1 || title.length > 200) {
     throw new APIError('Title is required and must be 1-200 characters', 400);
   }
   if (!description || typeof description !== 'string' || description.length < 1) {
@@ -41,7 +41,7 @@ const validatePodcastData = ({ title, description, category, station, coverImage
   }
   if (coverImage && !coverImage.startsWith('data:image/') && !coverImage.startsWith('http')) {
     throw new APIError('Invalid cover image format', 400);
-  }
+  }*/
 };
 
 /**
