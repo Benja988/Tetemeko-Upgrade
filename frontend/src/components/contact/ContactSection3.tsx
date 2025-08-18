@@ -35,7 +35,7 @@ export default function ContactSection3() {
   };
 
   return (
-    <section id="contact-form" className="bg-white py-16 px-4 sm:px-6 text-gray-800">
+    <section id="contact-form" className="bg-primary py-16 px-4 sm:px-6 text-white">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -45,9 +45,9 @@ export default function ContactSection3() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Send Us a <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">Message</span>
+            Send Us a <span className="text-white">Message</span>
           </h2>
-          <p className="text-gray-600 max-w-xl mx-auto">
+          <p className="text-gray-300 max-w-xl mx-auto">
             Fill out the form below and our team will get back to you as soon as possible
           </p>
         </motion.div>
@@ -58,33 +58,33 @@ export default function ContactSection3() {
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           viewport={{ once: true }}
-          className="space-y-6 bg-gray-50 p-6 sm:p-8 rounded-xl shadow-sm border border-gray-100"
+          className="space-y-6 bg-primary/90 p-6 sm:p-8 rounded-xl shadow-sm border border-gray-700"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Name */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">Your Name *</label>
+              <label className="block text-sm font-medium mb-2 text-gray-300">Your Name *</label>
               <input
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="John Doe"
-                className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                className="w-full bg-primary text-white placeholder-gray-400 px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
                 required
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">Email Address *</label>
+              <label className="block text-sm font-medium mb-2 text-gray-300">Email Address *</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+                className="w-full bg-primary text-white placeholder-gray-400 px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
                 required
               />
             </div>
@@ -92,27 +92,27 @@ export default function ContactSection3() {
 
           {/* Subject */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">Subject</label>
+            <label className="block text-sm font-medium mb-2 text-gray-300">Subject</label>
             <input
               type="text"
               name="subject"
               value={formData.subject}
               onChange={handleChange}
               placeholder="I want to advertise"
-              className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+              className="w-full bg-primary text-white placeholder-gray-400 px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
             />
           </div>
 
           {/* Message */}
           <div>
-            <label className="block text-sm font-medium mb-2 text-gray-700">Message *</label>
+            <label className="block text-sm font-medium mb-2 text-gray-300">Message *</label>
             <textarea
               name="message"
               rows={5}
               value={formData.message}
               onChange={handleChange}
               placeholder="Type your message here..."
-              className="w-full bg-white px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition"
+              className="w-full bg-primary text-white placeholder-gray-400 px-4 py-3 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition"
               required
             ></textarea>
           </div>
@@ -122,9 +122,9 @@ export default function ContactSection3() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 bg-green-50 text-green-700 p-4 rounded-lg border border-green-100"
+              className="flex items-center gap-2 bg-green-600/20 text-green-400 p-4 rounded-lg border border-green-600"
             >
-              <FiCheckCircle className="text-green-500 text-xl" />
+              <FiCheckCircle className="text-green-400 text-xl" />
               <p className="font-medium">Thank you! We'll get back to you shortly.</p>
             </motion.div>
           )}
@@ -132,9 +132,9 @@ export default function ContactSection3() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 bg-red-50 text-red-700 p-4 rounded-lg border border-red-100"
+              className="flex items-center gap-2 bg-red-600/20 text-red-400 p-4 rounded-lg border border-red-600"
             >
-              <FiAlertCircle className="text-red-500 text-xl" />
+              <FiAlertCircle className="text-red-400 text-xl" />
               <p className="font-medium">Please fill out all required fields.</p>
             </motion.div>
           )}
@@ -147,8 +147,8 @@ export default function ContactSection3() {
             disabled={isSubmitting}
             className={`w-full flex items-center justify-center gap-2 font-semibold px-6 py-3 rounded-lg transition-all ${
               isSubmitting 
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-gradient-to-r from-primary to-secondary text-white shadow-md hover:shadow-lg'
+                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-primary to-blue-600 text-white shadow-md hover:shadow-lg'
             }`}
           >
             {isSubmitting ? (

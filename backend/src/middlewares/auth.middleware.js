@@ -1,3 +1,5 @@
+// src/middlewares/auth.middleware.js
+
 import jwt from 'jsonwebtoken';
 import sanitize from 'sanitize-html';
 import logger from '../utils/logger.js';

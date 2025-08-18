@@ -33,12 +33,22 @@ const withToast = async <T>(
 /* ------------------------- PODCAST SERVICES --------------------------- */
 
 // ✅ Create a podcast (Admin only)
-export const createPodcast = async (data: FormData): Promise<Podcast | null> =>
+// export const createPodcast = async (data: FormData): Promise<Podcast | null> =>
+//   withToast(
+//     () => apiRequest<Podcast>('/podcasts', 'POST', data),
+//     'Podcast created successfully.',
+//     'Failed to create podcast.'
+//   );
+
+// ✅ Create a podcast (Admin only) without FormData
+export const createPodcast = async (data: Record<string, any>): Promise<Podcast | null> =>
   withToast(
-    () => apiRequest<Podcast>('/podcasts', 'POST', data),
+    () => apiRequest<Podcast>('/podcasts', 'POST', data), // ✅ remove JSON.stringify
     'Podcast created successfully.',
     'Failed to create podcast.'
   );
+
+
 
 // ✅ Get all podcasts (public)
 export const getAllPodcasts = async (

@@ -2,15 +2,12 @@
 import { motion } from 'framer-motion'
 import { MdEmail, MdPhone, MdLocationOn } from 'react-icons/md'
 import { FaFacebook, FaTwitter, FaInstagram, FaYoutube, FaLinkedin } from 'react-icons/fa'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 
 const FooterLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
-  <motion.div
-    whileHover={{ x: 5 }}
-    className="mb-4 last:mb-0"
-  >
+  <motion.div whileHover={{ x: 5 }} className="mb-4 last:mb-0">
     <Link
       href={href}
       className="text-gray-400 hover:text-blue-400 transition-colors flex items-start gap-2 group"
@@ -20,6 +17,43 @@ const FooterLink = ({ href, children }: { href: string; children: React.ReactNod
     </Link>
   </motion.div>
 )
+
+function FloatingCircles() {
+  const [circles, setCircles] = useState<
+    { width: number; height: number; left: number; top: number }[]
+  >([])
+
+  useEffect(() => {
+    // Generate random circles only on client
+    const arr = [...Array(8)].map(() => ({
+      width: 80 + Math.random() * 120,
+      height: 80 + Math.random() * 120,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+    }))
+    setCircles(arr)
+  }, [])
+
+  return (
+    <>
+      {circles.map((circle, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, scale: 0 }}
+          animate={{ opacity: 0.05, scale: 1 }}
+          transition={{ duration: 1, delay: i * 0.1 }}
+          className="absolute border border-white/10 rounded-full"
+          style={{
+            width: `${circle.width}px`,
+            height: `${circle.height}px`,
+            left: `${circle.left}%`,
+            top: `${circle.top}%`,
+          }}
+        />
+      ))}
+    </>
+  )
+}
 
 export default function Footer() {
   const [email, setEmail] = useState('')
@@ -36,23 +70,9 @@ export default function Footer() {
 
   return (
     <footer className="relative bg-gradient-to-b from-[#07131F] to-[#020617] text-white pt-16 pb-8 overflow-hidden">
-      {/* Floating media elements - optimized */}
+      {/* Floating media elements (client-only to avoid hydration mismatch) */}
       <div className="absolute inset-0 opacity-5 overflow-hidden pointer-events-none">
-        {[...Array(8)].map((_, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 0.05, scale: 1 }}
-            transition={{ duration: 1, delay: i * 0.1 }}
-            className="absolute border border-white/10 rounded-full"
-            style={{
-              width: `${80 + Math.random() * 120}px`,
-              height: `${80 + Math.random() * 120}px`,
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`
-            }}
-          />
-        ))}
+        <FloatingCircles />
       </div>
 
       {/* Grid background pattern */}
@@ -82,7 +102,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-gray-400 mb-6 text-sm leading-relaxed">
-              Bridging communities through innovative media solutions across East Africa. 
+              Bridging communities through innovative media solutions across East Africa.
               Your trusted source for news, entertainment, and cultural programming.
             </p>
             <div className="flex gap-3">
@@ -157,7 +177,7 @@ export default function Footer() {
                 <p className="text-gray-400 text-sm">info@tetemeko.com</p>
               </div>
             </div>
-            
+
             <div className="mt-6 bg-gradient-to-r from-blue-500/10 to-blue-600/10 rounded-lg p-4 border border-blue-500/20">
               <h5 className="text-sm font-medium text-white mb-1 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
@@ -184,7 +204,7 @@ export default function Footer() {
             <p className="text-gray-400 text-sm mb-4">
               Subscribe to receive the latest news, shows, and updates from Tetemeko Media.
             </p>
-            
+
             {isSubscribed ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -218,7 +238,7 @@ export default function Footer() {
                 </motion.button>
               </form>
             )}
-            
+
             <p className="text-xs text-gray-500 mt-3">
               We respect your privacy. Unsubscribe at any time.
             </p>

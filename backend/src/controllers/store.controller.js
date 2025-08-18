@@ -1,143 +1,131 @@
-"use strict";
-// import { Request, Response } from 'express';
-// import { Store } from '../models/Store'; // Adjust path as needed
-// import mongoose from 'mongoose';
-// // Create a new store
-// export const createStore = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const { name, logo, description, address } = req.body;
-//     const ownerId = req.user?.id; // Assumes user attached by auth middleware
-//     if (!ownerId) {
-//       res.status(401).json({ message: 'Unauthorized' });
-//       return;
-//     }
-//     // Check if a store with the same name already exists
-//     const existing = await Store.findOne({ name });
-//     if (existing) {
-//       res.status(400).json({ message: 'Store name already exists' });
-//       return;
-//     }
-//     const newStore = new Store({
-//       name,
-//       owner: ownerId,
-//       logo,
-//       description,
-//       address,
-//       isVerified: false,
-//     });
-//     const savedStore = await newStore.save();
-//     res.status(201).json(savedStore);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error creating store', error });
-//   }
-// };
-// // Get all stores (optionally filter by owner or verified)
-// export const getAllStores = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const filters: any = {};
-//     // Optional query params: owner, isVerified
-//     if (req.query.owner && mongoose.Types.ObjectId.isValid(req.query.owner as string)) {
-//       filters.owner = req.query.owner;
-//     }
-//     if (req.query.isVerified !== undefined) {
-//       filters.isVerified = req.query.isVerified === 'true';
-//     }
-//     const stores = await Store.find(filters).populate('owner', 'name email');
-//     res.status(200).json(stores);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching stores', error });
-//   }
-// };
-// // Get store by ID
-// export const getStoreById = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       res.status(400).json({ message: 'Invalid store ID' });
-//       return;
-//     }
-//     const store = await Store.findById(id).populate('owner', 'name email');
-//     if (!store) {
-//       res.status(404).json({ message: 'Store not found' });
-//       return;
-//     }
-//     res.status(200).json(store);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error fetching store', error });
-//   }
-// };
-// // Update store info (only owner or admin allowed)
-// export const updateStore = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const { id } = req.params;
-//     const updates = req.body;
-//     const userId = req.user?.id;
-//     const userRole = req.user?.role;
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       res.status(400).json({ message: 'Invalid store ID' });
-//       return;
-//     }
-//     const store = await Store.findById(id);
-//     if (!store) {
-//       res.status(404).json({ message: 'Store not found' });
-//       return;
-//     }
-//     // Only owner or admin can update
-//     if (store.owner.toString() !== userId && userRole !== 'admin') {
-//       res.status(403).json({ message: 'Forbidden' });
-//       return;
-//     }
-//     // Prevent changing owner or isVerified by non-admin
-//     if (updates.owner && userRole !== 'admin') {
-//       delete updates.owner;
-//     }
-//     if (updates.isVerified !== undefined && userRole !== 'admin') {
-//       delete updates.isVerified;
-//     }
-//     Object.assign(store, updates);
-//     await store.save();
-//     res.status(200).json(store);
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error updating store', error });
-//   }
-// };
-// // Delete store (only owner or admin)
-// export const deleteStore = async (
-//   req: Request,
-//   res: Response
-// ): Promise<void> => {
-//   try {
-//     const { id } = req.params;
-//     const userId = req.user?.id;
-//     // const userRole = req.user?.role;
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       res.status(400).json({ message: 'Invalid store ID' });
-//       return;
-//     }
-//     const store = await Store.findById(id);
-//     if (!store) {
-//       res.status(404).json({ message: 'Store not found' });
-//       return;
-//     }
-//     if (store.owner.toString() !== userId && userRole !== 'admin') {
-//       res.status(403).json({ message: 'Forbidden' });
-//       return;
-//     }
-//     await store.deleteOne();
-//     res.status(200).json({ message: 'Store deleted successfully' });
-//   } catch (error) {
-//     res.status(500).json({ message: 'Error deleting store', error });
-//   }
-// };
+import { Store } from "../models/Store.js";
+import { uploadMedia } from "../utils/cloudinary.js";
+import sanitize from "sanitize-html";
+import logger from "../utils/logger.js";
+
+// Sanitize inputs
+const sanitizeInput = (input) => {
+  return sanitize(input, { allowedTags: [] });
+};
+
+// Create store (web_user can own one, admin/manager can create many)
+export const createStore = async (req, res) => {
+  try {
+    const existingStore = await Store.findOne({ owner: req.user._id, isActive: true });
+    if (existingStore && req.user.role === "web_user") {
+      return res.status(400).json({ message: "You already own a store" });
+    }
+
+    const { name, description, address } = req.body;
+    const sanitizedInput = {
+      name: sanitizeInput(name),
+      description: description ? sanitizeInput(description) : undefined,
+      address: {
+        line1: sanitizeInput(address.line1),
+        city: sanitizeInput(address.city),
+        state: address.state ? sanitizeInput(address.state) : undefined,
+        country: sanitizeInput(address.country),
+        postalCode: address.postalCode ? sanitizeInput(address.postalCode) : undefined
+      }
+    };
+
+    let logo;
+    if (req.file) {
+      const uploadResult = await uploadMedia(req.file, "stores", "image", { tags: ["store", sanitizedInput.name] });
+      logo = uploadResult.secure_url;
+    }
+
+    const store = new Store({
+      ...sanitizedInput,
+      logo,
+      owner: req.user._id
+    });
+    await store.save();
+    const populatedStore = await Store.findById(store._id).populate("owner").lean();
+    res.status(201).json(populatedStore);
+  } catch (err) {
+    logger.error("Failed to create store", { error: err.message, userId: req.user._id });
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// Get stores
+export const getStores = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const stores = await Store.find({ isActive: true })
+      .populate("owner")
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
+    res.json({
+      stores,
+      page: Number(page),
+      limit: Number(limit),
+      total: await Store.countDocuments({ isActive: true })
+    });
+  } catch (err) {
+    logger.error("Failed to get stores", { error: err.message });
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Update store
+export const updateStore = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id);
+    if (!store) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+    if (String(store.owner) !== String(req.user._id) && !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const { name, description, address } = req.body;
+    const sanitizedInput = {
+      name: name ? sanitizeInput(name) : store.name,
+      description: description ? sanitizeInput(description) : store.description,
+      address: {
+        line1: address?.line1 ? sanitizeInput(address.line1) : store.address.line1,
+        city: address?.city ? sanitizeInput(address.city) : store.address.city,
+        state: address?.state ? sanitizeInput(address.state) : store.address.state,
+        country: address?.country ? sanitizeInput(address.country) : store.address.country,
+        postalCode: address?.postalCode ? sanitizeInput(address.postalCode) : store.address.postalCode
+      }
+    };
+
+    let logo = store.logo;
+    if (req.file) {
+      const uploadResult = await uploadMedia(req.file, "stores", "image", { tags: ["store", sanitizedInput.name] });
+      logo = uploadResult.secure_url;
+    }
+
+    Object.assign(store, sanitizedInput, { logo });
+    await store.save();
+    const populatedStore = await Store.findById(store._id).populate("owner").lean();
+    res.json(populatedStore);
+  } catch (err) {
+    logger.error("Failed to update store", { error: err.message, userId: req.user._id });
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// Soft delete store
+export const deleteStore = async (req, res) => {
+  try {
+    const store = await Store.findById(req.params.id);
+    if (!store) {
+      return res.status(404).json({ message: "Store not found" });
+    }
+    if (String(store.owner) !== String(req.user._id) && !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    store.isActive = false;
+    await store.save();
+    res.json({ message: "Store soft-deleted", store });
+  } catch (err) {
+    logger.error("Failed to delete store", { error: err.message, userId: req.user._id });
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

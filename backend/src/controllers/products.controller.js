@@ -1,393 +1,136 @@
-import mongoose from 'mongoose';
-import { Product, ProductStatus } from '../models/Product.js';
-import { Category } from '../models/Category.js';
-import { User, UserRole } from '../models/User.js';
-import slugify from 'slugify';
-import { sanitize } from 'sanitize-html';
+import { Product } from "../models/Product.js";
+import { uploadMedia } from "../utils/cloudinary.js";
+import sanitize from "sanitize-html";
+import logger from "../utils/logger.js";
 
-// Custom error class for better error handling
-class APIError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-  }
-}
-
-// Predefined valid product statuses
-const VALID_STATUSES = Object.values(ProductStatus);
-const ITEMS_PER_PAGE = 20;
-
-// Check permissions for admin or manager actions
-const checkPermissions = (user) => {
-  if (!user || ![UserRole.ADMIN, UserRole.MANAGER].includes(user.role)) {
-    throw new APIError('Unauthorized: Only admins or managers can perform this action', 403);
-  }
+// Sanitize inputs
+const sanitizeInput = (input) => {
+  return sanitize(input, { allowedTags: [] });
 };
 
-// Validate product fields
-const validateProductFields = ({ price, discount, stock, status }) => {
-  if (price !== undefined && (typeof price !== 'number' || price < 0)) {
-    throw new APIError('Price must be a non-negative number', 400);
-  }
-  if (discount !== undefined && (typeof discount !== 'number' || discount < 0 || discount > 100)) {
-    throw new APIError('Discount must be a number between 0 and 100', 400);
-  }
-  if (stock !== undefined && (typeof stock !== 'number' || stock < 0 || !Number.isInteger(stock))) {
-    throw new APIError('Stock must be a non-negative integer', 400);
-  }
-  if (status && !VALID_STATUSES.includes(status)) {
-    throw new APIError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`, 400);
-  }
-};
-
-/**
- * Create a new product
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
+// Create product (store owner only)
 export const createProduct = async (req, res) => {
   try {
-    checkPermissions(req.user);
-
-    const { title, description, images, price, discount, stock, category, tags, seller, status, isFeatured } = req.body;
-
-    if (!title || !price || !category || !seller) {
-      throw new APIError('Missing required fields: title, price, category, seller', 400);
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(category) || !mongoose.Types.ObjectId.isValid(seller)) {
-      throw new APIError('Invalid category or seller ID', 400);
-    }
-
-    validateProductFields({ price, discount, stock, status });
-
-    const sanitizedData = {
-      title: sanitize(title, { allowedTags: [] }),
-      description: description ? sanitize(description, { allowedTags: ['p', 'strong', 'em'] }) : '',
-      images: images ? images.map(img => sanitize(img, { allowedTags: [] })) : [],
-      price,
-      discount,
-      stock,
-      category: sanitize(category, { allowedTags: [] }),
-      tags: tags ? tags.map(tag => sanitize(tag, { allowedTags: [] })) : [],
-      seller: sanitize(seller, { allowedTags: [] }),
-      status: status || ProductStatus.ACTIVE,
-      isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : false
+    const { title, description, price, discount, stock, category, tags } = req.body;
+    const sanitizedInput = {
+      title: sanitizeInput(title),
+      description: sanitizeInput(description),
+      price: Number(sanitizeInput(price)),
+      discount: Number(sanitizeInput(discount) || 0),
+      stock: Number(sanitizeInput(stock)),
+      category: sanitizeInput(category),
+      tags: Array.isArray(tags) ? tags.map(tag => sanitizeInput(tag)) : []
     };
 
-    // Verify category and seller exist
-    const [categoryDoc, sellerDoc] = await Promise.all([
-      Category.findOne({ _id: sanitizedData.category, isActive: true }),
-      User.findOne({ _id: sanitizedData.seller, isActive: true })
-    ]);
-
-    if (!categoryDoc) {
-      throw new APIError('Active category not found', 404);
-    }
-    if (!sellerDoc) {
-      throw new APIError('Active seller not found', 404);
+    let images = [];
+    if (req.files && Array.isArray(req.files)) {
+      images = await Promise.all(
+        req.files.map(file => uploadMedia(file, "products", "image", { tags: ["product", sanitizedInput.title] }))
+      );
+      images = images.map(img => img.secure_url);
     }
 
-    let slug = slugify(sanitizedData.title, { lower: true, strict: true });
-    let slugCounter = 1;
-    while (await Product.findOne({ slug })) {
-      slug = `${slugify(sanitizedData.title, { lower: true, strict: true })}-${slugCounter}`;
-      slugCounter++;
-    }
-
-    const product = await Product.create({
-      ...sanitizedData,
-      slug,
-      createdBy: req.user?.id
+    const product = new Product({
+      ...sanitizedInput,
+      images,
+      seller: req.user._id,
+      createdBy: req.user._id
     });
 
-    const populatedProduct = await Product.findById(product._id)
-      .populate('category', 'name')
-      .populate('seller', 'name email')
-      .lean();
-
-    return res.status(201).json({ message: 'Product created successfully', product: populatedProduct });
-  } catch (error) {
-    console.error('Create product error:', { error: error.message, body: req.body });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to create product' });
+    await product.save();
+    const populatedProduct = await Product.findById(product._id).populate("category seller").lean();
+    res.status(201).json(populatedProduct);
+  } catch (err) {
+    logger.error("Failed to create product", { error: err.message, userId: req.user._id });
+    res.status(400).json({ message: err.message });
   }
 };
 
-/**
- * Get all products with pagination and filtering
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export const getAllProducts = async (req, res) => {
+// Get all products (filter by category, store, featured)
+export const getProducts = async (req, res) => {
   try {
-    const { page = 1, category, status, seller, minPrice, maxPrice, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-    const filter = { isActive: true };
+    const { category, store, featured, page = 1, limit = 10 } = req.query;
+    const filter = { status: "active" };
 
-    if (category) {
-      if (!mongoose.Types.ObjectId.isValid(category)) {
-        throw new APIError('Invalid category ID', 400);
-      }
-      filter.category = sanitize(category, { allowedTags: [] });
-    }
+    if (category) filter.category = sanitizeInput(category);
+    if (store) filter.seller = sanitizeInput(store);
+    if (featured) filter.isFeatured = sanitizeInput(featured) === "true";
 
-    if (status && !VALID_STATUSES.includes(status)) {
-      throw new APIError(`Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}`, 400);
-    }
-    if (status) filter.status = sanitize(status, { allowedTags: [] });
+    const products = await Product.find(filter)
+      .populate("category seller")
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit))
+      .lean();
 
-    if (seller) {
-      if (!mongoose.Types.ObjectId.isValid(seller)) {
-        throw new APIError('Invalid seller ID', 400);
-      }
-      filter.seller = sanitize(seller, { allowedTags: [] });
-    }
-
-    if (minPrice || maxPrice) {
-      filter.price = {};
-      if (minPrice) filter.price.$gte = Number(minPrice);
-      if (maxPrice) filter.price.$lte = Number(maxPrice);
-    }
-
-    if (search) {
-      const sanitizedSearch = sanitize(search, { allowedTags: [] });
-      filter.$or = [
-        { title: { $regex: sanitizedSearch, $options: 'i' } },
-        { description: { $regex: sanitizedSearch, $options: 'i' } }
-      ];
-    }
-
-    const skip = (Number(page) - 1) * ITEMS_PER_PAGE;
-    const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
-
-    const [products, total] = await Promise.all([
-      Product.find(filter)
-        .populate('category', 'name')
-        .populate('seller', 'name email')
-        .select('-__v')
-        .skip(skip)
-        .limit(ITEMS_PER_PAGE)
-        .sort(sort)
-        .lean(),
-      Product.countDocuments(filter)
-    ]);
-
-    return res.status(200).json({
+    res.json({
       products,
-      pagination: {
-        page: Number(page),
-        limit: ITEMS_PER_PAGE,
-        total,
-        pages: Math.ceil(total / ITEMS_PER_PAGE)
-      }
+      page: Number(page),
+      limit: Number(limit),
+      total: await Product.countDocuments(filter),
     });
-  } catch (error) {
-    console.error('Get products error:', { error: error.message, query: req.query });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to fetch products' });
+  } catch (err) {
+    logger.error("Failed to get products", { error: err.message });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
 
-/**
- * Get a single product by slug
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export const getProductBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    const sanitizedSlug = sanitize(slug, { allowedTags: [] });
 
-    const product = await Product.findOne({ slug: sanitizedSlug, isActive: true })
-      .populate('category', 'name')
-      .populate('seller', 'name email')
-      .select('-__v')
-      .lean();
-
-    if (!product) {
-      throw new APIError('Product not found', 404);
-    }
-
-    return res.status(200).json({ product });
-  } catch (error) {
-    console.error('Get product error:', { error: error.message, slug: req.params.slug });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to fetch product' });
-  }
-};
-
-/**
- * Update product by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
+// Update product (owner or admin/manager)
 export const updateProduct = async (req, res) => {
   try {
-    checkPermissions(req.user);
-
-    const { id } = req.params;
-    const { title, description, images, price, discount, stock, category, tags, seller, status, isFeatured } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new APIError('Invalid product ID', 400);
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    if (String(product.seller) !== String(req.user._id) && !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    validateProductFields({ price, discount, stock, status });
-
-    const sanitizedData = {
-      title: title ? sanitize(title, { allowedTags: [] }) : undefined,
-      description: description ? sanitize(description, { allowedTags: ['p', 'strong', 'em'] }) : undefined,
-      images: images ? images.map(img => sanitize(img, { allowedTags: [] })) : undefined,
-      price,
-      discount,
-      stock,
-      category: category ? sanitize(category, { allowedTags: [] }) : undefined,
-      tags: tags ? tags.map(tag => sanitize(tag, { allowedTags: [] })) : undefined,
-      seller: seller ? sanitize(seller, { allowedTags: [] }) : undefined,
-      status,
-      isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined
+    const sanitizedInput = {
+      title: req.body.title ? sanitizeInput(req.body.title) : product.title,
+      description: req.body.description ? sanitizeInput(req.body.description) : product.description,
+      price: req.body.price ? Number(sanitizeInput(req.body.price)) : product.price,
+      discount: req.body.discount ? Number(sanitizeInput(req.body.discount)) : product.discount,
+      stock: req.body.stock ? Number(sanitizeInput(req.body.stock)) : product.stock,
+      category: req.body.category ? sanitizeInput(req.body.category) : product.category,
+      tags: Array.isArray(req.body.tags) ? req.body.tags.map(tag => sanitizeInput(tag)) : product.tags,
+      isFeatured: req.body.isFeatured !== undefined ? req.body.isFeatured : product.isFeatured
     };
 
-    if (sanitizedData.category && !mongoose.Types.ObjectId.isValid(sanitizedData.category)) {
-      throw new APIError('Invalid category ID', 400);
+    let images = product.images;
+    if (req.files && Array.isArray(req.files)) {
+      images = await Promise.all(
+        req.files.map(file => uploadMedia(file, "products", "image", { tags: ["product", sanitizedInput.title] }))
+      );
+      images = images.map(img => img.secure_url);
     }
 
-    if (sanitizedData.seller && !mongoose.Types.ObjectId.isValid(sanitizedData.seller)) {
-      throw new APIError('Invalid seller ID', 400);
-    }
-
-    if (sanitizedData.category) {
-      const categoryDoc = await Category.findOne({ _id: sanitizedData.category, isActive: true });
-      if (!categoryDoc) {
-        throw new APIError('Active category not found', 404);
-      }
-    }
-
-    if (sanitizedData.seller) {
-      const sellerDoc = await User.findOne({ _id: sanitizedData.seller, isActive: true });
-      if (!sellerDoc) {
-        throw new APIError('Active seller not found', 404);
-      }
-    }
-
-    let slug = undefined;
-    if (sanitizedData.title) {
-      slug = slugify(sanitizedData.title, { lower: true, strict: true });
-      let slugCounter = 1;
-      while (await Product.findOne({ slug, _id: { $ne: id } })) {
-        slug = `${slugify(sanitizedData.title, { lower: true, strict: true })}-${slugCounter}`;
-        slugCounter++;
-      }
-    }
-
-    const updates = Object.fromEntries(
-      Object.entries({ ...sanitizedData, slug }).filter(([_, v]) => v !== undefined)
-    );
-
-    const updatedProduct = await Product.findOneAndUpdate(
-      { _id: id, isActive: true },
-      { ...updates, updatedBy: req.user?.id },
-      { new: true, runValidators: true }
-    )
-      .populate('category', 'name')
-      .populate('seller', 'name email')
-      .select('-__v');
-
-    if (!updatedProduct) {
-      throw new APIError('Product not found', 404);
-    }
-
-    return res.status(200).json({ message: 'Product updated successfully', product: updatedProduct });
-  } catch (error) {
-    console.error('Update product error:', { error: error.message, productId: req.params.id });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to update product' });
+    Object.assign(product, sanitizedInput, { images, updatedBy: req.user._id });
+    await product.save();
+    const populatedProduct = await Product.findById(product._id).populate("category seller").lean();
+    res.json(populatedProduct);
+  } catch (err) {
+    logger.error("Failed to update product", { error: err.message, userId: req.user._id });
+    res.status(400).json({ message: err.message });
   }
 };
 
-/**
- * Delete product by ID (soft delete)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
+// Soft delete product
 export const deleteProduct = async (req, res) => {
   try {
-    checkPermissions(req.user);
-
-    const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw new APIError('Invalid product ID', 400);
-    }
-
-    const deletedProduct = await Product.findOneAndUpdate(
-      { _id: id, isActive: true },
-      { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() },
-      { new: true }
-    );
-
-    if (!deletedProduct) {
-      throw new APIError('Product not found', 404);
-    }
-
-    return res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    console.error('Delete product error:', { error: error.message, productId: req.params.id });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to delete product' });
-  }
-};
-
-/**
- * Add or update a product rating
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export const rateProduct = async (req, res) => {
-  try {
-    const { productId } = req.params;
-    const { userId, rating, comment } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(productId) || !mongoose.Types.ObjectId.isValid(userId)) {
-      throw new APIError('Invalid product or user ID', 400);
-    }
-
-    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
-      throw new APIError('Rating must be a number between 1 and 5', 400);
-    }
-
-    const sanitizedComment = comment ? sanitize(comment, { allowedTags: ['p', 'strong', 'em'] }) : undefined;
-
-    const product = await Product.findOne({ _id: productId, isActive: true });
+    const product = await Product.findById(req.params.id);
     if (!product) {
-      throw new APIError('Product not found', 404);
+      return res.status(404).json({ message: "Product not found" });
+    }
+    if (String(product.seller) !== String(req.user._id) && !["admin", "manager"].includes(req.user.role)) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    const user = await User.findOne({ _id: userId, isActive: true });
-    if (!user) {
-      throw new APIError('User not found', 404);
-    }
-
-    const existingRating = product.ratings.find(r => r.user.toString() === userId);
-    if (existingRating) {
-      existingRating.rating = rating;
-      if (sanitizedComment) existingRating.comment = sanitizedComment;
-    } else {
-      product.ratings.push({ user: userId, rating, comment: sanitizedComment });
-    }
-
-    product.averageRating = product.ratings.reduce((sum, r) => sum + r.rating, 0) / product.ratings.length;
+    product.status = "inactive";
     await product.save();
-
-    const populatedProduct = await Product.findById(product._id)
-      .populate('category', 'name')
-      .populate('seller', 'name email')
-      .select('-__v')
-      .lean();
-
-    return res.status(200).json({ message: 'Product rated successfully', product: populatedProduct });
-  } catch (error) {
-    console.error('Rate product error:', { error: error.message, productId: req.params.productId });
-    const status = error.statusCode || 500;
-    return res.status(status).json({ message: error.message || 'Failed to rate product' });
+    res.json({ message: "Product soft-deleted", product });
+  } catch (err) {
+    logger.error("Failed to delete product", { error: err.message, userId: req.user._id });
+    res.status(500).json({ message: "Internal server error" });
   }
 };

@@ -40,7 +40,7 @@ const Navbar = ({ isScrolled = false }: NavbarProps) => {
                 className="object-contain"
               />
             </motion.div>
-            <span className="text-xl font-bold tracking-wide hidden sm:block">
+            <span className="text-white text-xl font-bold tracking-wide hidden sm:block">
               Tetemeko Media
             </span>
           </Link>
@@ -63,7 +63,7 @@ const Navbar = ({ isScrolled = false }: NavbarProps) => {
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleSearch}
-              className="p-2 hover:text-secondary transition"
+              className="p-2 hover:text-light transition"
               aria-label="Search"
             >
               <FaSearch />

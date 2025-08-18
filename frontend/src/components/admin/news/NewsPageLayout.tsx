@@ -5,6 +5,7 @@ import NewsHeader from './NewsHeader';
 import NewsSearchFilterBar from './NewsSearchFilterBar';
 import NewsStats from './NewsStats';
 import NewsTable from './NewsTable';
+import NewsLoader from './NewsLoader'; // Assuming this is the path to your NewsLoader component
 import { deleteNewsById, getAllNews, getNewsStats, toggleBreakingNews } from '@/services/news/newsService';
 import { useEffect, useState } from 'react';
 import { News } from '@/interfaces/News';
@@ -20,9 +21,11 @@ export default function NewsPageLayout({ heading }: Props) {
   const [showForm, setShowForm] = useState(false);
   const [stats, setStats] = useState({ totalNews: 0, publishedNews: 0, unpublishedNews: 0 });
   const [refresh, setRefresh] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchAll = async () => {
+      setIsLoading(true);
       const [newsRes, statsRes] = await Promise.all([
         getAllNews(),
         getNewsStats()
@@ -30,6 +33,7 @@ export default function NewsPageLayout({ heading }: Props) {
 
       if (newsRes) setNewsList(newsRes.news);
       if (statsRes) setStats(statsRes);
+      setIsLoading(false);
     };
 
     fetchAll();
@@ -100,12 +104,16 @@ export default function NewsPageLayout({ heading }: Props) {
         </div>
       )}
 
-      <NewsTable
-        newsList={filteredNews}
-        onDelete={handleDelete}
-        onToggleBreaking={handleToggleBreaking}
-        refetch={refetch}
-      />
+      {isLoading ? (
+        <NewsLoader />
+      ) : (
+        <NewsTable
+          newsList={filteredNews}
+          onDelete={handleDelete}
+          onToggleBreaking={handleToggleBreaking}
+          refetch={refetch}
+        />
+      )}
     </div>
   );
 }

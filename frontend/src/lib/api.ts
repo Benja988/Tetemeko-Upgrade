@@ -20,6 +20,7 @@ async function refreshToken() {
   return response.json(); // { accessToken, refreshToken? }
 }
 
+
 export const apiRequest = async <T = any>(
   url: string,
   method = "GET",
@@ -43,6 +44,18 @@ export const apiRequest = async <T = any>(
       headers,
       body: body ? JSON.stringify(body) : undefined,
     });
+
+    let requestOptions: RequestInit = {
+      method,
+      headers,
+    };
+
+    if (body instanceof FormData) {
+      requestOptions.body = body;
+    } else if (body) {
+      headers["Content-Type"] = "application/json";
+      requestOptions.body = JSON.stringify(body);
+    }
 
     return response;
   };

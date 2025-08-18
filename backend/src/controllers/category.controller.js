@@ -12,7 +12,7 @@ class APIError extends Error {
 }
 
 // Predefined category types
-const VALID_CATEGORY_TYPES = ['news', 'blog', 'podcast', 'video'];
+const VALID_CATEGORY_TYPES = ['news', 'blog', 'podcast', 'video', 'Marketplace'];
 
 /**
  * Check if user has required permissions
@@ -41,9 +41,9 @@ export const createCategory = async (req, res) => {
       throw new APIError('Name and categoryType are required', 400);
     }
 
-    if (!VALID_CATEGORY_TYPES.includes(categoryType)) {
+    /*if (!VALID_CATEGORY_TYPES.includes(categoryType)) {
       throw new APIError(`Invalid category type. Must be one of: ${VALID_CATEGORY_TYPES.join(', ')}`, 400);
-    }
+    }*/
 
     // Sanitize inputs
     const sanitizedData = {
@@ -87,9 +87,9 @@ export const getAllCategories = async (req, res) => {
     const { type, page = 1, limit = 10 } = req.query;
     const filter = { isActive: true };
     if (type) {
-      if (!VALID_CATEGORY_TYPES.includes(type)) {
+      /*if (!VALID_CATEGORY_TYPES.includes(type)) {
         throw new APIError(`Invalid category type. Must be one of: ${VALID_CATEGORY_TYPES.join(', ')}`, 400);
-      }
+      }*/
       filter.categoryType = sanitize(type, { allowedTags: [] });
     }
 
@@ -158,9 +158,9 @@ export const updateCategory = async (req, res) => {
       throw new APIError('At least one field is required for update', 400);
     }
 
-    if (categoryType && !VALID_CATEGORY_TYPES.includes(categoryType)) {
+    /*if (categoryType && !VALID_CATEGORY_TYPES.includes(categoryType)) {
       throw new APIError(`Invalid category type. Must be one of: ${VALID_CATEGORY_TYPES.join(', ')}`, 400);
-    }
+    }*/
 
     // Sanitize inputs
     const sanitizedData = {

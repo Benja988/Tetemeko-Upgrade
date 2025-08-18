@@ -168,6 +168,8 @@ export default function UserRow({
           <Image
             src={user.profilePictureUrl || '/avatar.jpg'}
             alt={`${user.name}'s profile`}
+            width={40}
+            height={40}
             className="h-8 w-8 rounded-full object-cover border border-gray-200"
             loading="lazy"
             decoding="async"

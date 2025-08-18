@@ -1,3 +1,5 @@
+// src/models/Podcast.js
+
 import mongoose from 'mongoose';
 
 const PodcastSchema = new mongoose.Schema({

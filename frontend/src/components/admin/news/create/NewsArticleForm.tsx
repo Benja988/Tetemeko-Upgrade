@@ -305,7 +305,7 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
     }
   };
 
-  
+
 
   return (
     <div className="p-6 mx-auto space-y-6 bg-gray-50 rounded-xl shadow-lg max-w-5xl">
@@ -477,7 +477,13 @@ export default function NewsArticleForm({ onSuccess, existingNews }: NewsArticle
             className="w-full p-3 rounded-lg border border-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
           {thumbnail && (
-            <NextImage src={thumbnail} alt="Thumbnail preview" className="mt-2 w-40 rounded-lg shadow-sm" />
+            <NextImage
+              src={thumbnail}
+              alt="Thumbnail preview"
+              width={160}
+              height={90}
+              className="mt-2 w-40 rounded-lg shadow-sm object-cover"
+            />
           )}
           {errors.thumbnail && <p className="text-red-500 text-sm">{errors.thumbnail}</p>}
         </div>

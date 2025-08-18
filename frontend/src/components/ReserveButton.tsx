@@ -24,67 +24,53 @@ export default function ReserveButton({ variant = 'primary' }: { variant?: 'prim
     <motion.div
       className="w-full max-w-md mx-auto"
       initial={{ opacity: 0, y: 20 }}
-      whileInView={{ 
-        opacity: 1, 
+      whileInView={{
+        opacity: 1,
         y: 0,
-        transition: { 
-          duration: 0.6, 
-          ease: [0.16, 1, 0.3, 1],
-          delay: 0.1
-        }
+        transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }
       }}
       viewport={{ once: true, margin: '0px 0px -50px 0px' }}
     >
-      <Link href="/requestServices" passHref>
-        <motion.a
-          whileHover={{ 
-            y: -4,
-            scale: 1.02,
+      <Link
+        href="/requestServices"
+        className={`
+      flex w-full ${buttonVariants[variant].background} ${buttonVariants[variant].text}
+      font-semibold text-lg px-8 py-4 rounded-xl ${buttonVariants[variant].shadow}
+      transition-all duration-300 items-center justify-center gap-3
+      relative overflow-hidden group
+    `}
+      >
+        <motion.span
+          className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-10"
+          initial={{ x: '-100%' }}
+          whileHover={{
+            x: '100%',
+            transition: { duration: 1.2, ease: 'linear' }
           }}
-          whileTap={{ 
-            scale: 0.98,
-            transition: { duration: 0.1 }
+        />
+
+        <FiCalendar
+          className={`${buttonVariants[variant].icon} transition-transform group-hover:scale-110`}
+          size={22}
+        />
+
+        <span className="relative z-10">Reserve Media Services</span>
+
+        <FiArrowRight
+          className={`ml-1 transition-all duration-300 group-hover:translate-x-1 ${buttonVariants[variant].icon}`}
+        />
+
+        <motion.span
+          className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10"
+          initial={{ scale: 0, opacity: 0 }}
+          whileTap={{
+            scale: 2,
+            opacity: 0.2,
+            transition: { duration: 0.6 }
           }}
-          className={`
-            flex w-full ${buttonVariants[variant].background} ${buttonVariants[variant].text}
-            font-semibold text-lg px-8 py-4 rounded-xl ${buttonVariants[variant].shadow}
-            transition-all duration-300 items-center justify-center gap-3
-            relative overflow-hidden group
-          `}
-        >
-          {/* Animated background effect */}
-          <motion.span
-            className="absolute inset-0 bg-gradient-to-r from-blue-500 to-indigo-500 opacity-0 group-hover:opacity-10"
-            initial={{ x: '-100%' }}
-            whileHover={{ 
-              x: '100%',
-              transition: { duration: 1.2, ease: 'linear' }
-            }}
-          />
-          
-          <FiCalendar 
-            className={`${buttonVariants[variant].icon} transition-transform group-hover:scale-110`} 
-            size={22} 
-          />
-          
-          <span className="relative z-10">Reserve Media Services</span>
-          
-          <FiArrowRight 
-            className={`ml-1 transition-all duration-300 group-hover:translate-x-1 ${buttonVariants[variant].icon}`}
-          />
-          
-          {/* Ripple effect */}
-          <motion.span
-            className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10"
-            initial={{ scale: 0, opacity: 0 }}
-            whileTap={{
-              scale: 2,
-              opacity: 0.2,
-              transition: { duration: 0.6 }
-            }}
-          />
-        </motion.a>
+        />
       </Link>
     </motion.div>
+
   );
 }

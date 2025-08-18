@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "tetemeko.co.ke",
+      },
     ],
   },
 };

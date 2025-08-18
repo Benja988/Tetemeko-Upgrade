@@ -1,6 +1,7 @@
 'use client';
 
 import { ReactNode, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 
 interface Props {
@@ -13,7 +14,15 @@ interface Props {
   isSubmitting?: boolean;
 }
 
-export default function Modal({ isOpen, onClose, onSubmit, children, title, maxWidth = 'max-w-2xl', isSubmitting = false }: Props) {
+export default function Modal({
+  isOpen,
+  onClose,
+  onSubmit,
+  children,
+  title,
+  maxWidth = 'max-w-2xl',
+  isSubmitting = false,
+}: Props) {
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -34,14 +43,16 @@ export default function Modal({ isOpen, onClose, onSubmit, children, title, maxW
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? 'modal-title' : undefined}
+    >
       <div
         ref={modalRef}
         className={`bg-white rounded-2xl shadow-2xl w-full ${maxWidth} mx-4 overflow-hidden animate-slideInUp focus:outline-none`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={title ? 'modal-title' : undefined}
         tabIndex={-1}
       >
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -88,6 +99,7 @@ export default function Modal({ isOpen, onClose, onSubmit, children, title, maxW
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
