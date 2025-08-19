@@ -1,97 +1,53 @@
-// import { apiRequest } from '@/lib/api';
-// import { toast } from 'sonner';
-// import { Episode } from '@/interfaces/podcasts';
+import { apiRequest } from '@/lib/api';
+import { Episode, PaginatedEpisodesResponse } from '@/interfaces/podcasts';
+import { buildQueryParams } from '@/lib/api';
 
-// /* ------------------------ TOAST HANDLER WRAPPER ------------------------ */
-// const withToast = async <T>(
-//   fn: () => Promise<T>,
-//   successMsg: string,
-//   errorMsg: string
-// ): Promise<T | null> => {
-//   try {
-//     const result = await fn();
-//     toast.success(successMsg);
-//     return result;
-//   } catch (e: any) {
-//     toast.error(e?.message || errorMsg);
-//     return null;
-//   }
-// };
+export const episodeService = {
+  // Get all episodes for a podcast
+  async getAll(
+    podcastId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<PaginatedEpisodesResponse> {
+    const query = buildQueryParams(params);
+    return apiRequest(`/podcasts/${podcastId}/episodes${query}`, "GET");
+  },
 
-// /* ------------------------- EPISODE SERVICES --------------------------- */
+  // Get a single episode
+  async getById(
+    podcastId: string,
+    episodeId: string
+  ): Promise<{ episode: Episode }> {
+    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "GET");
+  },
 
-// // ✅ Add a new episode to a podcast
-// export const createEpisode = async (
-//   podcastId: string,
-//   data: FormData
-// ): Promise<Episode | null> =>
-//   withToast(
-//     () =>
-//       apiRequest<Episode>(`/podcasts/${podcastId}/episodes`, 'POST', data),
-//     'Episode created successfully.',
-//     'Failed to create episode.'
-//   );
+  // Add episode (admin only)
+  async create(
+    podcastId: string,
+    data: FormData
+  ): Promise<{ message: string; episode: Episode }> {
+    return apiRequest(`/podcasts/${podcastId}/episodes`, "POST", data);
+  },
 
-// // ✅ Get all episodes for a podcast
-// export const getAllEpisodes = async (
-//   podcastId: string,
-//   params: Record<string, any> = {}
-// ): Promise<{
-//   episodes: Episode[];
-//   total: number;
-//   page: number;
-//   limit: number;
-//   totalPages: number;
-// } | null> =>
-//   withToast(
-//     () =>
-//       apiRequest(
-//         `/podcasts/${podcastId}/episodes`,
-//         'GET',
-//         null
-//       ),
-//     'Fetched episodes successfully.',
-//     'Failed to fetch episodes.'
-//   );
+  // Update episode
+  async update(
+    podcastId: string,
+    episodeId: string,
+    data: FormData
+  ): Promise<{ message: string; episode: Episode }> {
+    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "PUT", data);
+  },
 
-// // ✅ Get an episode by ID
-// export const getEpisodeById = async (
-//   podcastId: string,
-//   episodeId: string
-// ): Promise<Episode | null> => {
-//   try {
-//     return await apiRequest<Episode>(`/podcasts/${podcastId}/episodes/${episodeId}`, 'GET');
-//   } catch (error: any) {
-//     console.error('❌ Failed to fetch episode:', error.message);
-//     return null;
-//   }
-// };
-
-// // ✅ Update an episode
-// export const updateEpisodeById = async (
-//   podcastId: string,
-//   episodeId: string,
-//   data: FormData
-// ): Promise<Episode | null> =>
-//   withToast(
-//     () =>
-//       apiRequest<Episode>(
-//         `/podcasts/${podcastId}/episodes/${episodeId}`,
-//         'PUT',
-//         data
-//       ),
-//     'Episode updated successfully.',
-//     'Failed to update episode.'
-//   );
-
-// // ✅ Delete an episode
-// export const deleteEpisodeById = async (
-//   podcastId: string,
-//   episodeId: string
-// ): Promise<boolean | null> =>
-//   withToast(
-//     () =>
-//       apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, 'DELETE'),
-//     'Episode deleted successfully.',
-//     'Failed to delete episode.'
-//   );
+  // Delete episode
+  async delete(
+    podcastId: string,
+    episodeId: string
+  ): Promise<{ message: string }> {
+    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "DELETE");
+  },
+};

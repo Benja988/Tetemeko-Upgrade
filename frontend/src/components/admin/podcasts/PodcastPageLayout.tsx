@@ -1,47 +1,143 @@
-// // src/app/dashboard/podcasts/PodcastPageLayout.tsx
-// "use client";
+// src/components/podcasts/PodcastPageLayout.tsx
+"use client";
+import { useEffect, useState } from "react";
+import { Podcast, Episode } from "@/interfaces/podcasts";
+import PodcastTable from "./PodcastTable";
+import { podcastService } from "@/services/podcasts/podcastsService";
+import { episodeService } from "@/services/episodes/episodeServices";
+import Loader from "@/components/Loader";
+import Button from "@/components/ui/Button";
+import EpisodeTable from "./EpisodeTable";
+import PodcastFormModal from "./PodcastFormModal";
+import EpisodeFormModal from "./EpisodeFormModal";
+import ConfirmDialog from "./ConfirmDialog";
 
-// import React, { useState } from "react";
-// import { Podcast } from "@/interfaces/podcasts";
-// import PodcastHeader from "@/components/podcasts/PodcastHeader";
-// import PodcastSearch from "@/components/podcasts/PodcastSearch";
-// import PodcastTable from "@/components/podcasts/PodcastTable";
-// import PodcastForm from "@/components/podcasts/PodcastForm";
+export default function PodcastPageLayout() {
+  const [podcasts, setPodcasts] = useState<Podcast[]>([]);
+  const [episodes, setEpisodes] = useState<Episode[]>([]);
+  const [selectedPodcast, setSelectedPodcast] = useState<Podcast | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-// const PodcastPageLayout: React.FC = () => {
-//   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
-//   const [showForm, setShowForm] = useState(false);
+  // modals
+  const [showPodcastModal, setShowPodcastModal] = useState(false);
+  const [editingPodcast, setEditingPodcast] = useState<Podcast | null>(null);
 
-//   const handleAddPodcast = () => setShowForm(true);
+  const [showEpisodeModal, setShowEpisodeModal] = useState(false);
+  const [editingEpisode, setEditingEpisode] = useState<Episode | null>(null);
 
-//   const handleSavePodcast = (data: any) => {
-//     // Later, connect with createPodcast service
-//     const newPodcast: Podcast = {
-//       _id: String(Date.now()),
-//       title: data.title,
-//       description: data.description,
-//       coverImage: data.coverImage ? URL.createObjectURL(data.coverImage) : "",
-//       category: { _id: "1", name: data.category },
-//       station: data.station ? { _id: "2", name: data.station } : undefined,
-//       isActive: true,
-//     };
-//     setPodcasts((prev) => [...prev, newPodcast]);
-//     setShowForm(false);
-//   };
+  const [confirmDelete, setConfirmDelete] = useState<{ open: boolean; id: string | null; type: "podcast" | "episode" | null }>({
+    open: false,
+    id: null,
+    type: null,
+  });
 
-//   const handleSearch = (query: string) => {
-//     console.log("Search query:", query);
-//     // later connect to getAllPodcasts({ search: query })
-//   };
+  const fetchPodcasts = async () => {
+    try {
+      setLoading(true);
+      const data = await podcastService.getAll();
+      setPodcasts(data.podcasts);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-//   return (
-//     <div className="p-6">
-//       <PodcastHeader onAddPodcast={handleAddPodcast} />
-//       <PodcastSearch onSearch={handleSearch} />
-//       {showForm && <PodcastForm onSubmit={handleSavePodcast} />}
-//       <PodcastTable podcasts={podcasts} />
-//     </div>
-//   );
-// };
+  const fetchEpisodes = async (podcastId: string) => {
+    const data = await episodeService.getAll(podcastId);
+    setEpisodes(data.episodes);
+  };
 
-// export default PodcastPageLayout;
+  useEffect(() => {
+    fetchPodcasts();
+  }, []);
+
+  // CRUD podcast
+  const handleSavePodcast = async (formData: FormData, id?: string) => {
+    if (id) await podcastService.update(id, formData);
+    else await podcastService.create(formData);
+    setShowPodcastModal(false);
+    fetchPodcasts();
+  };
+
+  const handleDeletePodcast = async (id: string) => {
+    await podcastService.delete(id);
+    fetchPodcasts();
+  };
+
+  // CRUD episode
+  const handleSaveEpisode = async (formData: FormData, id?: string) => {
+    if (!selectedPodcast) return;
+    if (id) await episodeService.update(selectedPodcast._id, id, formData);
+    else await episodeService.create(selectedPodcast._id, formData);
+    setShowEpisodeModal(false);
+    fetchEpisodes(selectedPodcast._id);
+  };
+
+  const handleDeleteEpisode = async (id: string) => {
+    if (!selectedPodcast) return;
+    await episodeService.delete(selectedPodcast._id, id);
+    fetchEpisodes(selectedPodcast._id);
+  };
+
+  if (loading) return <Loader />;
+  if (error) return <p className="text-red-500">{error}</p>;
+
+  return (
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-xl font-bold">Podcasts</h1>
+        <Button onClick={() => { setEditingPodcast(null); setShowPodcastModal(true); }}>+ Add Podcast</Button>
+      </div>
+
+      <PodcastTable
+        podcasts={podcasts}
+        onEdit={(p) => { setEditingPodcast(p); setShowPodcastModal(true); }}
+        onDelete={(id) => setConfirmDelete({ open: true, id, type: "podcast" })}
+        onToggle={async (id) => { await podcastService.toggleStatus(id); fetchPodcasts(); }}
+      />
+
+      {selectedPodcast && (
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-lg font-semibold">Episodes of {selectedPodcast.title}</h2>
+            <Button onClick={() => { setEditingEpisode(null); setShowEpisodeModal(true); }}>+ Add Episode</Button>
+          </div>
+          <EpisodeTable
+            episodes={episodes}
+            onEdit={(e) => { setEditingEpisode(e); setShowEpisodeModal(true); }}
+            onDelete={(id) => setConfirmDelete({ open: true, id, type: "episode" })}
+          />
+        </div>
+      )}
+
+      {/* Modals */}
+      <PodcastFormModal
+        open={showPodcastModal}
+        onClose={() => setShowPodcastModal(false)}
+        onSave={handleSavePodcast}
+        podcast={editingPodcast}
+      />
+      <EpisodeFormModal
+        open={showEpisodeModal}
+        onClose={() => setShowEpisodeModal(false)}
+        onSave={handleSaveEpisode}
+        episode={editingEpisode}
+      />
+
+      {/* Delete dialog */}
+      <ConfirmDialog
+        open={confirmDelete.open}
+        title="Confirm Delete"
+        message="Are you sure you want to delete this?"
+        onConfirm={() => {
+          if (confirmDelete.type === "podcast" && confirmDelete.id) handleDeletePodcast(confirmDelete.id);
+          if (confirmDelete.type === "episode" && confirmDelete.id) handleDeleteEpisode(confirmDelete.id);
+          setConfirmDelete({ open: false, id: null, type: null });
+        }}
+        onClose={() => setConfirmDelete({ open: false, id: null, type: null })}
+      />
+    </div>
+  );
+}

@@ -1,44 +1,63 @@
-// interfaces/Podcast.ts
+// src/interfaces/podcasts.ts
+
 export interface Episode {
   _id: string;
   title: string;
   description: string;
   audioUrl: string;
   duration: number;
-  episodeNumber?: number;
-  tags?: string[];
   publishedDate: string;
-  createdBy?: { name: string };
-}
-
-export interface EpisodeInput {
-  title: string;
-  description: string;
-  duration: number;
+  podcast: string; // podcast ID
+  createdBy: {
+    _id: string;
+    name: string;
+  };
+  isActive: boolean;
   episodeNumber?: number;
   tags?: string[];
-  audioUrl?: string | File;
 }
 
-
-// src/interfaces/podcasts.ts
 export interface Podcast {
   _id: string;
   title: string;
   description: string;
   coverImage?: string;
-  category?: { _id: string; name: string };
-  station?: { _id: string; name: string };
-  episodes?: Episode[];
-  createdBy?: { name: string };
+  category: {
+    _id: string;
+    name: string;
+  };
+  station?: {
+    _id: string;
+    name: string;
+  };
+  createdBy: {
+    _id: string;
+    name: string;
+  };
   isActive: boolean;
+  episodes?: Episode[];
+  tags?: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
+// ✅ API Responses
+export interface PaginatedPodcastsResponse {
+  podcasts: Podcast[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
 
-export interface PodcastInput {
-  title: string;
-  description: string;
-  category: string;
-  station?: string;
-  coverImage?: string | File;
+export interface PaginatedEpisodesResponse {
+  episodes: Episode[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }

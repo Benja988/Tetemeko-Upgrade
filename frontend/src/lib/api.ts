@@ -87,3 +87,16 @@ export const apiRequest = async <T = any>(
   return response.json() as Promise<T>;
 };
 
+
+export function buildQueryParams(params?: Record<string, any>): string {
+  if (!params) return "";
+  const query = new URLSearchParams(
+    Object.entries(params).reduce((acc, [key, val]) => {
+      if (val !== undefined && val !== null) acc[key] = String(val);
+      return acc;
+    }, {} as Record<string, string>)
+  ).toString();
+  return query ? `?${query}` : "";
+}
+
+

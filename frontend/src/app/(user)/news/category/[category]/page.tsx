@@ -1,5 +1,4 @@
 // @/app/(user)/news/category/[category]/page.tsx
-
 import { getNewsByCategory } from '@/services/news/newsService';
 import { slugify } from '@/utils/slugify';
 import { News } from '@/interfaces/News';
@@ -8,32 +7,30 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import NewsFooter from '@/components/news/NewsFooter';
 import Image from 'next/image';
+import type { Metadata } from 'next';
 
-// interface Props {
-//   params: {
-//     category: string;
-//   };
-// }
+// Define props with an async params type
+type Props = {
+  params: Promise<{ category: string }>;
+};
 
 export async function generateMetadata(
-  props: { params: Promise<{ category: string }> }
-) {
+  props: Props
+): Promise<Metadata> {
   const { category } = await props.params;
-
   return {
     title: `News - ${category}`,
     description: `Browse the latest news under ${category} category`,
   };
 }
 
-
-export default async function CategoryPage({ params }: { params: { category: string } }) {
-  const { category } = await params;
-
+export default async function CategoryPage(props: Props) {
+  const { category } = await props.params;
   const result = await getNewsByCategory(category);
   const newsList: News[] = result?.news ?? [];
 
   if (!result || newsList.length === 0) return notFound();
+
   return (
     <>
       <Navbar />
@@ -41,28 +38,36 @@ export default async function CategoryPage({ params }: { params: { category: str
         <h1 className="text-4xl font-bold mb-8 font-serif underline decoration-secondary decoration-4">
           {category} News
         </h1>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {newsList.map((news) => (
-            <Link href={`/news/article/${slugify(news.title)}-${news._id}`} key={news._id}>
+            <Link
+              href={`/news/article/${slugify(news.title)}-${news._id}`}
+              key={news._id}
+            >
               <div className="bg-gray-900 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition">
                 <Image
-                  src={news.thumbnail || news.featuredImage || '/placeholder.jpg'}
+                  src={
+                    news.thumbnail ||
+                    news.featuredImage ||
+                    '/placeholder.jpg'
+                  }
                   alt={news.title}
                   className="w-full h-48 object-cover"
+                  width={400}
+                  height={250}
                 />
                 <div className="p-4">
                   <h2 className="text-xl font-semibold text-white font-serif line-clamp-2">
                     {news.title}
                   </h2>
                   <p className="text-sm text-gray-300 mt-2 line-clamp-3">
-                    {news.summary || news.content?.slice(0, 100) + '...'}
+                    {news.summary ||
+                      news.content?.slice(0, 100) + '...'}
                   </p>
                 </div>
               </div>
             </Link>
           ))}
-
         </div>
       </main>
       <NewsFooter />
