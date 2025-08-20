@@ -107,7 +107,7 @@ app.use(`${apiBase}/users`, userRoutes);
 app.use(`${apiBase}/authors`, authorRoutes);
 app.use(`${apiBase}/news`, newsRoutes);
 app.use(`${apiBase}/categories`, categoryRoutes);
-app.use(`${apiBase}/episodes`, episodeRoutes);
+app.use(`${apiBase}/podcasts`, episodeRoutes);
 app.use(`${apiBase}/stations`, stationRoutes);
 app.use(`${apiBase}/podcasts`, podcastRoutes);
 /*app.use(`${apiBase}/products`, productRoutes);

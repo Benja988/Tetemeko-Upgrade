@@ -24,8 +24,21 @@ router.get('/', getAllPodcasts); // List all podcasts with optional category, se
 router.get('/:id', getPodcastById); // Get a single podcast by ID
 
 // 🟡 Authenticated routes
-router.post('/', authenticateJWT, authorize([UserRole.ADMIN]), createPodcast); // Create a new podcast
-router.put('/:id', authenticateJWT, authorize([UserRole.ADMIN]), upload.single('coverImage'), updatePodcast); // Update a podcast
+router.post(
+  '/',
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
+  upload.single('coverImage'), 
+  createPodcast
+);
+
+router.put(
+  '/:id',
+  authenticateJWT,
+  authorize([UserRole.ADMIN]),
+  upload.single('coverImage'),
+  updatePodcast
+);
 router.delete('/:id', authenticateJWT, authorize([UserRole.ADMIN]), deletePodcast); // Delete a podcast
 
 // 🔴 Admin-only route

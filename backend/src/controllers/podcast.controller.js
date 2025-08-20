@@ -26,10 +26,7 @@ const checkPermissions = (user) => {
 };
 
 // Validate podcast data
-const validatePodcastData = ({ title, description, category, station, coverImage }) => {
-  if (!title || typeof title !== 'string' || title.length < 1 || title.length > 200) {
-    throw new APIError('Title is required and must be 1-200 characters', 400);
-  }
+const validatePodcastData = ({ title, description, category, station, coverImage }, hasFile = false) => {
   if (!description || typeof description !== 'string' || description.length < 1) {
     throw new APIError('Description is required', 400);
   }
@@ -39,10 +36,13 @@ const validatePodcastData = ({ title, description, category, station, coverImage
   if (station && !mongoose.isValidObjectId(station)) {
     throw new APIError('Invalid station ID', 400);
   }
-  if (coverImage && !coverImage.startsWith('data:image/') && !coverImage.startsWith('http')) {
+
+  // Only validate coverImage if it's a string and not a file upload
+  if (!hasFile && coverImage && !coverImage.startsWith('data:image/') && !coverImage.startsWith('http')) {
     throw new APIError('Invalid cover image format', 400);
   }
 };
+
 
 /**
  * Create a new podcast
@@ -58,7 +58,7 @@ export const createPodcast = async (req, res) => {
 
     const { title, description, category, station, coverImage } = req.body;
 
-    validatePodcastData({ title, description, category, station, coverImage });
+    validatePodcastData({ title, description, category, station, coverImage }, !!req.file);
 
     const sanitizedData = {
       title: sanitize(title, { allowedTags: [] }),
@@ -238,7 +238,7 @@ export const updatePodcast = async (req, res) => {
 
     // Validate only provided fields
     if (title || description || category || station || coverImage) {
-      validatePodcastData({ title, description, category, station, coverImage });
+      validatePodcastData({ title, description, category, station, coverImage }, !!req.file);
     }
 
     const sanitizedData = {

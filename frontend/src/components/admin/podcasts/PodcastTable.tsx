@@ -7,9 +7,10 @@ interface Props {
   onEdit: (podcast: Podcast) => void;
   onDelete: (id: string) => void;
   onToggle: (id: string) => void;
+  onSelect: (podcast: Podcast) => void;
 }
 
-export default function PodcastTable({ podcasts, onEdit, onDelete, onToggle }: Props) {
+export default function PodcastTable({ podcasts, onEdit, onDelete, onToggle, onSelect }: Props) {
   return (
     <table className="w-full border-collapse border border-gray-300">
       <thead>
@@ -28,6 +29,7 @@ export default function PodcastTable({ podcasts, onEdit, onDelete, onToggle }: P
             onEdit={onEdit}
             onDelete={onDelete}
             onToggle={onToggle}
+            onSelect={onSelect}
           />
         ))}
       </tbody>

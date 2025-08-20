@@ -96,6 +96,10 @@ export default function PodcastPageLayout() {
         onEdit={(p) => { setEditingPodcast(p); setShowPodcastModal(true); }}
         onDelete={(id) => setConfirmDelete({ open: true, id, type: "podcast" })}
         onToggle={async (id) => { await podcastService.toggleStatus(id); fetchPodcasts(); }}
+        onSelect={(p) => { 
+    setSelectedPodcast(p); 
+    fetchEpisodes(p._id); 
+  }}
       />
 
       {selectedPodcast && (
@@ -116,7 +120,7 @@ export default function PodcastPageLayout() {
       <PodcastFormModal
         open={showPodcastModal}
         onClose={() => setShowPodcastModal(false)}
-        onSave={handleSavePodcast}
+        onSuccess={fetchPodcasts}
         podcast={editingPodcast}
       />
       <EpisodeFormModal
