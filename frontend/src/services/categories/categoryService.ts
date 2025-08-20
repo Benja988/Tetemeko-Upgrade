@@ -43,6 +43,15 @@ export const getCategoryBySlug = async (slug: string): Promise<Category | null> 
   }
 };
 
+export const getCategoryById = async (id: string): Promise<Category | null> => {
+  try {
+    return await apiRequest<Category>(`/categories/${id}`);
+  } catch (e: any) {
+    toast.error(e?.message || "Failed to fetch category.");
+    return null;
+  }
+};
+
 // ✅ Create category
 export const createCategory = async (
   data: CategoryInput
@@ -55,21 +64,27 @@ export const createCategory = async (
 
 // ✅ Update category
 export const updateCategory = async (
-  slug: string,
-  data: Partial<Omit<Category, "slug">>
-): Promise<Category | null> =>
-  withToast(
-    () => apiRequest<Category>(`/categories/${slug}`, "PUT", data),
+  id: string,
+  data: Partial<Omit<Category, "id">>
+): Promise<Category | null> => {
+  // Remove empty string fields before sending
+  const filteredData = Object.fromEntries(
+    Object.entries(data).filter(([_, v]) => v !== "")
+  );
+
+  return withToast(
+    () => apiRequest<Category>(`/categories/${id}`, "PUT", filteredData),
     "Category updated successfully.",
     "Failed to update category."
   );
+};
 
 // ✅ Delete category
-export const deleteCategory = async (slug: string): Promise<boolean> => {
+export const deleteCategory = async (id: string): Promise<boolean> => {
   try {
     const result = await withToast(
       async () => {
-        await apiRequest(`/categories/${slug}`, "DELETE");
+        await apiRequest(`/categories/${id}`, "DELETE");
         return true;
       },
       "Category deleted successfully.",

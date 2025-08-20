@@ -9,16 +9,26 @@ import {
   getCategories,
   deleteCategory,
 } from '@/services/categories/categoryService';
+import { toast } from 'sonner'; // using sonner/toast for better UX
 
 export default function CategoriesPageLayout() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [filter, setFilter] = useState<string>('');
+  const [loading, setLoading] = useState(false);
 
   const fetchCategories = async () => {
-    const data = await getCategories(filter);
-    setCategories(data);
+    try {
+      setLoading(true);
+      const data = await getCategories(filter);
+      setCategories(data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -35,13 +45,21 @@ export default function CategoriesPageLayout() {
     setModalOpen(true);
   };
 
-  const handleDelete = async (slug: string) => {
-    const confirmed = confirm('Are you sure you want to delete this category?');
-    if (confirmed) {
-      const success = await deleteCategory(slug);
+  const handleDelete = async (_id: string) => {
+    try {
+      const confirmed = confirm('Are you sure you want to delete this category?');
+      if (!confirmed) return;
+
+      const success = await deleteCategory(_id);
       if (success) {
+        toast.success('Category deleted');
         fetchCategories();
+      } else {
+        toast.error('Failed to delete category');
       }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Something went wrong');
     }
   };
 
@@ -58,11 +76,17 @@ export default function CategoriesPageLayout() {
       </div>
 
       <CategoryFilter value={filter} onChange={setFilter} />
-      <CategoryTable
-        categories={categories}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+
+      {loading ? (
+        <p className="text-gray-500 mt-4">Loading categories...</p>
+      ) : (
+        <CategoryTable
+          categories={categories}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
+
       <CategoryFormModal
         isOpen={isModalOpen}
         onClose={() => setModalOpen(false)}

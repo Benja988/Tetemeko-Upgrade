@@ -1,25 +1,35 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Episode } from "@/interfaces/podcasts";
 import Button from "@/components/ui/Button";
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSave: (data: FormData, id?: string) => void;
+  onSave: (data: FormData, id?: string) => Promise<void>;
   episode?: Episode | null;
 }
 
-export default function EpisodeFormModal({ open, onClose, onSave, episode }: Props) {
+export default function EpisodeFormModal({
+  open,
+  onClose,
+  onSave,
+  episode,
+}: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
   const [episodeNumber, setEpisodeNumber] = useState("");
   const [tags, setTags] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [audioUrl, setAudioUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (episode) {
@@ -27,34 +37,62 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
       setDescription(episode.description || "");
       setDuration(String(episode.duration || ""));
       setEpisodeNumber(String(episode.episodeNumber || ""));
-      setTags(episode.tags?.join(", ") || "");
-      setAudioUrl(episode.audioUrl || "");
+      setTags(Array.isArray(episode.tags) ? episode.tags.join(", ") : episode.tags || "");
     } else {
-      setTitle("");
-      setDescription("");
-      setDuration("");
-      setEpisodeNumber("");
-      setTags("");
-      setAudioUrl("");
-      setFile(null);
+      resetForm();
     }
   }, [episode]);
 
-  const handleSubmit = () => {
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setDuration("");
+    setEpisodeNumber("");
+    setTags("");
+    setFile(null);
+  };
+
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      alert("Title is required");
+      return;
+    }
+    if (!episode && !file) {
+      alert("Please upload an audio file for this episode");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("title", title);
     formData.append("description", description);
-    formData.append("duration", duration);
-    formData.append("episodeNumber", episodeNumber);
-    formData.append("tags", JSON.stringify(tags.split(",").map((t) => t.trim())));
-    
+    formData.append("duration", String(Number(duration)));
+    formData.append("episodeNumber", String(Number(episodeNumber)));
+
+    tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0)
+      .forEach((tag) => formData.append("tags[]", tag));
+
     if (file) {
-      formData.append("audioFile", file); // backend should upload and return audioUrl
-    } else if (audioUrl) {
-      formData.append("audioUrl", audioUrl); // allow direct URL if no file
+      formData.append("audioFile", file);
     }
 
-    onSave(formData, episode?._id);
+    try {
+      setSubmitting(true);
+      await onSave(formData, episode?._id);
+      resetForm();
+      onClose();
+    } catch (err) {
+      console.error("Failed to save episode:", err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0] || null;
+    setFile(selectedFile);
   };
 
   return (
@@ -64,7 +102,6 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
           <DialogTitle>{episode ? "Edit Episode" : "Add Episode"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
-          {/* Title */}
           <input
             className="border p-2 w-full rounded"
             placeholder="Title"
@@ -72,7 +109,6 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
             onChange={(e) => setTitle(e.target.value)}
           />
 
-          {/* Description */}
           <textarea
             className="border p-2 w-full rounded"
             placeholder="Description"
@@ -81,7 +117,6 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
             onChange={(e) => setDescription(e.target.value)}
           />
 
-          {/* Duration */}
           <input
             className="border p-2 w-full rounded"
             placeholder="Duration (seconds)"
@@ -90,7 +125,6 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
             onChange={(e) => setDuration(e.target.value)}
           />
 
-          {/* Episode Number */}
           <input
             className="border p-2 w-full rounded"
             placeholder="Episode Number"
@@ -99,7 +133,6 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
             onChange={(e) => setEpisodeNumber(e.target.value)}
           />
 
-          {/* Tags */}
           <input
             className="border p-2 w-full rounded"
             placeholder="Tags (comma separated)"
@@ -107,25 +140,23 @@ export default function EpisodeFormModal({ open, onClose, onSave, episode }: Pro
             onChange={(e) => setTags(e.target.value)}
           />
 
-          {/* Audio File Upload */}
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-          />
-
-          {/* OR Audio URL */}
-          <input
-            className="border p-2 w-full rounded"
-            placeholder="Audio URL (optional if file is uploaded)"
-            value={audioUrl}
-            onChange={(e) => setAudioUrl(e.target.value)}
-          />
+          <div>
+            <input
+              type="file"
+              accept="audio/*"
+              onChange={handleFileChange}
+            />
+            {file && <p className="text-sm mt-1">Selected: {file.name}</p>}
+          </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSubmit}>{episode ? "Update" : "Create"}</Button>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? "Saving..." : episode ? "Update" : "Create"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

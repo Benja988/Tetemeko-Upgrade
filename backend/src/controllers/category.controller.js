@@ -151,16 +151,12 @@ export const updateCategory = async (req, res) => {
   try {
     checkPermissions(req.user, [UserRole.ADMIN, UserRole.MANAGER]);
 
-    const { slug } = req.params;
+    const { id } = req.params;
     const { name, categoryType, description, seoTitle, seoDescription } = req.body;
 
     if (!name && !categoryType && !description && !seoTitle && !seoDescription) {
       throw new APIError('At least one field is required for update', 400);
     }
-
-    /*if (categoryType && !VALID_CATEGORY_TYPES.includes(categoryType)) {
-      throw new APIError(`Invalid category type. Must be one of: ${VALID_CATEGORY_TYPES.join(', ')}`, 400);
-    }*/
 
     // Sanitize inputs
     const sanitizedData = {
@@ -172,10 +168,12 @@ export const updateCategory = async (req, res) => {
     };
 
     const updates = { ...sanitizedData };
+
+    // If name changes, update slug as well
     if (sanitizedData.name) {
       let newSlug = slugify(sanitizedData.name, { lower: true });
       let slugCounter = 1;
-      while (await Category.findOne({ slug: newSlug, slug: { $ne: slug } })) {
+      while (await Category.findOne({ slug: newSlug, _id: { $ne: id } })) {
         newSlug = `${slugify(sanitizedData.name, { lower: true })}-${slugCounter}`;
         slugCounter++;
       }
@@ -183,7 +181,7 @@ export const updateCategory = async (req, res) => {
     }
 
     const updatedCategory = await Category.findOneAndUpdate(
-      { slug, isActive: true },
+      { _id: id, isActive: true },
       { $set: { ...updates, updatedBy: req.user?.id } },
       { new: true, runValidators: true }
     ).select('-__v');
@@ -194,11 +192,12 @@ export const updateCategory = async (req, res) => {
 
     return res.status(200).json({ message: 'Category updated successfully', category: updatedCategory });
   } catch (error) {
-    console.error('Update category error:', { error: error.message, slug: req.params.slug });
+    console.error('Update category error:', { error: error.message, id: req.params.id });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }
 };
+
 
 /**
  * Delete category (soft delete)
@@ -209,11 +208,10 @@ export const deleteCategory = async (req, res) => {
   try {
     checkPermissions(req.user, [UserRole.ADMIN]);
 
-    const { slug } = req.params;
-    const sanitizedSlug = sanitize(slug, { allowedTags: [] });
+    const { id } = req.params;
     
     const deleted = await Category.findOneAndUpdate(
-      { slug: sanitizedSlug, isActive: true },
+      { _id: id, isActive: true },
       { $set: { isActive: false, deletedBy: req.user?.id, deletedAt: new Date() } },
       { new: true }
     );
@@ -224,7 +222,7 @@ export const deleteCategory = async (req, res) => {
 
     return res.status(200).json({ message: 'Category deleted successfully' });
   } catch (error) {
-    console.error('Delete category error:', { error: error.message, slug: req.params.slug });
+    console.error('Delete category error:', { error: error.message, id: req.params.id });
     const status = error.statusCode || 500;
     return res.status(status).json({ message: error.message || 'Internal server error' });
   }

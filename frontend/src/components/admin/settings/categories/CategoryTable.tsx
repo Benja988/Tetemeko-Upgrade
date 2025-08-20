@@ -4,7 +4,7 @@ import CategoryRowActions from './CategoryRowActions';
 interface Props {
   categories: Category[];
   onEdit: (cat: Category) => void;
-  onDelete: (slug: string) => void;
+  onDelete: (_id: string) => void;
 }
 
 export default function CategoryTable({ categories, onEdit, onDelete }: Props) {

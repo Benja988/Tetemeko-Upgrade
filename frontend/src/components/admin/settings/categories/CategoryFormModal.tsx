@@ -54,22 +54,26 @@ export default function CategoryFormModal({
   };
 
   const handleSubmit = async () => {
+    console.log("Submitting form:", form);
     try {
       if (initialData) {
-        const updated = await updateCategory(initialData.slug, form);
+        console.log("Updating category with id:", initialData._id);
+        const updated = await updateCategory(initialData._id, form);
+        console.log("Update response:", updated);
         if (updated) {
           onSuccess();
           onClose();
         }
       } else {
         const created = await createCategory(form);
+        console.log("Create response:", created);
         if (created) {
           onSuccess();
           onClose();
         }
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error in submit:", err);
     }
   };
 

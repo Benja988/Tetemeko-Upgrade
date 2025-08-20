@@ -140,15 +140,34 @@ router.post(
 );
 
 /**
- * @route PUT /api/v1/categories/:slug
+ * @route GET /api/v1/categories/:id
+ * @desc Get category by id
+ * @access Public
+ */
+router.get('/:id', publicRateLimiter, async (req, res, next) => {
+  try {
+    await getCategoryById(req, res);
+    logger.info('Retrieved category by id', { id: req.params.id, correlationId: req.correlationId });
+  } catch (error) {
+    logger.error('Error retrieving category by id', {
+      error: error.message,
+      stack: error.stack,
+      id: req.params.id,
+      correlationId: req.correlationId
+    });
+    next(error);
+  }
+});
+
+/**
+ * @route PUT /api/v1/categories/:id
  * @desc Update a category
  * @access Admin
  */
 router.put(
-  '/:slug',
+  '/:id',
   authenticateJWT,
   authorize([UserRole.ADMIN]),
-  validateSlug,
   validateCategoryData,
   async (req, res, next) => {
     try {
@@ -156,7 +175,7 @@ router.put(
       await updateCategory(req, res);
       logger.audit('Category updated', {
         userId: req.user.id,
-        slug: req.params.slug,
+        id: req.params.id,
         body: req.body,
         correlationId: req.correlationId
       });
@@ -165,7 +184,7 @@ router.put(
         error: error.message,
         stack: error.stack,
         userId: req.user.id,
-        slug: req.params.slug,
+        id: req.params.id,
         correlationId: req.correlationId
       });
       next(error);
@@ -174,22 +193,21 @@ router.put(
 );
 
 /**
- * @route DELETE /api/v1/categories/:slug
+ * @route DELETE /api/v1/categories/:id
  * @desc Soft delete a category
  * @access Admin
  */
 router.delete(
-  '/:slug',
+  '/:id',
   authenticateJWT,
   authorize([UserRole.ADMIN]),
-  validateSlug,
   async (req, res, next) => {
     try {
       req.body.deletedBy = req.user.id;
       await deleteCategory(req, res);
       logger.audit('Category soft deleted', {
         userId: req.user.id,
-        slug: req.params.slug,
+        id: req.params.id,
         correlationId: req.correlationId
       });
     } catch (error) {
@@ -197,12 +215,13 @@ router.delete(
         error: error.message,
         stack: error.stack,
         userId: req.user.id,
-        slug: req.params.slug,
+        id: req.params.id,
         correlationId: req.correlationId
       });
       next(error);
     }
   }
 );
+
 
 export default router;
