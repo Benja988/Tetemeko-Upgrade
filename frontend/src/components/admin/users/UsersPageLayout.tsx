@@ -33,14 +33,14 @@ export default function UsersPageLayout({
   const [selectedUserNames, setSelectedUserNames] = useState<string[]>([]);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isExportModalOpen, setExportModalOpen] = useState(false);
-  const [uiFilter, setUiFilter] = useState(''); // Tabs filter like locked, pending
+  const [uiFilter, setUiFilter] = useState(''); 
 
   const applyUiFilter = (users: IUser[], filter: string): IUser[] => {
     switch (filter) {
       case 'pending':
         return users.filter((u) => !u.isVerified);
       case 'invited':
-        return users.filter((u) => !u.isVerified); // Modify if invited is separate
+        return users.filter((u) => !u.isVerified); 
       case 'locked':
         return users.filter((u) => u.failedLoginAttempts >= 3);
       case 'inactive':

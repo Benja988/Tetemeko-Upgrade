@@ -5,8 +5,8 @@ import CategoriesPageLayout from "@/components/admin/settings/categories/Categor
 export default function CategoriesPage() {
   return (
     <CategoriesPageLayout
-      heading="Marketplace Categories"
-      fixedFilter="marketplace"  
+      heading="News Categories"
+      fixedFilter="news"  
       showFilter={false}       
     />
   );

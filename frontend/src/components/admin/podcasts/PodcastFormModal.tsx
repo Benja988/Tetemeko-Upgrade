@@ -18,7 +18,7 @@ import { podcastService } from "@/services/podcasts/podcastsService";
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSuccess: () => void; // refresh list after save
+  onSuccess: () => void;
   podcast?: Podcast | null;
 }
 
@@ -38,88 +38,96 @@ export default function PodcastFormModal({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Fetch only podcast categories
-    getCategories("podcast").then(setCategories);
-    // Fetch available active stations
-    getStations({ limit: 50, fields: ["_id", "name"] }).then(setStations);
-
-    if (podcast) {
-      setTitle(podcast.title || "");
-      setDescription(podcast.description || "");
-      setCategory(podcast.category?._id || "");
-      setStation(podcast.station?._id || "");
-      setFile(null);
-    } else {
-      setTitle("");
-      setDescription("");
-      setCategory("");
-      setStation("");
-      setFile(null);
+  (async () => {
+    try {
+      const data = await getCategories("podcast");
+      setCategories(data); 
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+      setCategories([]);
     }
-  }, [podcast, open]);
+  })();
+
+  getStations({ limit: 50, fields: ["_id", "name"] }).then(setStations);
+
+  if (podcast) {
+    setTitle(podcast.title || "");
+    setDescription(podcast.description || "");
+    setCategory(podcast.category?._id || "");
+    setStation(podcast.station?._id || "");
+    setFile(null);
+  } else {
+    setTitle("");
+    setDescription("");
+    setCategory("");
+    setStation("");
+    setFile(null);
+  }
+}, [podcast, open]);
+
 
   const handleSubmit = async () => {
-  if (!title.trim()) {
-    alert("Title is required");
-    return;
-  }
-  if (!description.trim()) {
-    alert("Description is required");
-    return;
-  }
-  if (!category) {
-    alert("Please select a category");
-    return;
-  }
-
-  try {
-    setLoading(true);
-
-    if (file) {
-      // Case 1: Upload file
-      const formData = new FormData();
-      formData.append("title", title.trim());
-      formData.append("description", description.trim());
-      formData.append("category", category);
-      if (station) formData.append("station", station);
-      formData.append("coverImage", file);
-
-      if (podcast?._id) {
-        await podcastService.update(podcast._id, formData);
-        alert("Podcast updated successfully");
-      } else {
-        await podcastService.create(formData);
-        alert("Podcast created successfully");
-      }
-    } else {
-      // Case 2: Send JSON body with coverImage URL
-      const payload = {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        station: station || undefined,
-        coverImage: podcast?.coverImage || 
-          "https://res.cloudinary.com/dd1pvbuyg/image/upload/v1754936808/stations"
-      };
-
-      if (podcast?._id) {
-        await podcastService.update(podcast._id, payload as any);
-        alert("Podcast updated successfully");
-      } else {
-        await podcastService.create(payload as any);
-        alert("Podcast created successfully");
-      }
+    if (!title.trim()) {
+      alert("Title is required");
+      return;
+    }
+    if (!description.trim()) {
+      alert("Description is required");
+      return;
+    }
+    if (!category) {
+      alert("Please select a category");
+      return;
     }
 
-    onSuccess();
-    onClose();
-  } catch (err: any) {
-    console.error(err);
-    alert(err?.message || "Something went wrong");
-  } finally {
-    setLoading(false);
-  }
-};
+    try {
+      setLoading(true);
+
+      if (file) {
+        // Case 1: Upload file
+        const formData = new FormData();
+        formData.append("title", title.trim());
+        formData.append("description", description.trim());
+        formData.append("category", category);
+        if (station) formData.append("station", station);
+        formData.append("coverImage", file);
+
+        if (podcast?._id) {
+          await podcastService.update(podcast._id, formData);
+          alert("Podcast updated successfully");
+        } else {
+          await podcastService.create(formData);
+          alert("Podcast created successfully");
+        }
+      } else {
+        // Case 2: Send JSON body with coverImage URL
+        const payload = {
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          station: station || undefined,
+          coverImage: podcast?.coverImage ||
+            "https://res.cloudinary.com/dd1pvbuyg/image/upload/v1754936808/stations"
+        };
+
+        if (podcast?._id) {
+          await podcastService.update(podcast._id, payload as any);
+          alert("Podcast updated successfully");
+        } else {
+          await podcastService.create(payload as any);
+          alert("Podcast created successfully");
+        }
+      }
+
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   return (

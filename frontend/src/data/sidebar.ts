@@ -29,6 +29,7 @@ export const navItems: NavItem[] = [
     subItems: [
       { label: 'All News', href: '/admin/dashboard/news' },
       { label: 'Create News', href: '/admin/dashboard/news/create' },
+      { label: 'Categories', href: '/admin/dashboard/news/categories' },
     ],
   },
   {

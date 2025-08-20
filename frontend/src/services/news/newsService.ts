@@ -167,7 +167,7 @@ export const getNewsStats = async (): Promise<NewsStatsResponse | null> =>
 // ✅ Toggle breaking status
 export const toggleBreakingNews = async (id: string): Promise<News | null> =>
   withToast(
-    () => apiRequest<News>(`/news/${id}/toggle-breaking`, 'PATCH'),
+    () => apiRequest<News>(`/news/admin/${id}/toggle-breaking`, 'PATCH'),
     'Toggled breaking news status.',
     'Failed to toggle breaking status.'
   );

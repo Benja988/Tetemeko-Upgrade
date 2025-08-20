@@ -22,15 +22,26 @@ const withToast = async <T>(
 /* ---------------------- Category Services ---------------------- */
 
 // ✅ Get all categories
-export const getCategories = async (type?: string): Promise<Category[]> => {
+export const getCategories = async (
+  type?: string,
+  limit: number = 1000 // big number to fetch all
+): Promise<Category[]> => {
   try {
-    const query = type ? `?type=${type}` : "";
-    const res = await apiRequest<{ categories: Category[], pagination: any }>(`/categories${query}`);
-    return res.categories; 
+    const params = new URLSearchParams();
+    if (type) params.append("type", type);
+    params.append("limit", limit.toString());
+
+    const res = await apiRequest<{ categories: Category[]; pagination: any }>(
+      `/categories?${params.toString()}`
+    );
+
+    return res.categories ?? [];
   } catch (e: any) {
+    console.error("getCategories error:", e.message);
     return [];
   }
 };
+
 
 
 // ✅ Get category by slug

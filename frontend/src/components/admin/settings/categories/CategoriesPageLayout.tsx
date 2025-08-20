@@ -5,17 +5,24 @@ import CategoryTable from './CategoryTable';
 import CategoryFormModal from './CategoryFormModal';
 import CategoryFilter from './CategoryFilter';
 import { Category } from '@/interfaces/Category';
-import {
-  getCategories,
-  deleteCategory,
-} from '@/services/categories/categoryService';
-import { toast } from 'sonner'; // using sonner/toast for better UX
+import { getCategories, deleteCategory } from '@/services/categories/categoryService';
+import { toast } from 'sonner';
 
-export default function CategoriesPageLayout() {
+interface CategoriesPageLayoutProps {
+  heading?: string;              
+  fixedFilter?: string;          
+  showFilter?: boolean;         
+}
+
+export default function CategoriesPageLayout({
+  heading = 'Manage Categories',
+  fixedFilter,
+  showFilter = true,
+}: CategoriesPageLayoutProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [filter, setFilter] = useState<string>('');
+  const [filter, setFilter] = useState<string>(fixedFilter || '');
   const [loading, setLoading] = useState(false);
 
   const fetchCategories = async () => {
@@ -66,7 +73,7 @@ export default function CategoriesPageLayout() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Manage Categories</h1>
+        <h1 className="text-2xl font-bold">{heading}</h1>
         <button
           onClick={handleCreate}
           className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition"
@@ -75,7 +82,10 @@ export default function CategoriesPageLayout() {
         </button>
       </div>
 
-      <CategoryFilter value={filter} onChange={setFilter} />
+      {/* 🔥 Show filter dropdown only if not locked */}
+      {showFilter && !fixedFilter && (
+        <CategoryFilter value={filter} onChange={setFilter} />
+      )}
 
       {loading ? (
         <p className="text-gray-500 mt-4">Loading categories...</p>

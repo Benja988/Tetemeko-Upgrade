@@ -8,6 +8,8 @@ import {
   searchAuthors,
   updateAuthor,
   verifyAuthor,
+
+  createAuthor
 } from '@/services/authors';
 
 // Components
@@ -216,6 +218,23 @@ export default function AuthorsPageLayout({
     );
   }, []);
 
+  const handleCreateSubmit = useCallback(
+  async (data: Partial<Author>) => {
+    try {
+      setIsLoading(true);
+      await createAuthor(data);   
+      await fetchAuthors();      
+      setCreateModalOpen(false);  
+    } catch (error) {
+      console.error("Create failed:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  },
+  [fetchAuthors]
+);
+
+
   return (
     <section className="min-h-screen bg-gray-50 px-4 py-6">
       <header className="mb-6 space-y-4">
@@ -265,7 +284,7 @@ export default function AuthorsPageLayout({
       <CreateAuthorModal
         isOpen={isCreateModalOpen}
         onClose={() => setCreateModalOpen(false)}
-        onCreate={fetchAuthors}
+        onCreate={handleCreateSubmit}
       />
 
       <UpdateAuthorModal
