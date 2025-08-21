@@ -13,7 +13,7 @@ export const logoutUser = async (router: any) => {
     delete axios.defaults.headers.common["Authorization"];
 
     toast.success("Logged out successfully.");
-    router.push("/auth/login");
+    router.push("/admin/login");
   } catch (error) {
     toast.error(error instanceof Error ? error.message : "Logout failed.");
   }

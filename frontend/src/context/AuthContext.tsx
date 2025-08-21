@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(loggedInUser);
       router.push("/admin/dashboard");
     }
-    return loggedInUser; // ✅ Ensure the function returns a value
+    return loggedInUser; 
   };
 
 

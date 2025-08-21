@@ -375,6 +375,7 @@ export default function Sidebar() {
                 </span>
               </button>
               <button
+                onClick={logout}
                 className="flex items-center gap-3 px-4 py-2 w-full rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-700 dark:text-gray-300"
               >
                 <LogOut className="h-4 w-4" />
@@ -401,7 +402,7 @@ export default function Sidebar() {
                 )}
               </button>
               <button
-                onClick={handleLogout}
+                onClick={logout}
                 className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
                 aria-label="Sign out"
               >
