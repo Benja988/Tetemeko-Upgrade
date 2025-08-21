@@ -1,3 +1,5 @@
+'use client'
+
 import {
   UserIcon,
   MicIcon,
@@ -5,14 +7,16 @@ import {
   CreditCardIcon,
   MessageCircleIcon,
   SendIcon,
-} from 'lucide-react';
+  Clock,
+} from 'lucide-react'
+import { useState, useEffect } from 'react'
 
-type ActivityType = 'user' | 'podcast' | 'order' | 'payment' | 'comment' | 'send';
+type ActivityType = 'user' | 'podcast' | 'order' | 'payment' | 'comment' | 'send'
 
 interface Activity {
-  activity: string;
-  time: string;
-  type: ActivityType;
+  activity: string
+  time: string
+  type: ActivityType
 }
 
 const activities: Activity[] = [
@@ -22,7 +26,7 @@ const activities: Activity[] = [
   { activity: 'Payment received from user #0987', time: '3 hours ago', type: 'payment' },
   { activity: 'New comment on episode "Marketing 101"', time: '6 hours ago', type: 'comment' },
   { activity: 'Newsletter campaign sent', time: '1 day ago', type: 'send' },
-];
+]
 
 const activityIcons: Record<ActivityType, { icon: React.ElementType; color: string }> = {
   user: { icon: UserIcon, color: 'bg-blue-500' },
@@ -31,36 +35,69 @@ const activityIcons: Record<ActivityType, { icon: React.ElementType; color: stri
   payment: { icon: CreditCardIcon, color: 'bg-green-500' },
   comment: { icon: MessageCircleIcon, color: 'bg-yellow-500' },
   send: { icon: SendIcon, color: 'bg-pink-500' },
-};
+}
 
 export default function RecentActivities() {
-  return (
-    <section className="bg-gradient-to-br from-white via-slate-50 to-white p-6 rounded-2xl shadow-lg transition-all duration-300">
-      <h2 className="text-2xl font-bold text-[var(--color-primary)] mb-6">Recent Activities</h2>
+  const [isLoading, setIsLoading] = useState(true)
 
-      <div className="relative border-l-4 border-gradient-to-b from-blue-400 via-purple-400 to-pink-400 pl-6 space-y-6">
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (isLoading) {
+    return (
+      <section className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md transition-colors duration-200">
+        <div className="h-7 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-6 animate-pulse"></div>
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex items-center space-x-3">
+              <div className="h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+              <div className="flex-1">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2 animate-pulse"></div>
+                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-1/3 animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md transition-colors duration-200">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Recent Activities</h2>
+
+      <div className="space-y-4">
         {activities.slice(0, 5).map((item, idx) => {
-          const { icon: Icon, color } = activityIcons[item.type];
+          const { icon: Icon, color } = activityIcons[item.type]
 
           return (
             <div
               key={idx}
-              className="relative flex items-start group hover:bg-gray-50 rounded-xl p-3 transition duration-300"
+              className="flex items-start space-x-3 group p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
             >
-              {/* Icon Bubble */}
-              <div className={`absolute -left-7 top-2 w-5 h-5 rounded-full flex items-center justify-center ${color} text-white shadow-md`}>
-                <Icon className="w-3.5 h-3.5" />
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${color} text-white`}>
+                <Icon className="w-4 h-4" />
               </div>
 
-              {/* Content */}
-              <div className="flex justify-between w-full items-center">
-                <p className="text-gray-800 font-medium">{item.activity}</p>
-                <span className="text-sm text-gray-500 ml-4 whitespace-nowrap">{item.time}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{item.activity}</p>
+                <div className="flex items-center mt-1">
+                  <Clock className="w-3 h-3 text-gray-400 mr-1" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">{item.time}</span>
+                </div>
               </div>
             </div>
-          );
+          )
         })}
       </div>
+
+      <button className="w-full mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline text-center">
+        View all activities
+      </button>
     </section>
-  );
+  )
 }

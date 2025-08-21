@@ -1,73 +1,69 @@
-// src/app/(management)/admin/dashboard/page.tsx
-
+// src/app/(management)/admin/dashboard/page.tsx (redesigned)
 'use client'
 
-import DashboardStats from '@/components/admin/dashboard/DashboardStats';
-import RecentActivities from '@/components/admin/dashboard/RecentActivities';
-import RecentOrdersTable from '@/components/admin/dashboard/RecentOrdersTable';
-import TopStationsChart from '@/components/admin/dashboard/TopStationsChart';
-import { useAuth } from '@/context/AuthContext';
-import { useAuthGuard } from '@/hooks/useAuthGuard';
-import { useEffect, useState } from 'react';
-// import Link from 'next/link';
-// import { PlusCircle, Users, BarChart3 } from 'lucide-react';
-import QuickLinks from '@/components/admin/dashboard/QuickLinks';
-import BarChartStats from '@/components/admin/dashboard/BarChartStats';
-import LineChartStats from '@/components/admin/dashboard/LineChartStats';
+import { useState, useEffect } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { useAuthGuard } from '@/hooks/useAuthGuard'
+import DashboardHeader from '@/components/admin/dashboard/DashboardHeader'
+import DashboardStats from '@/components/admin/dashboard/DashboardStats'
+import RecentActivities from '@/components/admin/dashboard/RecentActivities'
+import RecentOrdersTable from '@/components/admin/dashboard/RecentOrdersTable'
+import TopStationsChart from '@/components/admin/dashboard/TopStationsChart'
+import QuickLinks from '@/components/admin/dashboard/QuickLinks'
+import BarChartStats from '@/components/admin/dashboard/BarChartStats'
+import LineChartStats from '@/components/admin/dashboard/LineChartStats'
+import WelcomeBanner from '@/components/admin/dashboard/WelcomeBanner'
+import DashboardGrid from '@/components/admin/dashboard/DashboardGrid'
 
 export default function DashboardPage() {
-  useAuthGuard();
-  const { user, logout } = useAuth();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  useAuthGuard()
+  const { user, logout } = useAuth()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setIsAuthenticated(true);
-  }, []);
+    // Simulate initial data loading
+    const timer = setTimeout(() => {
+      setIsAuthenticated(true)
+      setIsLoading(false)
+    }, 1000)
+    
+    return () => clearTimeout(timer)
+  }, [])
 
-  if (!user || !isAuthenticated) {
+  if (!user || !isAuthenticated || isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p className="text-xl font-semibold">Loading...</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-300">Loading dashboard...</p>
+        </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-light)] p-4 sm:p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4 sm:mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-primary)]">
-          Welcome, {user.name || 'Admin'}!
-        </h1>
-        <button
-          onClick={logout}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition"
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Quick Links */}
-      <QuickLinks />
-
-      {/* Stats */}
-      <DashboardStats />
-
-      {/* Chart + Activities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-6">
-        <TopStationsChart />
-        <RecentActivities />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <BarChartStats />
-        <LineChartStats />
-      </div>
-
-      {/* Recent Orders */}
-      <div className="mt-6 sm:mt-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+      <DashboardHeader user={user} onLogout={logout} />
+      
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <WelcomeBanner user={user} />
+        
+        <QuickLinks />
+        
+        <DashboardStats />
+        
+        <DashboardGrid>
+          <div className="lg:col-span-2">
+            <BarChartStats />
+          </div>
+          <LineChartStats />
+          <TopStationsChart />
+          <RecentActivities />
+        </DashboardGrid>
+        
         <RecentOrdersTable />
-      </div>
+      </main>
     </div>
-  );
+  )
 }

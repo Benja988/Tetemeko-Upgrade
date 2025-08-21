@@ -1,29 +1,26 @@
+// src/app/(management)/admin/dashboard/layout.tsx
 'use client'
 
-import DashboardHeader from '@/components/admin/dashboard/DashboardHeader';
-import Sidebar from '@/components/admin/dashboard/Sidebar';
-import { useAuth } from '@/context/AuthContext';
-import { useAuthGuard } from '@/hooks/useAuthGuard';
-import Loader from '@/components/Loader';
+import Navbar from '@/components/admin/dashboard/Navbar'
+import Sidebar from '@/components/admin/dashboard/Sidebar'
+import { useState } from 'react'
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  useAuthGuard(); // Ensure protected routes
-
-  const { user } = useAuth();
-
-  if (!user) {
-    return <Loader message="Loading dashboard..." />;
-  }
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-light)]">
-      <Sidebar />
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+      <Sidebar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       <div className="flex flex-col flex-1 overflow-hidden">
-        <DashboardHeader />
-        <main className="p-4 sm:p-6 overflow-y-auto flex-1">
+        {/* <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} /> */}
+        <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
     </div>
-  );
+  )
 }
