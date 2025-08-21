@@ -102,7 +102,10 @@ export const incrementViews = async (id: string): Promise<void | null> =>
 // ✅ Get featured news
 export const getFeaturedNews = async (): Promise<News[] | null> =>
   withToast(
-    () => apiRequest<News[]>('/news/featured', 'GET'),
+    async () => {
+      const res = await apiRequest<{ news: News[] }>('/news/featured', 'GET');
+      return res.news;
+    },
     'Fetched featured news.',
     'Failed to load featured news.'
   );
@@ -110,10 +113,14 @@ export const getFeaturedNews = async (): Promise<News[] | null> =>
 // ✅ Get breaking news
 export const getBreakingNews = async (): Promise<News[] | null> =>
   withToast(
-    () => apiRequest<News[]>('/news/breaking', 'GET'),
+    async () => {
+      const res = await apiRequest<{ news: News[] }>('/news/breaking', 'GET');
+      return res.news;
+    },
     'Fetched breaking news.',
     'Failed to load breaking news.'
   );
+
 
 // ✅ Search news
 export const searchNews = async (
@@ -151,10 +158,17 @@ export const getNewsByCategory = async (
 // ✅ Get recent news
 export const getRecentNews = async (limit = 10): Promise<News[] | null> =>
   withToast(
-    () => apiRequest<News[]>(`/news/recent?limit=${limit}`, 'GET'),
+    async () => {
+      const res = await apiRequest<{ news: News[]; total: number }>(
+        `/news/recent?limit=${limit}`,
+        'GET'
+      );
+      return res.news;
+    },
     'Fetched recent news.',
     'Failed to fetch recent news.'
   );
+
 
 // ✅ Get news stats
 export const getNewsStats = async (): Promise<NewsStatsResponse | null> =>

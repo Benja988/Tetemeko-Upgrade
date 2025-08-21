@@ -13,7 +13,7 @@ import { registerManager } from "@/services/auth/registerManager";
 import { forgotPassword } from "@/services/auth/forgotPassword";
 import { resendVerification } from "@/services/auth/resendVerification";
 import { resetPassword } from "@/services/auth/resetPassword";
-import { logout as handleLogout } from "@/services/auth/logout";
+import { logoutUser as handleLogout } from "@/services/auth/logout";
 
 interface User {
   id: string;

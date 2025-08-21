@@ -28,6 +28,9 @@ import {
   Sun,
 } from 'lucide-react';
 import { navItems } from '@/data/sidebar';
+import { useAuthGuard } from '@/hooks/useAuthGuard';
+import { useAuth } from '@/context/AuthContext';
+import { logoutUser } from '@/services/auth/logout';
 
 export default function Sidebar() {
   const [open, setOpen] = useState(false);
@@ -39,6 +42,19 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  useAuthGuard();
+    const { user, logout } = useAuth();
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+    useEffect(() => {
+      setIsAuthenticated(true);
+    }, []);
+
+
+  const handleLogout = async () => {
+    await logoutUser(router);
+  };
 
   // Initialize submenus and theme
   useEffect(() => {
@@ -143,6 +159,14 @@ export default function Sidebar() {
   };
 
   const isCollapsed = collapsed && !isHovering;
+
+  if (!user || !isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-xl font-semibold">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -377,6 +401,7 @@ export default function Sidebar() {
                 )}
               </button>
               <button
+                onClick={handleLogout}
                 className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-300"
                 aria-label="Sign out"
               >

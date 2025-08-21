@@ -1,9 +1,12 @@
+// src/services/episodeService.ts
 import { apiRequest } from '@/lib/api';
 import { Episode, PaginatedEpisodesResponse } from '@/interfaces/podcasts';
 import { buildQueryParams } from '@/lib/api';
 
+const BASE_URL = '/podcasts';
+
 export const episodeService = {
-  // Get all episodes for a podcast
+  // ✅ Get all episodes for a podcast
   async getAll(
     podcastId: string,
     params?: {
@@ -15,39 +18,47 @@ export const episodeService = {
     }
   ): Promise<PaginatedEpisodesResponse> {
     const query = buildQueryParams(params);
-    return apiRequest(`/podcasts/${podcastId}/episodes${query}`, "GET");
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes${query}`, 'GET');
   },
 
-  // Get a single episode
+  // ✅ Get a single episode by ID
   async getById(
     podcastId: string,
     episodeId: string
   ): Promise<{ episode: Episode }> {
-    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "GET");
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes/${episodeId}`, 'GET');
   },
 
-  // Add episode (admin only)
+  // ✅ Create a new episode (admin only)
   async create(
     podcastId: string,
     data: FormData
   ): Promise<{ message: string; episode: Episode }> {
-    return apiRequest(`/podcasts/${podcastId}/episodes`, "POST", data);
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes`, 'POST', data);
   },
 
-  // Update episode
+  // ✅ Update an episode
   async update(
     podcastId: string,
     episodeId: string,
     data: FormData
   ): Promise<{ message: string; episode: Episode }> {
-    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "PUT", data);
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes/${episodeId}`, 'PUT', data);
   },
 
-  // Delete episode
+  // ✅ Delete an episode
   async delete(
     podcastId: string,
     episodeId: string
   ): Promise<{ message: string }> {
-    return apiRequest(`/podcasts/${podcastId}/episodes/${episodeId}`, "DELETE");
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes/${episodeId}`, 'DELETE');
+  },
+
+  // ✅ Toggle active/inactive status for an episode
+  async toggleStatus(
+    podcastId: string,
+    episodeId: string
+  ): Promise<{ message: string; episode: Episode }> {
+    return apiRequest(`${BASE_URL}/${podcastId}/episodes/${episodeId}/toggle-status`, 'PATCH');
   },
 };
