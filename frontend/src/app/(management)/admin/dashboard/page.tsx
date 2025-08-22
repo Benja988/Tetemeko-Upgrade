@@ -44,7 +44,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      <DashboardHeader user={user} onLogout={logout} />
+      {/* <DashboardHeader user={user} onLogout={logout} /> */}
       
       <main className="p-4 sm:p-6 max-w-7xl mx-auto">
         <WelcomeBanner user={user} />
